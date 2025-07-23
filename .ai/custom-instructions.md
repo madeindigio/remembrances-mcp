@@ -1,0 +1,1 @@
+This is a Golang project for to build a MCP Server that acts as memory in different levels.

@@ -1,0 +1,47 @@
+# Go build artifacts
+/bin/
+/build/
+/dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+/vendor/
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Coverage reports
+coverage.*
+*.coverprofile
+
+# Test cache
+*.testcache
+
+# Module cache (should not be committed)
+/pkg/mod/
+
+# GoLand project files
+*.iml
+
+# Environment files
+.env
+.env.*
