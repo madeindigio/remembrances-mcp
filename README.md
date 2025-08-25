@@ -75,3 +75,12 @@ go run ./cmd/remembrances-mcp/main.go --knowledge-base ./kb --rest-api-serve
 ## License
 
 See [LICENSE.txt](LICENSE.txt).
+
+## Tasks
+
+### build
+
+```bash
+go mod tidy
+go build -o dist/remembrances-mcp ./cmd/remembrances-mcp
+```
