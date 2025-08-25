@@ -30,7 +30,7 @@ type Config struct {
 // Load loads the configuration from CLI flags and environment variables.
 func Load() (*Config, error) {
 	// Define flags
-	pflag.Bool("sse", true, "Enable SSE transport")
+	pflag.Bool("sse", false, "Enable SSE transport")
 	pflag.Bool("rest-api-serve", false, "Enable REST API server")
 	pflag.String("knowledge-base", "", "Path to the knowledge base directory")
 	pflag.String("db-path", "./remembrances.db", "Path to the embedded SurrealDB database")

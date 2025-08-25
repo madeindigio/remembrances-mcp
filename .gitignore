@@ -45,3 +45,11 @@ coverage.*
 # Environment files
 .env
 .env.*
+kvagerc
+
+# SurrealDB local database files
+*.db
+
+# binaries
+remembrances-mcp
+dist/*

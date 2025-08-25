@@ -1,0 +1,14 @@
+{
+    "mcpServers": {
+        "@serena": {
+            "command": "pkgx",
+            "args": [
+                "uvx",
+                "--from",
+                "git+https://github.com/oraios/serena",
+                "serena",
+                "start-mcp-server"
+            ]
+        }
+    }
+}

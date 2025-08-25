@@ -20,7 +20,7 @@ go run ./cmd/remembrances-mcp/main.go [flags]
 
 ### CLI Flags
 
-- `--sse` (default: true): Enable SSE transport
+- `--sse` (default: false): Enable SSE transport
 - `--rest-api-serve`: Enable REST API server
 - `--knowledge-base`: Path to knowledge base directory
 - `--db-path`: Path to embedded SurrealDB database (default: ./remembrances.db)
