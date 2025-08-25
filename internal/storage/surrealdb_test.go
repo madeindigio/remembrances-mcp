@@ -126,12 +126,12 @@ func TestSurrealDBStorageFromEnv(t *testing.T) {
 
 	storage := NewSurrealDBStorageFromEnv(tmpFile)
 
-	if storage.config.Namespace != "remembrances" {
-		t.Errorf("Expected namespace 'remembrances', got '%s'", storage.config.Namespace)
+	if storage.config.Namespace != "test" {
+		t.Errorf("Expected namespace 'test', got '%s'", storage.config.Namespace)
 	}
 
-	if storage.config.Database != "memories" {
-		t.Errorf("Expected database 'memories', got '%s'", storage.config.Database)
+	if storage.config.Database != "test" {
+		t.Errorf("Expected database 'test', got '%s'", storage.config.Database)
 	}
 
 	if storage.config.DBPath != tmpFile {

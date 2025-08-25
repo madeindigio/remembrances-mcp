@@ -27,6 +27,8 @@ go run ./cmd/remembrances-mcp/main.go [flags]
 - `--surrealdb-url`: URL for remote SurrealDB instance
 - `--surrealdb-user`: SurrealDB username (default: root)
 - `--surrealdb-pass`: SurrealDB password (default: root)
+- `--surrealdb-namespace`: SurrealDB namespace (default: test)
+- `--surrealdb-database`: SurrealDB database (default: test)
 - `--ollama-url`: Ollama server URL (default: http://localhost:11434)
 - `--ollama-model`: Ollama model for embeddings
 - `--openai-key`: OpenAI API key
@@ -44,6 +46,8 @@ All flags can be set via environment variables prefixed with `GOMEM_` and dashes
 - `GOMEM_SURREALDB_URL`
 - `GOMEM_SURREALDB_USER`
 - `GOMEM_SURREALDB_PASS`
+- `GOMEM_SURREALDB_NAMESPACE`
+- `GOMEM_SURREALDB_DATABASE`
 - `GOMEM_OLLAMA_URL`
 - `GOMEM_OLLAMA_MODEL`
 - `GOMEM_OPENAI_KEY`

@@ -20,10 +20,10 @@ type SurrealDBStorage struct {
 // NewSurrealDBStorage creates a new SurrealDB storage instance
 func NewSurrealDBStorage(config *ConnectionConfig) *SurrealDBStorage {
 	if config.Namespace == "" {
-		config.Namespace = "remembrances"
+		config.Namespace = "test"
 	}
 	if config.Database == "" {
-		config.Database = "memories"
+		config.Database = "test"
 	}
 	if config.Timeout == 0 {
 		config.Timeout = 30 * time.Second
@@ -36,13 +36,23 @@ func NewSurrealDBStorage(config *ConnectionConfig) *SurrealDBStorage {
 
 // NewSurrealDBStorageFromEnv creates a SurrealDB storage instance from environment variables
 func NewSurrealDBStorageFromEnv(dbPath string) *SurrealDBStorage {
+	namespace := os.Getenv("SURREALDB_NAMESPACE")
+	if namespace == "" {
+		namespace = "test"
+	}
+
+	database := os.Getenv("SURREALDB_DATABASE")
+	if database == "" {
+		database = "test"
+	}
+
 	config := &ConnectionConfig{
 		URL:       os.Getenv("SURREALDB_URL"),
 		Username:  os.Getenv("SURREALDB_USER"),
 		Password:  os.Getenv("SURREALDB_PASS"),
 		DBPath:    dbPath,
-		Namespace: "remembrances",
-		Database:  "memories",
+		Namespace: namespace,
+		Database:  database,
 		Timeout:   30 * time.Second,
 	}
 

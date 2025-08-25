@@ -1,33 +1,35 @@
 {
-    "mcpServers": {
-        "@serena": {
-            "command": "pkgx",
-            "args": [
-                "uvx",
-                "--from",
-                "git+https://github.com/oraios/serena",
-                "serena",
-                "start-mcp-server",
-                "--context",
-                "ide-assistant",
-                "--project",
-                "/www/MCP/remembrances-mcp/"
-            ]
-        },
-        "@remembrances": {
-            "command": "/www/MCP/remembrances-mcp/dist/remembrances-mcp",
-            "args": [
-                "--log",
-                "/www/MCP/remembrances-mcp/remembrances.log",
-                "--db-path",
-                "/www/MCP/remembrances-mcp/test.db",
-                "--ollama-url",
-                "http://localhost:11434",
-                "--ollama-model",
-                "nomic-embed-text:latest",
-                "--knowledge-base",
-                "/www/MCP/remembrances-mcp/.ai/knowledge-base"
-            ]
-        }
+  "mcpServers": {
+    "@serena": {
+      "command": "pkgx",
+      "args": [
+        "uvx",
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "/www/MCP/remembrances-mcp/"
+      ]
+    },
+    "@remembrances": {
+      "command": "/www/MCP/remembrances-mcp/dist/remembrances-mcp",
+      "args": [
+        "--log",
+        "/www/MCP/remembrances-mcp/remembrances.log",
+        "--surrealdb-url",
+        "http://localhost:8000",
+        "--ollama-url",
+        "http://localhost:11434",
+        "--ollama-model",
+        "nomic-embed-text:latest",
+        "--knowledge-base",
+        "/www/MCP/remembrances-mcp/.ai/knowledge-base"
+      ],
+      "disabled": true,
+      "alwaysAllow": []
     }
+  }
 }

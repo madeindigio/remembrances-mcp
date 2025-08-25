@@ -15,19 +15,21 @@ import (
 
 // Config holds the configuration for the Remembrances-MCP server.
 type Config struct {
-	SSE           bool   `mapstructure:"sse"`
-	RestAPIServe  bool   `mapstructure:"rest-api-serve"`
-	KnowledgeBase string `mapstructure:"knowledge-base"`
-	DbPath        string `mapstructure:"db-path"`
-	SurrealDBURL  string `mapstructure:"surrealdb-url"`
-	SurrealDBUser string `mapstructure:"surrealdb-user"`
-	SurrealDBPass string `mapstructure:"surrealdb-pass"`
-	OllamaURL     string `mapstructure:"ollama-url"`
-	OllamaModel   string `mapstructure:"ollama-model"`
-	OpenAIKey     string `mapstructure:"openai-key"`
-	OpenAIURL     string `mapstructure:"openai-url"`
-	OpenAIModel   string `mapstructure:"openai-model"`
-	LogFile       string `mapstructure:"log"`
+	SSE                bool   `mapstructure:"sse"`
+	RestAPIServe       bool   `mapstructure:"rest-api-serve"`
+	KnowledgeBase      string `mapstructure:"knowledge-base"`
+	DbPath             string `mapstructure:"db-path"`
+	SurrealDBURL       string `mapstructure:"surrealdb-url"`
+	SurrealDBUser      string `mapstructure:"surrealdb-user"`
+	SurrealDBPass      string `mapstructure:"surrealdb-pass"`
+	SurrealDBNamespace string `mapstructure:"surrealdb-namespace"`
+	SurrealDBDatabase  string `mapstructure:"surrealdb-database"`
+	OllamaURL          string `mapstructure:"ollama-url"`
+	OllamaModel        string `mapstructure:"ollama-model"`
+	OpenAIKey          string `mapstructure:"openai-key"`
+	OpenAIURL          string `mapstructure:"openai-url"`
+	OpenAIModel        string `mapstructure:"openai-model"`
+	LogFile            string `mapstructure:"log"`
 }
 
 // Load loads the configuration from CLI flags and environment variables.
@@ -40,6 +42,8 @@ func Load() (*Config, error) {
 	pflag.String("surrealdb-url", "", "URL for the remote SurrealDB instance")
 	pflag.String("surrealdb-user", "root", "Username for SurrealDB")
 	pflag.String("surrealdb-pass", "root", "Password for SurrealDB")
+	pflag.String("surrealdb-namespace", "test", "Namespace for SurrealDB")
+	pflag.String("surrealdb-database", "test", "Database for SurrealDB")
 	pflag.String("ollama-url", "http://localhost:11434", "URL for the Ollama server")
 	pflag.String("ollama-model", "", "Ollama model to use for embeddings")
 	pflag.String("openai-key", "", "OpenAI API key")
@@ -111,6 +115,22 @@ func (c *Config) GetOpenAIURL() string {
 // GetOpenAIModel returns the OpenAI model name.
 func (c *Config) GetOpenAIModel() string {
 	return c.OpenAIModel
+}
+
+// GetSurrealDBNamespace returns the SurrealDB namespace.
+func (c *Config) GetSurrealDBNamespace() string {
+	if c.SurrealDBNamespace == "" {
+		return "test"
+	}
+	return c.SurrealDBNamespace
+}
+
+// GetSurrealDBDatabase returns the SurrealDB database.
+func (c *Config) GetSurrealDBDatabase() string {
+	if c.SurrealDBDatabase == "" {
+		return "test"
+	}
+	return c.SurrealDBDatabase
 }
 
 // Getenv reads an environment variable or returns a default value.
