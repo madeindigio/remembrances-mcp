@@ -4,6 +4,8 @@ package config
 import (
 	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -25,6 +27,7 @@ type Config struct {
 	OpenAIKey     string `mapstructure:"openai-key"`
 	OpenAIURL     string `mapstructure:"openai-url"`
 	OpenAIModel   string `mapstructure:"openai-model"`
+	LogFile       string `mapstructure:"log"`
 }
 
 // Load loads the configuration from CLI flags and environment variables.
@@ -42,6 +45,7 @@ func Load() (*Config, error) {
 	pflag.String("openai-key", "", "OpenAI API key")
 	pflag.String("openai-url", "https://api.openai.com/v1", "OpenAI base URL")
 	pflag.String("openai-model", "text-embedding-3-large", "OpenAI model to use for embeddings")
+	pflag.String("log", "", "Path to the log file (logs will be written to both stdout and file)")
 	pflag.Parse()
 
 	// Bind flags to viper
@@ -115,4 +119,36 @@ func Getenv(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// SetupLogging configures slog to write to both stdout and a log file if specified.
+func (c *Config) SetupLogging() error {
+	var writers []io.Writer
+
+	// Always write to stdout
+	writers = append(writers, os.Stdout)
+
+	// If log file is specified, also write to file
+	if c.LogFile != "" {
+		logFile, err := os.OpenFile(c.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			return fmt.Errorf("failed to open log file %s: %w", c.LogFile, err)
+		}
+		writers = append(writers, logFile)
+	}
+
+	// Create a multi-writer that writes to all specified destinations
+	multiWriter := io.MultiWriter(writers...)
+
+	// Create a text handler with the multi-writer
+	handler := slog.NewTextHandler(multiWriter, &slog.HandlerOptions{
+		Level:     slog.LevelInfo,
+		AddSource: false,
+	})
+
+	// Set the default logger
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+
+	return nil
 }

@@ -4,7 +4,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -25,6 +25,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup logging
+	if err := cfg.SetupLogging(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error setting up logging: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Root context with graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -36,13 +42,14 @@ func main() {
 		if addr == "" {
 			addr = ":3000"
 		}
-		log.Printf("SSE transport enabled, listening on %s", addr)
+		slog.Info("SSE transport enabled", "address", addr)
 		t, err = mcptransport.NewSSEServerTransport(addr)
 		if err != nil {
-			log.Fatalf("failed to initialize SSE transport: %v", err)
+			slog.Error("failed to initialize SSE transport", "error", err)
+			os.Exit(1)
 		}
 	} else {
-		log.Println("Starting MCP over stdio (default)")
+		slog.Info("Starting MCP over stdio (default)")
 		t = mcptransport.NewStdioServerTransport()
 	}
 
@@ -56,7 +63,8 @@ func main() {
 		mcpserver.WithInstructions("Remembrances-MCP server is ready."),
 	)
 	if err != nil {
-		log.Fatalf("failed to create MCP server: %v", err)
+		slog.Error("failed to create MCP server", "error", err)
+		os.Exit(1)
 	}
 
 	// TODO: Register tools (Mem0-like ops) and resources here
@@ -64,13 +72,16 @@ func main() {
 	// Graceful shutdown
 	go func() {
 		<-ctx.Done()
+		slog.Info("Shutdown signal received, starting graceful shutdown")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(shutdownCtx)
 	}()
 
 	// Run the server (blocking)
+	slog.Info("Starting Remembrances-MCP server")
 	if err := srv.Run(); err != nil {
-		log.Fatalf("server run error: %v", err)
+		slog.Error("server run error", "error", err)
+		os.Exit(1)
 	}
 }
