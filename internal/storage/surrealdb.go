@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -161,15 +162,35 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 
 // ensureSchemaVersionTable creates the schema_version table if it doesn't exist
 func (s *SurrealDBStorage) ensureSchemaVersionTable(ctx context.Context) error {
-	// Use IF NOT EXISTS equivalent approach for SurrealDB
-	_, err := surrealdb.Query[map[string]interface{}](s.db, `
-		DEFINE TABLE schema_version SCHEMAFULL;
-		DEFINE FIELD version ON schema_version TYPE int;
-		DEFINE FIELD applied_at ON schema_version TYPE datetime VALUE time::now();
-	`, nil)
-	
-	// SurrealDB will succeed if table already exists, so we ignore "already exists" type errors
-	return err
+	// First check if the table exists
+	exists, err := s.checkTableExists(ctx, "schema_version")
+	if err != nil {
+		// If we can't check, try to create anyway
+		log.Printf("Warning: Could not check if schema_version table exists: %v", err)
+	}
+
+	if !exists {
+		// Create the schema version table
+		_, err := surrealdb.Query[map[string]interface{}](s.db, `
+			DEFINE TABLE schema_version SCHEMAFULL;
+			DEFINE FIELD version ON schema_version TYPE int;
+			DEFINE FIELD applied_at ON schema_version TYPE datetime VALUE time::now();
+		`, nil)
+
+		if err != nil {
+			// Check if it's an "already exists" error
+			if s.isAlreadyExistsError(err) {
+				log.Println("Schema version table already exists, continuing...")
+				return nil
+			}
+			return fmt.Errorf("failed to create schema_version table: %w", err)
+		}
+		log.Println("Created schema_version table")
+	} else {
+		log.Println("Schema version table already exists")
+	}
+
+	return nil
 }
 
 // getCurrentSchemaVersion returns the current schema version, 0 if no version is set
@@ -190,17 +211,33 @@ func (s *SurrealDBStorage) getCurrentSchemaVersion(ctx context.Context) (int, er
 		return 0, nil // No version set, start from 0
 	}
 
-	version, ok := queryResult.Result[0]["version"].(float64)
-	if !ok {
+	raw := queryResult.Result[0]["version"]
+	switch v := raw.(type) {
+	case float64:
+		return int(v), nil
+	case float32:
+		return int(v), nil
+	case int:
+		return v, nil
+	case int64:
+		return int(v), nil
+	case uint64:
+		return int(v), nil
+	case string:
+		// Try to parse numeric string
+		if parsed, err := strconv.Atoi(v); err == nil {
+			return parsed, nil
+		}
+		return 0, fmt.Errorf("invalid version format in schema_version table: non-numeric string")
+	default:
 		return 0, fmt.Errorf("invalid version format in schema_version table")
 	}
-
-	return int(version), nil
 }
 
 // setSchemaVersion updates the schema version
 func (s *SurrealDBStorage) setSchemaVersion(ctx context.Context, version int) error {
-	_, err := surrealdb.Query[map[string]interface{}](s.db, `
+	// The CREATE statement returns an array-like result; request the matching type to avoid CBOR unmarshal errors.
+	_, err := surrealdb.Query[[]map[string]interface{}](s.db, `
 		CREATE schema_version SET version = $version;
 	`, map[string]interface{}{
 		"version": version,
@@ -213,12 +250,12 @@ func (s *SurrealDBStorage) runMigrations(ctx context.Context, currentVersion, ta
 	for version := currentVersion; version < targetVersion; version++ {
 		nextVersion := version + 1
 		log.Printf("Applying migration to version %d", nextVersion)
-		
+
 		err := s.applyMigration(ctx, nextVersion)
 		if err != nil {
 			return fmt.Errorf("failed to apply migration to version %d: %w", nextVersion, err)
 		}
-		
+
 		err = s.setSchemaVersion(ctx, nextVersion)
 		if err != nil {
 			return fmt.Errorf("failed to update schema version to %d: %w", nextVersion, err)
@@ -238,7 +275,6 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 }
 
 // applyMigrationV1 creates the initial schema (version 1)
-// applyMigrationV1 creates the initial schema (version 1)
 func (s *SurrealDBStorage) applyMigrationV1(ctx context.Context) error {
 	log.Println("Applying migration v1: Creating initial schema")
 
@@ -257,7 +293,9 @@ func (s *SurrealDBStorage) applyMigrationV1(ctx context.Context) error {
 		{Type: "field", Statement: `DEFINE FIELD key ON kv_memories TYPE string;`, OnTable: "kv_memories"},
 		{Type: "field", Statement: `DEFINE FIELD value ON kv_memories TYPE any;`, OnTable: "kv_memories"},
 		{Type: "field", Statement: `DEFINE FIELD created_at ON kv_memories TYPE datetime VALUE time::now();`, OnTable: "kv_memories"},
-		{Type: "field", Statement: `DEFINE FIELD updated_at ON kv_memories TYPE datetime VALUE time::now() ON UPDATE time::now();`, OnTable: "kv_memories"},
+		// SurrealDB does not support `ON UPDATE` in field definitions in this client/schema version,
+		// keep updated_at with a VALUE default and let the application set it on updates.
+		{Type: "field", Statement: `DEFINE FIELD updated_at ON kv_memories TYPE datetime VALUE time::now();`, OnTable: "kv_memories"},
 
 		// Fields for vector_memories
 		{Type: "field", Statement: `DEFINE FIELD user_id ON vector_memories TYPE string;`, OnTable: "vector_memories"},
@@ -265,7 +303,7 @@ func (s *SurrealDBStorage) applyMigrationV1(ctx context.Context) error {
 		{Type: "field", Statement: `DEFINE FIELD embedding ON vector_memories TYPE array<float>;`, OnTable: "vector_memories"},
 		{Type: "field", Statement: `DEFINE FIELD metadata ON vector_memories TYPE object;`, OnTable: "vector_memories"},
 		{Type: "field", Statement: `DEFINE FIELD created_at ON vector_memories TYPE datetime VALUE time::now();`, OnTable: "vector_memories"},
-		{Type: "field", Statement: `DEFINE FIELD updated_at ON vector_memories TYPE datetime VALUE time::now() ON UPDATE time::now();`, OnTable: "vector_memories"},
+		{Type: "field", Statement: `DEFINE FIELD updated_at ON vector_memories TYPE datetime VALUE time::now();`, OnTable: "vector_memories"},
 
 		// Fields for knowledge_base
 		{Type: "field", Statement: `DEFINE FIELD file_path ON knowledge_base TYPE string;`, OnTable: "knowledge_base"},
@@ -273,28 +311,28 @@ func (s *SurrealDBStorage) applyMigrationV1(ctx context.Context) error {
 		{Type: "field", Statement: `DEFINE FIELD embedding ON knowledge_base TYPE array<float>;`, OnTable: "knowledge_base"},
 		{Type: "field", Statement: `DEFINE FIELD metadata ON knowledge_base TYPE object;`, OnTable: "knowledge_base"},
 		{Type: "field", Statement: `DEFINE FIELD created_at ON knowledge_base TYPE datetime VALUE time::now();`, OnTable: "knowledge_base"},
-		{Type: "field", Statement: `DEFINE FIELD updated_at ON knowledge_base TYPE datetime VALUE time::now() ON UPDATE time::now();`, OnTable: "knowledge_base"},
+		{Type: "field", Statement: `DEFINE FIELD updated_at ON knowledge_base TYPE datetime VALUE time::now();`, OnTable: "knowledge_base"},
 
 		// Fields for entities
 		{Type: "field", Statement: `DEFINE FIELD name ON entities TYPE string;`, OnTable: "entities"},
 		{Type: "field", Statement: `DEFINE FIELD type ON entities TYPE string;`, OnTable: "entities"},
 		{Type: "field", Statement: `DEFINE FIELD properties ON entities TYPE object;`, OnTable: "entities"},
 		{Type: "field", Statement: `DEFINE FIELD created_at ON entities TYPE datetime VALUE time::now();`, OnTable: "entities"},
-		{Type: "field", Statement: `DEFINE FIELD updated_at ON entities TYPE datetime VALUE time::now() ON UPDATE time::now();`, OnTable: "entities"},
+		{Type: "field", Statement: `DEFINE FIELD updated_at ON entities TYPE datetime VALUE time::now();`, OnTable: "entities"},
 
 		// Fields for relationship tables
-		{Type: "field", Statement: `DEFINE FIELD in ON wrote TYPE record(entities);`, OnTable: "wrote"},
-		{Type: "field", Statement: `DEFINE FIELD out ON wrote TYPE record(entities);`, OnTable: "wrote"},
+		{Type: "field", Statement: `DEFINE FIELD in ON wrote TYPE record;`, OnTable: "wrote"},
+		{Type: "field", Statement: `DEFINE FIELD out ON wrote TYPE record;`, OnTable: "wrote"},
 		{Type: "field", Statement: `DEFINE FIELD timestamp ON wrote TYPE datetime VALUE time::now();`, OnTable: "wrote"},
 		{Type: "field", Statement: `DEFINE FIELD properties ON wrote TYPE object;`, OnTable: "wrote"},
 
-		{Type: "field", Statement: `DEFINE FIELD in ON mentioned_in TYPE record(entities);`, OnTable: "mentioned_in"},
-		{Type: "field", Statement: `DEFINE FIELD out ON mentioned_in TYPE record(entities);`, OnTable: "mentioned_in"},
+		{Type: "field", Statement: `DEFINE FIELD in ON mentioned_in TYPE record;`, OnTable: "mentioned_in"},
+		{Type: "field", Statement: `DEFINE FIELD out ON mentioned_in TYPE record;`, OnTable: "mentioned_in"},
 		{Type: "field", Statement: `DEFINE FIELD timestamp ON mentioned_in TYPE datetime VALUE time::now();`, OnTable: "mentioned_in"},
 		{Type: "field", Statement: `DEFINE FIELD properties ON mentioned_in TYPE object;`, OnTable: "mentioned_in"},
 
-		{Type: "field", Statement: `DEFINE FIELD in ON related_to TYPE record(entities);`, OnTable: "related_to"},
-		{Type: "field", Statement: `DEFINE FIELD out ON related_to TYPE record(entities);`, OnTable: "related_to"},
+		{Type: "field", Statement: `DEFINE FIELD in ON related_to TYPE record;`, OnTable: "related_to"},
+		{Type: "field", Statement: `DEFINE FIELD out ON related_to TYPE record;`, OnTable: "related_to"},
 		{Type: "field", Statement: `DEFINE FIELD timestamp ON related_to TYPE datetime VALUE time::now();`, OnTable: "related_to"},
 		{Type: "field", Statement: `DEFINE FIELD properties ON related_to TYPE object;`, OnTable: "related_to"},
 
@@ -354,7 +392,8 @@ func (s *SurrealDBStorage) checkSchemaElementExists(ctx context.Context, element
 
 // checkTableExists checks if a table exists
 func (s *SurrealDBStorage) checkTableExists(ctx context.Context, tableName string) (bool, error) {
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, `INFO FOR DB;`, nil)
+	// The INFO FOR DB; command returns a single result as a map. Use map-based unmarshalling.
+	result, err := surrealdb.Query[map[string]interface{}](s.db, `INFO FOR DB;`, nil)
 	if err != nil {
 		return false, err
 	}
@@ -363,12 +402,20 @@ func (s *SurrealDBStorage) checkTableExists(ctx context.Context, tableName strin
 		return false, nil
 	}
 
-	queryResult := (*result)[0]
-	if queryResult.Status != "OK" || queryResult.Result == nil || len(queryResult.Result) == 0 {
+	// Get the QueryResult wrapper and its typed Result map
+	qr := (*result)[0]
+	if qr.Status != "OK" {
 		return false, nil
 	}
 
-	tables, ok := queryResult.Result[0]["tables"].(map[string]interface{})
+	resMap := qr.Result
+	// Expect a "tables" key in the returned map
+	tablesRaw, ok := resMap["tables"]
+	if !ok || tablesRaw == nil {
+		return false, nil
+	}
+
+	tables, ok := tablesRaw.(map[string]interface{})
 	if !ok {
 		return false, nil
 	}
@@ -380,7 +427,7 @@ func (s *SurrealDBStorage) checkTableExists(ctx context.Context, tableName strin
 // checkFieldExists checks if a field exists on a table
 func (s *SurrealDBStorage) checkFieldExists(ctx context.Context, tableName, fieldName string) (bool, error) {
 	query := fmt.Sprintf("INFO FOR TABLE %s;", tableName)
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
+	result, err := surrealdb.Query[map[string]interface{}](s.db, query, nil)
 	if err != nil {
 		return false, err
 	}
@@ -389,12 +436,18 @@ func (s *SurrealDBStorage) checkFieldExists(ctx context.Context, tableName, fiel
 		return false, nil
 	}
 
-	queryResult := (*result)[0]
-	if queryResult.Status != "OK" || queryResult.Result == nil || len(queryResult.Result) == 0 {
+	qr := (*result)[0]
+	if qr.Status != "OK" {
 		return false, nil
 	}
 
-	fields, ok := queryResult.Result[0]["fields"].(map[string]interface{})
+	resMap := qr.Result
+	fieldsRaw, ok := resMap["fields"]
+	if !ok || fieldsRaw == nil {
+		return false, nil
+	}
+
+	fields, ok := fieldsRaw.(map[string]interface{})
 	if !ok {
 		return false, nil
 	}
@@ -406,7 +459,7 @@ func (s *SurrealDBStorage) checkFieldExists(ctx context.Context, tableName, fiel
 // checkIndexExists checks if an index exists on a table
 func (s *SurrealDBStorage) checkIndexExists(ctx context.Context, tableName, indexName string) (bool, error) {
 	query := fmt.Sprintf("INFO FOR TABLE %s;", tableName)
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
+	result, err := surrealdb.Query[map[string]interface{}](s.db, query, nil)
 	if err != nil {
 		return false, err
 	}
@@ -415,12 +468,18 @@ func (s *SurrealDBStorage) checkIndexExists(ctx context.Context, tableName, inde
 		return false, nil
 	}
 
-	queryResult := (*result)[0]
-	if queryResult.Status != "OK" || queryResult.Result == nil || len(queryResult.Result) == 0 {
+	qr := (*result)[0]
+	if qr.Status != "OK" {
 		return false, nil
 	}
 
-	indexes, ok := queryResult.Result[0]["indexes"].(map[string]interface{})
+	resMap := qr.Result
+	indexesRaw, ok := resMap["indexes"]
+	if !ok || indexesRaw == nil {
+		return false, nil
+	}
+
+	indexes, ok := indexesRaw.(map[string]interface{})
 	if !ok {
 		return false, nil
 	}
@@ -434,11 +493,11 @@ func (s *SurrealDBStorage) isAlreadyExistsError(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	errStr := strings.ToLower(err.Error())
 	return strings.Contains(errStr, "already exists") ||
-		   strings.Contains(errStr, "already defined") ||
-		   strings.Contains(errStr, "duplicate")
+		strings.Contains(errStr, "already defined") ||
+		strings.Contains(errStr, "duplicate")
 }
 
 // extractTableName extracts table name from DEFINE TABLE statement
