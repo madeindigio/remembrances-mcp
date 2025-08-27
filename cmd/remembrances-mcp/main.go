@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 	"time"
@@ -130,12 +131,75 @@ Choose the right tool for your data:
 		storageInstance = storage.NewSurrealDBStorage(storageConfig)
 	}
 
-	// Connect to storage
+	// Connect to storage. If connection fails and a SurrealDB start command is provided
+	// in the configuration, attempt to run it and retry the connection.
 	if err := storageInstance.Connect(ctx); err != nil {
-		slog.Error("failed to connect to storage", "error", err)
-		os.Exit(1)
+		slog.Warn("initial connection to SurrealDB failed", "error", err)
+
+		// If a start command is configured, try to run it and retry connecting.
+		if cfg.SurrealDBStartCmd != "" {
+			slog.Info("attempting to start external SurrealDB process", "cmd", cfg.SurrealDBStartCmd)
+
+			// Run the configured command in a separate process.
+			// Use /bin/sh -c so users can provide complex commands or use aliases.
+			startCmd := cfg.SurrealDBStartCmd
+			proc := exec.CommandContext(ctx, "/bin/sh", "-c", startCmd)
+			// Redirect output to the main logger's stdout/stderr so users can see it
+			proc.Stdout = os.Stdout
+			proc.Stderr = os.Stderr
+
+			if err := proc.Start(); err != nil {
+				slog.Error("failed to start external SurrealDB command", "cmd", startCmd, "error", err)
+				os.Exit(1)
+			}
+
+			// Give the process some time to start and then retry connection with backoff
+			retryCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			backoff := 1 * time.Second
+			connected := false
+			for {
+				select {
+				case <-retryCtx.Done():
+					slog.Error("timed out waiting for SurrealDB to become available")
+					// Try one last time with the original context
+					if err := storageInstance.Connect(ctx); err != nil {
+						slog.Error("surrealdb still unreachable after start command", "error", err)
+						os.Exit(1)
+					}
+					connected = true
+				default:
+					time.Sleep(backoff)
+					if err := storageInstance.Connect(ctx); err != nil {
+						slog.Info("surrealdb not ready yet, retrying...", "wait", backoff)
+						if backoff < 5*time.Second {
+							backoff = backoff * 2
+						}
+						// continue retrying
+					} else {
+						connected = true
+					}
+				}
+				if connected {
+					break
+				}
+			}
+
+			if !connected {
+				slog.Error("failed to connect to SurrealDB after running start command")
+				os.Exit(1)
+			}
+
+			// At this point connection succeeded; ensure Close will be called
+			defer storageInstance.Close()
+		} else {
+			slog.Error("failed to connect to storage", "error", err, "hint", "set --surrealdb-start-cmd or GOMEM_SURREALDB_START_CMD to auto-start a local SurrealDB")
+			os.Exit(1)
+		}
+	} else {
+		defer storageInstance.Close()
 	}
-	defer storageInstance.Close()
 
 	// Initialize schema
 	if err := storageInstance.InitializeSchema(ctx); err != nil {

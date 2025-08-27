@@ -24,12 +24,16 @@ type Config struct {
 	SurrealDBPass      string `mapstructure:"surrealdb-pass"`
 	SurrealDBNamespace string `mapstructure:"surrealdb-namespace"`
 	SurrealDBDatabase  string `mapstructure:"surrealdb-database"`
-	OllamaURL          string `mapstructure:"ollama-url"`
-	OllamaModel        string `mapstructure:"ollama-model"`
-	OpenAIKey          string `mapstructure:"openai-key"`
-	OpenAIURL          string `mapstructure:"openai-url"`
-	OpenAIModel        string `mapstructure:"openai-model"`
-	LogFile            string `mapstructure:"log"`
+	// Command to start an external SurrealDB instance when connection cannot be
+	// established. Can be set via CLI flag --surrealdb-start-cmd or
+	// environment variable GOMEM_SURREALDB_START_CMD.
+	SurrealDBStartCmd string `mapstructure:"surrealdb-start-cmd"`
+	OllamaURL         string `mapstructure:"ollama-url"`
+	OllamaModel       string `mapstructure:"ollama-model"`
+	OpenAIKey         string `mapstructure:"openai-key"`
+	OpenAIURL         string `mapstructure:"openai-url"`
+	OpenAIModel       string `mapstructure:"openai-model"`
+	LogFile           string `mapstructure:"log"`
 }
 
 // Load loads the configuration from CLI flags and environment variables.
@@ -44,6 +48,7 @@ func Load() (*Config, error) {
 	pflag.String("surrealdb-pass", "root", "Password for SurrealDB")
 	pflag.String("surrealdb-namespace", "test", "Namespace for SurrealDB")
 	pflag.String("surrealdb-database", "test", "Database for SurrealDB")
+	pflag.String("surrealdb-start-cmd", "", "External command to start SurrealDB when connection fails")
 	pflag.String("ollama-url", "http://localhost:11434", "URL for the Ollama server")
 	pflag.String("ollama-model", "", "Ollama model to use for embeddings")
 	pflag.String("openai-key", "", "OpenAI API key")
