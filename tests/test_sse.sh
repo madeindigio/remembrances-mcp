@@ -32,6 +32,7 @@ fi
 "$BINARY" --sse >"$LOG" 2>&1 &
 PID=$!
 
+
 cleanup() {
   echo "Cleaning up SSE test..."
   if kill -0 "$PID" 2>/dev/null; then
@@ -75,6 +76,9 @@ if command -v ss >/dev/null 2>&1; then
     echo "Warning: port ${PORT} not observed as LISTEN. The transport may not bind yet or uses a different mechanism." >&2
   fi
 fi
+
+echo "Running python client"
+python3 tests/clients/mcp_sse_client.py --binary ./dist/remembrances-mcp --start
 
 # Shut down
 kill -INT "$PID"

@@ -551,18 +551,26 @@ func (s *SurrealDBStorage) SaveFact(ctx context.Context, userID, key string, val
 func (s *SurrealDBStorage) GetFact(ctx context.Context, userID, key string) (interface{}, error) {
 	recordID := fmt.Sprintf("kv_memories:['%s:%s']", userID, key)
 
-	result, err := surrealdb.Select[map[string]interface{}](s.db, recordID)
+	// Use Query instead of Select to get proper result structure
+	query := "SELECT * FROM " + recordID
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fact: %w", err)
 	}
 
 	// Handle empty result
-	if result == nil {
+	if result == nil || len(*result) == 0 {
 		return nil, nil
 	}
 
-	// Extract value from result
-	return (*result)["value"], nil
+	queryResult := (*result)[0]
+	if queryResult.Status != "OK" || queryResult.Result == nil || len(queryResult.Result) == 0 {
+		return nil, nil
+	}
+
+	// Extract value from the first result
+	record := queryResult.Result[0]
+	return record["value"], nil
 }
 
 // UpdateFact updates an existing key-value fact
@@ -585,7 +593,9 @@ func (s *SurrealDBStorage) UpdateFact(ctx context.Context, userID, key string, v
 func (s *SurrealDBStorage) DeleteFact(ctx context.Context, userID, key string) error {
 	recordID := fmt.Sprintf("kv_memories:['%s:%s']", userID, key)
 
-	_, err := surrealdb.Delete[map[string]interface{}](s.db, recordID)
+	// Use Query instead of Delete to get proper result structure
+	query := "DELETE " + recordID
+	_, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete fact: %w", err)
 	}

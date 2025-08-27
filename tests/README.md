@@ -21,3 +21,30 @@ Usage example:
 chmod +x tests/*.sh
 ./tests/run_all.sh
 ```
+
+## MCP clients
+
+Two Python example clients are provided under `tests/clients`:
+
+- `mcp_stdio_client.py` -- starts the binary and communicates over stdio using JSON-RPC (tools/list, tools/call examples).
+- `mcp_sse_client.py` -- starts the binary with `--sse` (or connects to a running SSE server) and uses the SSE + POST endpoints to call tools.
+
+Both scripts are small examples to exercise the tool handlers. They expect the binary built at `./dist/remembrances-mcp` (use `tests/build.sh`).
+
+Requirements:
+
+- Python 3
+- `requests` package (for the SSE client): `pip install requests`
+
+Examples:
+
+```bash
+# Build the binary
+chmod +x tests/build.sh && ./tests/build.sh
+
+# Run the stdio client (will start the binary)
+python3 tests/clients/mcp_stdio_client.py --binary ./dist/remembrances-mcp
+
+# Run the SSE client (will start the binary)
+python3 tests/clients/mcp_sse_client.py --binary ./dist/remembrances-mcp --start
+```

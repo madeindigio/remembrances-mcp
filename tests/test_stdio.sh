@@ -31,6 +31,7 @@ echo "Starting server (stdio) -> logging to $LOG"
 "$BINARY" >"$LOG" 2>&1 &
 PID=$!
 
+
 cleanup() {
   echo "Cleaning up..."
   if kill -0 "$PID" 2>/dev/null; then
@@ -62,6 +63,10 @@ else
   tail -n 200 "$LOG" >&2 || true
   exit 3
 fi
+
+
+echo "Running python client"
+python3 tests/clients/mcp_stdio_client.py --binary ./dist/remembrances-mcp
 
 # Gracefully stop the server
 if kill -0 "$PID" 2>/dev/null; then
