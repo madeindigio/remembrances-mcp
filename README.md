@@ -99,7 +99,27 @@ See [LICENSE.txt](LICENSE.txt).
 
 ### build
 
+Build the project
+
 ```bash
 go mod tidy
 go build -o dist/remembrances-mcp ./cmd/remembrances-mcp
+```
+
+### starts-surrealdb
+
+Starts the SurrealDB instance
+
+interactive: true
+```bash
+surreal start --user root --pass root surrealkv:///www/MCP/remembrances-mcp/surreal_data
+```
+
+### run-tests
+
+Runs the test suite
+
+
+```bash
+./tests/run_all.sh
 ```
