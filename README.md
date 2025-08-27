@@ -35,6 +35,8 @@ go run ./cmd/remembrances-mcp/main.go [flags]
 - `--openai-url`: OpenAI base URL (default: https://api.openai.com/v1)
 - `--openai-model`: OpenAI model for embeddings (default: text-embedding-3-large)
 
+- `--surrealdb-start-cmd`: Optional command to start an external SurrealDB instance when an initial connection cannot be established. Can also be set via `GOMEM_SURREALDB_START_CMD`.
+
 ### Environment Variables
 
 All flags can be set via environment variables prefixed with `GOMEM_` and dashes replaced by underscores. For example:
@@ -53,6 +55,19 @@ All flags can be set via environment variables prefixed with `GOMEM_` and dashes
 - `GOMEM_OPENAI_KEY`
 - `GOMEM_OPENAI_URL`
 - `GOMEM_OPENAI_MODEL`
+
+Additionally, there is an optional environment variable/flag to help auto-start a local SurrealDB when the server cannot connect at startup:
+
+- `GOMEM_SURREALDB_START_CMD` / `--surrealdb-start-cmd`
+
+Example usage (start command provided via env):
+
+```bash
+export GOMEM_SURREALDB_START_CMD="surreal start --user root --pass root surrealkv:///path/to/surreal_data"
+go run ./cmd/remembrances-mcp/main.go --knowledge-base ./kb
+```
+
+Behavior: when the program starts it will attempt to connect to SurrealDB. If the connection fails and a start command was provided, the program will spawn the provided command (using `/bin/sh -c "<cmd>"`), stream its stdout/stderr to the running process, and poll the database connection for up to 30 seconds with exponential backoff. If the database becomes available the server continues startup. If starting the command fails or the database remains unreachable after the timeout, the program logs a descriptive error and exits.
 
 ## Requirements
 
