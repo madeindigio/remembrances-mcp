@@ -10,6 +10,8 @@ BINARY="$REPO_ROOT/dist/remembrances-mcp"
 LOG="$SCRIPT_DIR/sse_test.log"
 
 export GOMEM_OPENAI_KEY="testkey"
+export GOMEM_SSE="true"
+export GOMEM_SSE_ADDR=":4001"
 export GOMEM_DB_PATH="$REPO_ROOT/surreal_data"
 export GOMEM_LOG="$LOG"
 export GOMEM_SURREALDB_URL="ws://localhost:8000"
@@ -64,10 +66,13 @@ fi
 
 # Optionally check the port is listening (best-effort)
 if command -v ss >/dev/null 2>&1; then
-  if ss -ltn sport = :4001 | grep -q LISTEN; then
-    echo "Port 4001 is listening"
+  # derive port from GOMEM_SSE_ADDR (formats like :4001 or 0.0.0.0:4001)
+  ADDR=${GOMEM_SSE_ADDR:-":4001"}
+  PORT=$(echo "$ADDR" | awk -F: '{print $NF}')
+  if ss -ltn sport = :${PORT} | grep -q LISTEN; then
+    echo "Port ${PORT} is listening"
   else
-    echo "Warning: port 4001 not observed as LISTEN. The transport may not bind yet or uses a different mechanism." >&2
+    echo "Warning: port ${PORT} not observed as LISTEN. The transport may not bind yet or uses a different mechanism." >&2
   fi
 fi
 

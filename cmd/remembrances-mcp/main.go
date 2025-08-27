@@ -42,7 +42,11 @@ func main() {
 	// Select transport: stdio (default) or SSE when --sse is passed or env set
 	var t mcptransport.ServerTransport
 	if cfg.SSE {
-		addr := os.Getenv("GOMEM_SSE_ADDR")
+		addr := cfg.SSEAddr
+		// allow env var to override if set for backwards compatibility
+		if env := os.Getenv("GOMEM_SSE_ADDR"); env != "" {
+			addr = env
+		}
 		if addr == "" {
 			addr = ":3000"
 		}

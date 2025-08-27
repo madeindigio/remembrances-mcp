@@ -64,8 +64,12 @@ else
 fi
 
 # Gracefully stop the server
-echo "Stopping server (PID=$PID)"
-kill -INT "$PID"
-wait "$PID" || true
+if kill -0 "$PID" 2>/dev/null; then
+  echo "Stopping server (PID=$PID)"
+  kill -INT "$PID" || true
+  wait "$PID" || true
+else
+  echo "Server already stopped (PID=$PID)"
+fi
 
 echo "stdio smoke test completed successfully"

@@ -21,6 +21,7 @@ go run ./cmd/remembrances-mcp/main.go [flags]
 ### CLI Flags
 
 - `--sse` (default: false): Enable SSE transport
+- `--sse-addr` (default: :4001): Address to bind SSE transport (host:port). Can also be set via `GOMEM_SSE_ADDR`.
 - `--rest-api-serve`: Enable REST API server
 - `--knowledge-base`: Path to knowledge base directory
 - `--db-path`: Path to embedded SurrealDB database (default: ./remembrances.db)
@@ -42,6 +43,7 @@ go run ./cmd/remembrances-mcp/main.go [flags]
 All flags can be set via environment variables prefixed with `GOMEM_` and dashes replaced by underscores. For example:
 
 - `GOMEM_SSE`
+- `GOMEM_SSE_ADDR` (e.g. `:4001` or `0.0.0.0:4001`)
 - `GOMEM_REST_API_SERVE`
 - `GOMEM_KNOWLEDGE_BASE`
 - `GOMEM_DB_PATH`
@@ -65,6 +67,12 @@ Example usage (start command provided via env):
 ```bash
 export GOMEM_SURREALDB_START_CMD="surreal start --user root --pass root surrealkv:///path/to/surreal_data"
 go run ./cmd/remembrances-mcp/main.go --knowledge-base ./kb
+
+# Start SSE transport on a custom address via CLI flag
+go run ./cmd/remembrances-mcp/main.go --sse --sse-addr=":4001"
+
+# Or via environment variable
+GOMEM_SSE=true GOMEM_SSE_ADDR=":4001" go run ./cmd/remembrances-mcp/main.go --sse
 ```
 
 Behavior: when the program starts it will attempt to connect to SurrealDB. If the connection fails and a start command was provided, the program will spawn the provided command (using `/bin/sh -c "<cmd>"`), stream its stdout/stderr to the running process, and poll the database connection for up to 30 seconds with exponential backoff. If the database becomes available the server continues startup. If starting the command fails or the database remains unreachable after the timeout, the program logs a descriptive error and exits.
@@ -119,6 +127,7 @@ surreal start --user root --pass root surrealkv:///www/MCP/remembrances-mcp/surr
 
 Runs the test suite
 
+interactive: true
 
 ```bash
 ./tests/run_all.sh
