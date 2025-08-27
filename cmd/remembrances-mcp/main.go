@@ -133,6 +133,10 @@ Choose the right tool for your data:
 
 	// Connect to storage. If connection fails and a SurrealDB start command is provided
 	// in the configuration, attempt to run it and retry the connection.
+	// Keep track of any process we start so we can shut it down when this app exits.
+	var startedProc *exec.Cmd
+	var procExited chan struct{}
+
 	if err := storageInstance.Connect(ctx); err != nil {
 		slog.Warn("initial connection to SurrealDB failed", "error", err)
 
@@ -152,6 +156,18 @@ Choose the right tool for your data:
 				slog.Error("failed to start external SurrealDB command", "cmd", startCmd, "error", err)
 				os.Exit(1)
 			}
+
+			// keep a reference so we can shut it down on app exit
+			startedProc = proc
+			procExited = make(chan struct{})
+			go func() {
+				if err := proc.Wait(); err != nil {
+					slog.Warn("surrealdb process exited with error", "error", err)
+				} else {
+					slog.Info("surrealdb process exited")
+				}
+				close(procExited)
+			}()
 
 			// Give the process some time to start and then retry connection with backoff
 			retryCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -230,6 +246,27 @@ Choose the right tool for your data:
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(shutdownCtx)
+
+		// If we started a SurrealDB process, try to stop it gracefully.
+		if startedProc != nil && startedProc.Process != nil {
+			slog.Info("shutting down started SurrealDB process")
+			// First try a polite SIGTERM
+			_ = startedProc.Process.Signal(syscall.SIGTERM)
+
+			// Wait a short while for it to exit
+			select {
+			case <-procExited:
+				slog.Info("started SurrealDB process exited cleanly")
+			case <-time.After(5 * time.Second):
+				slog.Warn("started SurrealDB process did not exit after SIGTERM, killing")
+				_ = startedProc.Process.Kill()
+				// wait for reaper if not already closed
+				select {
+				case <-procExited:
+				case <-time.After(2 * time.Second):
+				}
+			}
+		}
 	}()
 
 	// Run the server (blocking)
