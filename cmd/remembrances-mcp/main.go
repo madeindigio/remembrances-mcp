@@ -63,7 +63,43 @@ func main() {
 			Name:    "remembrances-mcp",
 			Version: "0.1.0",
 		}),
-		mcpserver.WithInstructions("Remembrances-MCP server is ready."),
+		mcpserver.WithInstructions(`Welcome to Remembrances-MCP Server!
+
+This server provides a comprehensive remembrance system with three complementary layers:
+
+🗂️ KEY-VALUE FACTS: Store simple facts, preferences, and settings that can be quickly retrieved by key
+   • remembrance_save_fact: Store basic information
+   • remembrance_get_fact: Retrieve by key
+   • remembrance_list_facts: See all facts for a user
+   • remembrance_delete_fact: Remove facts
+
+🧠 SEMANTIC VECTORS: Store content with automatic embedding for similarity search
+   • remembrance_add_vector: Add content that gets automatically embedded
+   • remembrance_search_vectors: Find similar content using semantic search
+   • remembrance_update_vector: Update existing content and regenerate embedding
+   • remembrance_delete_vector: Remove semantic content
+
+🕸️ KNOWLEDGE GRAPH: Create entities and relationships to model complex connections
+   • remembrance_create_entity: Add people, places, concepts
+   • remembrance_create_relationship: Connect entities with relationships
+   • remembrance_traverse_graph: Explore connections between entities
+   • remembrance_get_entity: Retrieve entity details
+
+📚 KNOWLEDGE BASE: Store and search documents
+   • kb_add_document: Add documents with automatic embedding
+   • kb_search_documents: Search documents by semantic similarity
+   • kb_get_document: Retrieve document by path
+   • kb_delete_document: Remove documents
+
+🔍 UNIFIED SEARCH: Combine all layers for comprehensive results
+   • remembrance_hybrid_search: Search across facts, vectors, and graph simultaneously
+   • remembrance_get_stats: Get overview of all stored remembrances
+
+Choose the right tool for your data:
+- Use FACTS for simple key-value data
+- Use VECTORS for content you want to find by meaning
+- Use GRAPH for modeling relationships and connections
+- Use HYBRID SEARCH when you want comprehensive results across all layers`),
 	)
 	if err != nil {
 		slog.Error("failed to create MCP server", "error", err)

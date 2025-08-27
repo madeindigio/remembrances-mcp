@@ -49,6 +49,7 @@ kvagerc
 
 # SurrealDB local database files
 *.db
+surreal_data/*
 
 # binaries
 remembrances-mcp

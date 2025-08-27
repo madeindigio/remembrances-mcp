@@ -66,3 +66,5 @@ excluded_tools: []
 initial_prompt: ""
 
 project_name: "remembrances-mcp"
+
+record_tool_usage_stats: true

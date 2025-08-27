@@ -30,17 +30,17 @@ func NewToolManager(storage storage.StorageWithStats, embedder embedder.Embedder
 
 // RegisterTools registers all MCP tools with the server
 func (tm *ToolManager) RegisterTools(srv *mcpserver.Server) error {
-	// Memory operations tools
+	// Remembrance operations tools
 	srv.RegisterTool(tm.saveFactTool(), tm.saveFactHandler)
 	srv.RegisterTool(tm.getFactTool(), tm.getFactHandler)
 	srv.RegisterTool(tm.listFactsTool(), tm.listFactsHandler)
 	srv.RegisterTool(tm.deleteFactTool(), tm.deleteFactHandler)
 
 	// Vector operations tools
-	srv.RegisterTool(tm.addMemoryTool(), tm.addMemoryHandler)
-	srv.RegisterTool(tm.searchMemoriesTool(), tm.searchMemoriesHandler)
-	srv.RegisterTool(tm.updateMemoryTool(), tm.updateMemoryHandler)
-	srv.RegisterTool(tm.deleteMemoryTool(), tm.deleteMemoryHandler)
+	srv.RegisterTool(tm.addVectorTool(), tm.addVectorHandler)
+	srv.RegisterTool(tm.searchVectorsTool(), tm.searchVectorsHandler)
+	srv.RegisterTool(tm.updateVectorTool(), tm.updateVectorHandler)
+	srv.RegisterTool(tm.deleteVectorTool(), tm.deleteVectorHandler)
 
 	// Graph operations tools
 	srv.RegisterTool(tm.createEntityTool(), tm.createEntityHandler)
@@ -83,26 +83,26 @@ type DeleteFactInput struct {
 	Key    string `json:"key"`
 }
 
-type AddMemoryInput struct {
+type AddVectorInput struct {
 	UserID   string                 `json:"user_id"`
 	Content  string                 `json:"content"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
-type SearchMemoriesInput struct {
+type SearchVectorsInput struct {
 	UserID string `json:"user_id"`
 	Query  string `json:"query"`
 	Limit  int    `json:"limit,omitempty"`
 }
 
-type UpdateMemoryInput struct {
+type UpdateVectorInput struct {
 	ID       string                 `json:"id"`
 	UserID   string                 `json:"user_id"`
 	Content  string                 `json:"content"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
-type DeleteMemoryInput struct {
+type DeleteVectorInput struct {
 	ID     string `json:"id"`
 	UserID string `json:"user_id"`
 }
@@ -160,94 +160,269 @@ type GetStatsInput struct {
 	UserID string `json:"user_id"`
 }
 
+const (
+	errParseArgs         = "failed to parse arguments: %w"
+	errGenEmbedding      = "failed to generate embedding: %w"
+	errGenQueryEmbedding = "failed to generate query embedding: %w"
+)
+
 // Tool definitions
 func (tm *ToolManager) saveFactTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_save_fact", "Save a key-value fact to memory for a specific user", SaveFactInput{})
+	tool, _ := protocol.NewTool("remembrance_save_fact", `Save a key-value fact for a user.
+
+Explanation: Stores a simple key -> value pair scoped to a user. Values can be strings, numbers, or objects. This is optimized for fast exact-key lookup, not semantic search.
+
+When to call: Use when you need to persist small, structured facts or preferences (e.g. contact info, settings, short user preferences) that will be retrieved by exact key later.
+
+Example arguments/values:
+	user_id: "user123"
+	key: "favorite_color"
+	value: "blue"
+`, SaveFactInput{})
 	return tool
 }
 
 func (tm *ToolManager) getFactTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_get_fact", "Retrieve a key-value fact from memory for a specific user", GetFactInput{})
+	tool, _ := protocol.NewTool("remembrance_get_fact", `Retrieve a key-value fact for a user by key.
+
+Explanation: Returns the stored value for the given user/key. If not found, returns nil.
+
+When to call: Use when you know the exact key you stored and need the precise value back (no semantic matching).
+
+Example arguments/values:
+	user_id: "user123"
+	key: "favorite_color"
+`, GetFactInput{})
 	return tool
 }
 
 func (tm *ToolManager) listFactsTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_list_facts", "List all key-value facts for a specific user", ListFactsInput{})
+	tool, _ := protocol.NewTool("remembrance_list_facts", `List all key-value facts for a user.
+
+Explanation: Returns all facts previously saved for the specified user as a map of keys to values.
+
+When to call: Use when you need an overview of stored preferences or when initializing a user session.
+
+Example arguments/values:
+	user_id: "user123"
+`, ListFactsInput{})
 	return tool
 }
 
 func (tm *ToolManager) deleteFactTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_delete_fact", "Delete a key-value fact from memory", DeleteFactInput{})
+	tool, _ := protocol.NewTool("remembrance_delete_fact", `Delete a user-scoped key-value fact.
+
+Explanation: Permanently removes the specified key for the user.
+
+When to call: Use to correct mistakes or to forget outdated personal data (e.g., user requested deletion).
+
+Example arguments/values:
+	user_id: "user123"
+	key: "favorite_color"
+`, DeleteFactInput{})
 	return tool
 }
 
-func (tm *ToolManager) addMemoryTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_add_memory", "Add a memory with semantic content that will be automatically embedded for similarity search", AddMemoryInput{})
+func (tm *ToolManager) addVectorTool() *protocol.Tool {
+	tool, _ := protocol.NewTool("remembrance_add_vector", `Add a semantic remembrance (text -> embedding).
+
+Explanation: Converts the provided text into an embedding and stores it with optional metadata for later semantic retrieval.
+
+When to call: Use for storing notes, messages, or any content you may later find by conceptual similarity (e.g., meeting notes, ideas, long-form content).
+
+Example arguments/values:
+	user_id: "user123"
+	content: "Met Alice about project X; action: follow up on budget."
+	metadata: { source: "meeting" }
+`, AddVectorInput{})
 	return tool
 }
 
-func (tm *ToolManager) searchMemoriesTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_search_memories", "Search for similar memories using semantic similarity", SearchMemoriesInput{})
+func (tm *ToolManager) searchVectorsTool() *protocol.Tool {
+	tool, _ := protocol.NewTool("remembrance_search_vectors", `Search remembrances by semantic similarity.
+
+Explanation: Embeds the query and returns the closest stored vectors for the user.
+
+When to call: Use when you want results related by meaning (e.g., find notes about "budget" even if the note doesn't contain the word). Set "limit" to control result count.
+
+Example arguments/values:
+	user_id: "user123"
+	query: "follow up on project budget"
+	limit: 5
+`, SearchVectorsInput{})
 	return tool
 }
 
-func (tm *ToolManager) updateMemoryTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_update_memory", "Update an existing memory with new content and metadata", UpdateMemoryInput{})
+func (tm *ToolManager) updateVectorTool() *protocol.Tool {
+	tool, _ := protocol.NewTool("remembrance_update_vector", `Update an existing semantic remembrance.
+
+Explanation: Recomputes embedding for the new content and updates metadata. Requires the vector's ID and the owning user.
+
+When to call: Use when correcting or improving previously stored content.
+
+Example arguments/values:
+	id: "vec_abc123"
+	user_id: "user123"
+	content: "Updated meeting notes..."
+	metadata: { edited_by: "user123" }
+`, UpdateVectorInput{})
 	return tool
 }
 
-func (tm *ToolManager) deleteMemoryTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_delete_memory", "Delete a memory by ID", DeleteMemoryInput{})
+func (tm *ToolManager) deleteVectorTool() *protocol.Tool {
+	tool, _ := protocol.NewTool("remembrance_delete_vector", `Delete a semantic remembrance by ID.
+
+Explanation: Removes the vector record and its embedding. Requires the vector ID and user for authorization/scoping.
+
+When to call: Use to remove obsolete or sensitive semantic items.
+
+Example arguments/values:
+	id: "vec_abc123"
+	user_id: "user123"
+`, DeleteVectorInput{})
 	return tool
 }
 
 func (tm *ToolManager) createEntityTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_create_entity", "Create an entity in the knowledge graph", CreateEntityInput{})
+	tool, _ := protocol.NewTool("remembrance_create_entity", `Create an entity in the knowledge graph.
+
+Explanation: Adds a typed entity (person, place, concept) with properties to the graph store and returns its ID.
+
+When to call: Use when capturing structured objects you want to link (e.g., contacts, organizations, projects).
+
+Example arguments/values:
+	entity_type: "person"
+	name: "Alice"
+	properties: { email: "alice@example.com" }
+`, CreateEntityInput{})
 	return tool
 }
 
 func (tm *ToolManager) createRelationshipTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_create_relationship", "Create a relationship between two entities in the knowledge graph", CreateRelationshipInput{})
+	tool, _ := protocol.NewTool("remembrance_create_relationship", `Create a relationship between two graph entities.
+
+Explanation: Links two existing entity IDs with a typed relationship and optional properties.
+
+When to call: Use to model connections (e.g., person->works_at->organization, person->knows->person).
+
+Example arguments/values:
+	from_entity: "entity_1"
+	to_entity: "entity_2"
+	relationship_type: "works_at"
+	properties: { since: "2023-01-01" }
+`, CreateRelationshipInput{})
 	return tool
 }
 
 func (tm *ToolManager) traverseGraphTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_traverse_graph", "Traverse the knowledge graph starting from an entity", TraverseGraphInput{})
+	tool, _ := protocol.NewTool("remembrance_traverse_graph", `Traverse the knowledge graph from a start entity.
+
+Explanation: Performs breadth-limited traversal following relationships and returns connected entities/edges.
+
+When to call: Use when you want to discover related entities (e.g., find colleagues of a person or projects linked to an org). "depth" controls traversal breadth.
+
+Example arguments/values:
+	start_entity: "entity_1"
+	relationship_type: "works_at"
+	depth: 2
+`, TraverseGraphInput{})
 	return tool
 }
 
 func (tm *ToolManager) getEntityTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_get_entity", "Get details of an entity by ID", GetEntityInput{})
+	tool, _ := protocol.NewTool("remembrance_get_entity", `Get a graph entity by ID.
+
+Explanation: Returns the stored entity record including properties and metadata.
+
+When to call: Use when you need the full data for a specific entity (e.g., when rendering a contact card).
+
+Example arguments/values:
+	entity_id: "entity_1"
+`, GetEntityInput{})
 	return tool
 }
 
 func (tm *ToolManager) addDocumentTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("kb_add_document", "Add a document to the knowledge base with automatic embedding", AddDocumentInput{})
+	tool, _ := protocol.NewTool("kb_add_document", `Add a document to the knowledge base with automatic embedding.
+
+Explanation: Embeds the document content and stores it together with file path and metadata for semantic document search.
+
+When to call: Use when onboarding reference documents, manuals, or files you want to query semantically.
+
+Example arguments/values:
+	file_path: "/kb/guide.pdf"
+	content: "Full text of the document..."
+	metadata: { source: "import" }
+`, AddDocumentInput{})
 	return tool
 }
 
 func (tm *ToolManager) searchDocumentsTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("kb_search_documents", "Search for documents in the knowledge base using semantic similarity", SearchDocumentsInput{})
+	tool, _ := protocol.NewTool("kb_search_documents", `Search knowledge-base documents by semantic similarity.
+
+Explanation: Embeds the query and returns matching documents ranked by semantic relevance.
+
+When to call: Use to find relevant reference documents or passages given a question or topic.
+
+Example arguments/values:
+	query: "how to configure authentication"
+	limit: 5
+`, SearchDocumentsInput{})
 	return tool
 }
 
 func (tm *ToolManager) getDocumentTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("kb_get_document", "Get a document from the knowledge base by file path", GetDocumentInput{})
+	tool, _ := protocol.NewTool("kb_get_document", `Retrieve a stored document by file path.
+
+Explanation: Returns the document metadata and content (embedding omitted in responses).
+
+When to call: Use when you know the exact document path and need its contents or metadata.
+
+Example arguments/values:
+	file_path: "/kb/guide.pdf"
+`, GetDocumentInput{})
 	return tool
 }
 
 func (tm *ToolManager) deleteDocumentTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("kb_delete_document", "Delete a document from the knowledge base", DeleteDocumentInput{})
+	tool, _ := protocol.NewTool("kb_delete_document", `Delete a document from the knowledge base by file path.
+
+Explanation: Removes the stored document and its embedding.
+
+When to call: Use to remove outdated or sensitive documents.
+
+Example arguments/values:
+	file_path: "/kb/guide.pdf"
+`, DeleteDocumentInput{})
 	return tool
 }
 
 func (tm *ToolManager) hybridSearchTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_hybrid_search", "Perform a hybrid search across all memory layers (vector, graph, and key-value)", HybridSearchInput{})
+	tool, _ := protocol.NewTool("remembrance_hybrid_search", `Perform a hybrid search across vectors, graph, and key-value facts.
+
+Explanation: Combines semantic vector search, graph traversal (filtered by entities), and exact-fact lookup to produce a consolidated result set and timing stats.
+
+When to call: Use when you need the broadest coverage for a query that may be answered by facts, documents, graph links, or semantic memories.
+
+Example arguments/values:
+	user_id: "user123"
+	query: "Who worked on project X and what notes exist?"
+	entities: [ "person", "project" ]
+	limit: 10
+`, HybridSearchInput{})
 	return tool
 }
 
 func (tm *ToolManager) getStatsTool() *protocol.Tool {
-	tool, _ := protocol.NewTool("mem_get_stats", "Get statistics about stored memories for a user", GetStatsInput{})
+	tool, _ := protocol.NewTool("remembrance_get_stats", `Get memory statistics for a user.
+
+Explanation: Returns counts for facts, vectors, documents, entities, relationships and other usage metrics.
+
+When to call: Use for monitoring, quota checks, or to provide an overview dashboard for a user.
+
+Example arguments/values:
+	user_id: "user123"
+`, GetStatsInput{})
 	return tool
 }
 
@@ -255,7 +430,7 @@ func (tm *ToolManager) getStatsTool() *protocol.Tool {
 func (tm *ToolManager) saveFactHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input SaveFactInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	err := tm.storage.SaveFact(ctx, input.UserID, input.Key, input.Value)
@@ -274,7 +449,7 @@ func (tm *ToolManager) saveFactHandler(ctx context.Context, request *protocol.Ca
 func (tm *ToolManager) getFactHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input GetFactInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	value, err := tm.storage.GetFact(ctx, input.UserID, input.Key)
@@ -304,7 +479,7 @@ func (tm *ToolManager) getFactHandler(ctx context.Context, request *protocol.Cal
 func (tm *ToolManager) listFactsHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input ListFactsInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	facts, err := tm.storage.ListFacts(ctx, input.UserID)
@@ -325,7 +500,7 @@ func (tm *ToolManager) listFactsHandler(ctx context.Context, request *protocol.C
 func (tm *ToolManager) deleteFactHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input DeleteFactInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	err := tm.storage.DeleteFact(ctx, input.UserID, input.Key)
@@ -341,35 +516,35 @@ func (tm *ToolManager) deleteFactHandler(ctx context.Context, request *protocol.
 	}, false), nil
 }
 
-func (tm *ToolManager) addMemoryHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
-	var input AddMemoryInput
+func (tm *ToolManager) addVectorHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
+	var input AddVectorInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	// Generate embedding for the content
 	embedding, err := tm.embedder.EmbedQuery(ctx, input.Content)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate embedding: %w", err)
+		return nil, fmt.Errorf(errGenEmbedding, err)
 	}
 
 	memoryID, err := tm.storage.IndexVector(ctx, input.UserID, input.Content, embedding, input.Metadata)
 	if err != nil {
-		return nil, fmt.Errorf("failed to add memory: %w", err)
+		return nil, fmt.Errorf("failed to add remembrance: %w", err)
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Successfully added memory with ID '%s' for user '%s'", memoryID, input.UserID),
+			Text: fmt.Sprintf("Successfully added remembrance with ID '%s' for user '%s'", memoryID, input.UserID),
 		},
 	}, false), nil
 }
 
-func (tm *ToolManager) searchMemoriesHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
-	var input SearchMemoriesInput
+func (tm *ToolManager) searchVectorsHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
+	var input SearchVectorsInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	if input.Limit == 0 {
@@ -379,12 +554,12 @@ func (tm *ToolManager) searchMemoriesHandler(ctx context.Context, request *proto
 	// Generate embedding for the query
 	queryEmbedding, err := tm.embedder.EmbedQuery(ctx, input.Query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+		return nil, fmt.Errorf(errGenQueryEmbedding, err)
 	}
 
 	results, err := tm.storage.SearchSimilar(ctx, input.UserID, queryEmbedding, input.Limit)
 	if err != nil {
-		return nil, fmt.Errorf("failed to search memories: %w", err)
+		return nil, fmt.Errorf("failed to search remembrances: %w", err)
 	}
 
 	resultsBytes, _ := json.MarshalIndent(results, "", "  ")
@@ -392,51 +567,51 @@ func (tm *ToolManager) searchMemoriesHandler(ctx context.Context, request *proto
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Found %d similar memories for query '%s':\n%s", len(results), input.Query, string(resultsBytes)),
+			Text: fmt.Sprintf("Found %d similar remembrances for query '%s':\n%s", len(results), input.Query, string(resultsBytes)),
 		},
 	}, false), nil
 }
 
-func (tm *ToolManager) updateMemoryHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
-	var input UpdateMemoryInput
+func (tm *ToolManager) updateVectorHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
+	var input UpdateVectorInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	// Generate new embedding for the updated content
 	embedding, err := tm.embedder.EmbedQuery(ctx, input.Content)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate embedding: %w", err)
+		return nil, fmt.Errorf(errGenEmbedding, err)
 	}
 
 	err = tm.storage.UpdateVector(ctx, input.ID, input.UserID, input.Content, embedding, input.Metadata)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update memory: %w", err)
+		return nil, fmt.Errorf("failed to update remembrance: %w", err)
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Successfully updated memory '%s' for user '%s'", input.ID, input.UserID),
+			Text: fmt.Sprintf("Successfully updated remembrance '%s' for user '%s'", input.ID, input.UserID),
 		},
 	}, false), nil
 }
 
-func (tm *ToolManager) deleteMemoryHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
-	var input DeleteMemoryInput
+func (tm *ToolManager) deleteVectorHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
+	var input DeleteVectorInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	err := tm.storage.DeleteVector(ctx, input.ID, input.UserID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to delete memory: %w", err)
+		return nil, fmt.Errorf("failed to delete remembrance: %w", err)
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Successfully deleted memory '%s' for user '%s'", input.ID, input.UserID),
+			Text: fmt.Sprintf("Successfully deleted remembrance '%s' for user '%s'", input.ID, input.UserID),
 		},
 	}, false), nil
 }
@@ -444,7 +619,7 @@ func (tm *ToolManager) deleteMemoryHandler(ctx context.Context, request *protoco
 func (tm *ToolManager) createEntityHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input CreateEntityInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	entityID, err := tm.storage.CreateEntity(ctx, input.EntityType, input.Name, input.Properties)
@@ -463,7 +638,7 @@ func (tm *ToolManager) createEntityHandler(ctx context.Context, request *protoco
 func (tm *ToolManager) createRelationshipHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input CreateRelationshipInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	err := tm.storage.CreateRelationship(ctx, input.FromEntity, input.ToEntity, input.RelationshipType, input.Properties)
@@ -482,7 +657,7 @@ func (tm *ToolManager) createRelationshipHandler(ctx context.Context, request *p
 func (tm *ToolManager) traverseGraphHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input TraverseGraphInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	if input.Depth == 0 {
@@ -507,7 +682,7 @@ func (tm *ToolManager) traverseGraphHandler(ctx context.Context, request *protoc
 func (tm *ToolManager) getEntityHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input GetEntityInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	entity, err := tm.storage.GetEntity(ctx, input.EntityID)
@@ -537,13 +712,13 @@ func (tm *ToolManager) getEntityHandler(ctx context.Context, request *protocol.C
 func (tm *ToolManager) addDocumentHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input AddDocumentInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	// Generate embedding for the document content
 	embedding, err := tm.embedder.EmbedQuery(ctx, input.Content)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate embedding: %w", err)
+		return nil, fmt.Errorf(errGenEmbedding, err)
 	}
 
 	err = tm.storage.SaveDocument(ctx, input.FilePath, input.Content, embedding, input.Metadata)
@@ -562,7 +737,7 @@ func (tm *ToolManager) addDocumentHandler(ctx context.Context, request *protocol
 func (tm *ToolManager) searchDocumentsHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input SearchDocumentsInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	if input.Limit == 0 {
@@ -572,7 +747,7 @@ func (tm *ToolManager) searchDocumentsHandler(ctx context.Context, request *prot
 	// Generate embedding for the query
 	queryEmbedding, err := tm.embedder.EmbedQuery(ctx, input.Query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+		return nil, fmt.Errorf(errGenQueryEmbedding, err)
 	}
 
 	results, err := tm.storage.SearchDocuments(ctx, queryEmbedding, input.Limit)
@@ -593,7 +768,7 @@ func (tm *ToolManager) searchDocumentsHandler(ctx context.Context, request *prot
 func (tm *ToolManager) getDocumentHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input GetDocumentInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	document, err := tm.storage.GetDocument(ctx, input.FilePath)
@@ -626,7 +801,7 @@ func (tm *ToolManager) getDocumentHandler(ctx context.Context, request *protocol
 func (tm *ToolManager) deleteDocumentHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input DeleteDocumentInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	err := tm.storage.DeleteDocument(ctx, input.FilePath)
@@ -645,7 +820,7 @@ func (tm *ToolManager) deleteDocumentHandler(ctx context.Context, request *proto
 func (tm *ToolManager) hybridSearchHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input HybridSearchInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	if input.Limit == 0 {
@@ -655,7 +830,7 @@ func (tm *ToolManager) hybridSearchHandler(ctx context.Context, request *protoco
 	// Generate embedding for the query
 	queryEmbedding, err := tm.embedder.EmbedQuery(ctx, input.Query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+		return nil, fmt.Errorf(errGenQueryEmbedding, err)
 	}
 
 	results, err := tm.storage.HybridSearch(ctx, input.UserID, queryEmbedding, input.Entities, input.Limit)
@@ -676,7 +851,7 @@ func (tm *ToolManager) hybridSearchHandler(ctx context.Context, request *protoco
 func (tm *ToolManager) getStatsHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input GetStatsInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("failed to parse arguments: %w", err)
+		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
 	stats, err := tm.storage.GetStats(ctx, input.UserID)
