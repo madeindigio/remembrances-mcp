@@ -251,6 +251,19 @@ Choose the right tool for your data:
 		defer cancel()
 		_ = srv.Shutdown(shutdownCtx)
 
+		// Ensure the process actually exits even if srv.Shutdown blocks or
+		// third-party transports don't return promptly. Some test harnesses
+		// (like the stdio client) send SIGINT and expect the process to exit
+		// within a few seconds. Start a short timer that forces exit if
+		// shutdown does not complete in time.
+		go func() {
+			select {
+			case <-time.After(3 * time.Second):
+				slog.Info("Graceful shutdown timed out; forcing exit")
+				// Use Exit to ensure tests detect the process has terminated.
+				os.Exit(0)
+			}
+		}()
 		// If we started a SurrealDB process, try to stop it gracefully.
 		if startedProc != nil && startedProc.Process != nil {
 			slog.Info("shutting down started SurrealDB process")
