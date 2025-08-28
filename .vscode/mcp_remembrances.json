@@ -11,6 +11,6 @@
 				"--ollama-model",
 				"nomic-embed-text:latest",
 				"--knowledge-base",
-				"/www/MCP/remembrances-mcp/.ai/knowledge-base"
+				"/www/MCP/remembrances-mcp/.serena/memories"
 			]
 		},

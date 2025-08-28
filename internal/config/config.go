@@ -3,6 +3,7 @@ package config
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log/slog"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+
+	"github.com/madeindigio/remembrances-mcp/pkg/version"
 )
 
 // Config holds the configuration for the Remembrances-MCP server.
@@ -42,6 +45,15 @@ type Config struct {
 // Load loads the configuration from CLI flags and environment variables.
 func Load() (*Config, error) {
 	// Define flags
+	// To add a new CLI flag:
+	// 1) Register it here with pflag (or pflag.String/PBool/etc)
+	// 2) Call pflag.Parse() (done below)
+	// 3) Bind pflags to viper via v.BindPFlags(pflag.CommandLine)
+	// 4) Read the value from the returned Config or via v.GetXXX
+	// Note: flags that should cause the process to exit early (like --version)
+	// can be handled immediately after parsing, before continuing with config
+	// initialization.
+
 	pflag.Bool("sse", false, "Enable SSE transport")
 	pflag.String("sse-addr", ":3000", "Address to bind SSE transport (host:port), can also be set via GOMEM_SSE_ADDR")
 	pflag.Bool("http", false, "Enable HTTP JSON API transport")
@@ -61,7 +73,31 @@ func Load() (*Config, error) {
 	pflag.String("openai-url", "https://api.openai.com/v1", "OpenAI base URL")
 	pflag.String("openai-model", "text-embedding-3-large", "OpenAI model to use for embeddings")
 	pflag.String("log", "", "Path to the log file (logs will be written to both stdout and file)")
+	// Version flag is handled here so config package can manage early-exit flags
+	// Also register a version flag with the standard library's flag set so
+	// packages that use the stdlib flag package (or call flag.Parse)
+	// won't error when users pass --version/-v to this binary.
+	flag.Bool("version", false, "Print version and exit")
+
+	// Make any flags registered with the stdlib visible to pflag so a single
+	// unified parse will work for both kinds of flags.
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+
+	// Do not re-register the "version" flag with pflag here — it is
+	// registered via the standard library flag set above and copied into
+	// pflag by AddGoFlagSet. Registering it twice causes a "flag redefined"
+	// panic when parsing.
 	pflag.Parse()
+
+	// Handle early-exit flags (version) before binding to viper
+	if ver := pflag.Lookup("version"); ver != nil && ver.Value.String() == "true" {
+		if version.CommitHash != "" && version.CommitHash != "unknown" {
+			fmt.Printf("%s (%s)\n", version.Version, version.CommitHash)
+		} else {
+			fmt.Printf("%s\n", version.Version)
+		}
+		os.Exit(0)
+	}
 
 	// Bind flags to viper
 	v := viper.New()

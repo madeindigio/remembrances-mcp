@@ -33,6 +33,24 @@
 				"/www/MCP/remembrances-mcp/"
 			]
 		},
+		"remembrances": {
+			"type": "stdio",
+			"command": "/www/MCP/remembrances-mcp/dist/remembrances-mcp",
+			"args": [
+				"--log",
+				"/www/MCP/remembrances-mcp/remembrances.log",
+				"--surrealdb-url",
+				"ws://localhost:8000",
+				"--ollama-url",
+				"http://localhost:11434",
+				"--ollama-model",
+				"nomic-embed-text:latest",
+				"--knowledge-base",
+				"/www/MCP/remembrances-mcp/.serena/memories",
+				"--surrealdb-start-cmd",
+				"surreal start --user root --pass root surrealkv:///www/MCP/remembrances-mcp/surreal_data"
+			]
+		},
 		"bravesearch": {
 			"url": "http://mcplink.madeindigio.com/sse?s=https%3A%2F%2Fgithub.com%2Fautomation-ai-labs%2Fmcp-link%2Fraw%2Frefs%2Fheads%2Fmain%2Fexamples%2Fbrave.yaml&u=https%3A%2F%2Fapi.search.brave.com%2Fres%2Fv1&h=%7B%22X-Subscription-Token%22%3A%22BSAfPg0fhEKKX5sV-Tc2XCVD-qEfyI-%22%7D&f=%2B%2F**",
 			"type": "http"

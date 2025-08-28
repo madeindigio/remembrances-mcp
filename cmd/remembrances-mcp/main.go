@@ -32,13 +32,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Quick version print and exit
-	for _, a := range os.Args[1:] {
-		if a == "--version" || a == "-v" {
-			fmt.Printf("%s\n", version.Version)
-			return
-		}
-	}
+	// version flag is handled by config.Load() which may exit early
 
 	// Setup logging
 	if err := cfg.SetupLogging(); err != nil {
