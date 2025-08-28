@@ -6,7 +6,7 @@ started with --sse.
 Behavior:
 - Starts the binary with --sse (if --start provided)
 - Connects to the SSE endpoint (/sse) and reads the initial `endpoint` event
-  which contains the message endpoint (e.g. /message?sessionID=...)
+    which contains the message endpoint (e.g. /message?sessionID=...)
 - Posts JSON-RPC requests (initialize, tools/list, tools/call) to the message endpoint
 - Reads responses arriving as SSE `message` events
 
@@ -68,20 +68,37 @@ def wait_for_endpoint(sse_url, timeout=15):
     raise TimeoutError("Timed out waiting for endpoint event on SSE stream")
 
 
-def post_message(url, payload):
+def post_message(url, payload, timeout_seconds=10):
     headers = {"Content-Type": "application/json"}
     # Try several times in case the session is not fully established yet
-    max_attempts = 5
+    max_attempts = 10
     r = None
     for attempt in range(max_attempts):
-        r = requests.post(url, data=json.dumps(payload), headers=headers)
-        if r.status_code in (200, 202):
-            return r
-        # If server reports session closed, wait with linear backoff and retry
-        if r.status_code == 400 and "session closed" in (r.text or ""):
-            time.sleep(0.25 * (attempt + 1))
+        try:
+            print(f"POST attempt {attempt + 1}/{max_attempts} to {url}")
+            r = requests.post(url, data=json.dumps(payload),
+                              headers=headers, timeout=timeout_seconds)
+            print(f"POST response: {r.status_code} {r.reason}")
+            if r.text:
+                print(f"Response body: {r.text[:200]}...")
+            if r.status_code in (200, 202):
+                return r
+            # If server reports session closed, wait with linear backoff and retry
+            if r.status_code == 400 and "session closed" in (r.text or ""):
+                # slightly longer backoff to allow server to rebind session
+                wait_time = 0.5 * (attempt + 1)
+                print(f"Session closed, waiting {wait_time}s before retry...")
+                time.sleep(wait_time)
+                continue
+            print(f"Unexpected response, failing immediately")
+            raise RuntimeError(f"POST failed: {r.status_code} {r.text}")
+        except requests.exceptions.RequestException as e:
+            print(f"Request exception: {e}")
+            if attempt == max_attempts - 1:
+                raise RuntimeError(
+                    f"POST failed with exception after retries: {e}")
+            time.sleep(0.5 * (attempt + 1))
             continue
-        raise RuntimeError(f"POST failed: {r.status_code} {r.text}")
     # Final attempt failed
     raise RuntimeError(f"POST failed after retries: {r.status_code} {r.text}")
 
@@ -134,14 +151,14 @@ def main():
     for attempt in range(attempts):
         try:
             # Wait for endpoint event which provides message endpoint including sessionID
-            endpoint, sse_resp = wait_for_endpoint(sse_url, timeout=20)
-            print("Received endpoint:", endpoint)
+            message_endpoint, sse_resp = wait_for_endpoint(sse_url, timeout=20)
+            print("Received message endpoint:", message_endpoint)
 
             # The endpoint may be relative (e.g. /message?sessionID=...), make it absolute
-            if endpoint.startswith("/"):
-                message_url = f"http://{args.addr}{endpoint}"
+            if message_endpoint.startswith("/"):
+                message_url = f"http://{args.addr}{message_endpoint}"
             else:
-                message_url = endpoint
+                message_url = message_endpoint
 
             print("Message endpoint ->", message_url)
 
@@ -156,7 +173,12 @@ def main():
                 sse_resp, stop_event, responses), daemon=True)
             listener.start()
 
+            # Give more time for the SSE session to fully establish before posting
+            print("Waiting for SSE session to fully establish...")
+            time.sleep(2.0)
+
             # Send initialize
+            print("Sending initialize request...")
             init_req = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
                 "clientInfo": {"name": "mcp-sse-py", "version": "0.1"}, "protocolVersion": "2025-03-26"}}
             post_message(message_url, init_req)

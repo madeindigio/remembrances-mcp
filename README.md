@@ -8,7 +8,7 @@ Remembrances-MCP is a Go-based MCP server that provides long-term memory capabil
 - SurrealDB support (embedded or external)
 - Knowledge base management with Markdown files
 - Embedding generation via Ollama (local) or OpenAI API
-- REST API and SSE transport options
+- Multiple transport options: stdio (default), SSE, and HTTP JSON API
 
 ## Usage
 
@@ -21,7 +21,9 @@ go run ./cmd/remembrances-mcp/main.go [flags]
 ### CLI Flags
 
 - `--sse` (default: false): Enable SSE transport
-- `--sse-addr` (default: :4001): Address to bind SSE transport (host:port). Can also be set via `GOMEM_SSE_ADDR`.
+- `--sse-addr` (default: :3000): Address to bind SSE transport (host:port). Can also be set via `GOMEM_SSE_ADDR`.
+- `--http` (default: false): Enable HTTP JSON API transport
+- `--http-addr` (default: :8080): Address to bind HTTP transport (host:port). Can also be set via `GOMEM_HTTP_ADDR`.
 - `--rest-api-serve`: Enable REST API server
 - `--knowledge-base`: Path to knowledge base directory
 - `--db-path`: Path to embedded SurrealDB database (default: ./remembrances.db)
@@ -43,7 +45,9 @@ go run ./cmd/remembrances-mcp/main.go [flags]
 All flags can be set via environment variables prefixed with `GOMEM_` and dashes replaced by underscores. For example:
 
 - `GOMEM_SSE`
-- `GOMEM_SSE_ADDR` (e.g. `:4001` or `0.0.0.0:4001`)
+- `GOMEM_SSE_ADDR` (e.g. `:3000` or `0.0.0.0:3000`)
+- `GOMEM_HTTP`
+- `GOMEM_HTTP_ADDR` (e.g. `:8080` or `0.0.0.0:8080`)
 - `GOMEM_REST_API_SERVE`
 - `GOMEM_KNOWLEDGE_BASE`
 - `GOMEM_DB_PATH`
@@ -69,10 +73,44 @@ export GOMEM_SURREALDB_START_CMD="surreal start --user root --pass root surrealk
 go run ./cmd/remembrances-mcp/main.go --knowledge-base ./kb
 
 # Start SSE transport on a custom address via CLI flag
-go run ./cmd/remembrances-mcp/main.go --sse --sse-addr=":4001"
+go run ./cmd/remembrances-mcp/main.go --sse --sse-addr=":3000"
 
 # Or via environment variable
-GOMEM_SSE=true GOMEM_SSE_ADDR=":4001" go run ./cmd/remembrances-mcp/main.go --sse
+GOMEM_SSE=true GOMEM_SSE_ADDR=":3000" go run ./cmd/remembrances-mcp/main.go --sse
+
+# Start HTTP JSON API transport
+go run ./cmd/remembrances-mcp/main.go --http --http-addr=":8080"
+
+# Or via environment variable
+GOMEM_HTTP=true GOMEM_HTTP_ADDR=":8080" go run ./cmd/remembrances-mcp/main.go
+```
+
+### Transport Options
+
+The server supports three transport modes:
+
+1. **stdio (default)**: Standard input/output for MCP protocol communication
+2. **SSE**: Server-Sent Events for web-based clients 
+3. **HTTP**: Simple HTTP JSON API for direct REST-style access
+
+#### HTTP Transport Endpoints
+
+When using `--http`, the server exposes these endpoints:
+
+- `GET /health` - Health check endpoint
+- `GET /mcp/tools` - List available MCP tools
+- `POST /mcp/tools/call` - Call an MCP tool
+
+Example HTTP usage:
+
+```bash
+# List available tools
+curl http://localhost:8080/mcp/tools
+
+# Call a tool
+curl -X POST http://localhost:8080/mcp/tools/call \
+  -H "Content-Type: application/json" \
+  -d '{"name": "remembrance_save_fact", "arguments": {"key": "test", "value": "example"}}'
 ```
 
 Behavior: when the program starts it will attempt to connect to SurrealDB. If the connection fails and a start command was provided, the program will spawn the provided command (using `/bin/sh -c "<cmd>"`), stream its stdout/stderr to the running process, and poll the database connection for up to 30 seconds with exponential backoff. If the database becomes available the server continues startup. If starting the command fails or the database remains unreachable after the timeout, the program logs a descriptive error and exits.

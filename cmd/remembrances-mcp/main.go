@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 
 	"remembrances-mcp/internal/config"
 	"remembrances-mcp/internal/storage"
+	"remembrances-mcp/internal/transport"
 	"remembrances-mcp/pkg/embedder"
 	"remembrances-mcp/pkg/mcp_tools"
 
@@ -39,9 +41,26 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Select transport: stdio (default) or SSE when --sse is passed or env set
+	// Select transport: stdio (default), SSE when --sse is passed, or HTTP when --http is passed
 	var t mcptransport.ServerTransport
-	if cfg.SSE {
+	var httpTransport *transport.HTTPTransport
+
+	if cfg.HTTP {
+		// HTTP JSON API transport
+		addr := cfg.HTTPAddr
+		// allow env var to override if set
+		if env := os.Getenv("GOMEM_HTTP_ADDR"); env != "" {
+			addr = env
+		}
+		if addr == "" {
+			addr = ":8080"
+		}
+		slog.Info("HTTP transport enabled", "address", addr)
+
+		// We'll create the HTTP transport after the MCP server is created
+		// because it needs access to the server for routing
+		t = mcptransport.NewStdioServerTransport() // temporary, will be replaced
+	} else if cfg.SSE {
 		addr := cfg.SSEAddr
 		// allow env var to override if set for backwards compatibility
 		if env := os.Getenv("GOMEM_SSE_ADDR"); env != "" {
@@ -241,6 +260,23 @@ Choose the right tool for your data:
 		os.Exit(1)
 	}
 
+	// If HTTP transport is enabled, set it up now that the server is configured
+	if cfg.HTTP {
+		addr := cfg.HTTPAddr
+		if env := os.Getenv("GOMEM_HTTP_ADDR"); env != "" {
+			addr = env
+		}
+		if addr == "" {
+			addr = ":8080"
+		}
+
+		httpTransport, err = transport.CreateHTTPServerTransport(addr, srv)
+		if err != nil {
+			slog.Error("failed to create HTTP transport", "error", err)
+			os.Exit(1)
+		}
+	}
+
 	slog.Info("Remembrances-MCP server initialized successfully")
 
 	// Graceful shutdown
@@ -249,6 +285,12 @@ Choose the right tool for your data:
 		slog.Info("Shutdown signal received, starting graceful shutdown")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+
+		// Shutdown HTTP transport if running
+		if httpTransport != nil {
+			_ = httpTransport.Shutdown(shutdownCtx)
+		}
+
 		_ = srv.Shutdown(shutdownCtx)
 
 		// Ensure the process actually exits even if srv.Shutdown blocks or
@@ -288,8 +330,17 @@ Choose the right tool for your data:
 
 	// Run the server (blocking)
 	slog.Info("Starting Remembrances-MCP server")
-	if err := srv.Run(); err != nil {
-		slog.Error("server run error", "error", err)
-		os.Exit(1)
+	if cfg.HTTP {
+		// Run HTTP transport
+		if err := httpTransport.Start(); err != nil && err != http.ErrServerClosed {
+			slog.Error("HTTP transport server error", "error", err)
+			os.Exit(1)
+		}
+	} else {
+		// Run MCP server with stdio or SSE transport
+		if err := srv.Run(); err != nil {
+			slog.Error("server run error", "error", err)
+			os.Exit(1)
+		}
 	}
 }

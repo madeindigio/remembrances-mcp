@@ -17,6 +17,8 @@ import (
 type Config struct {
 	SSE                bool   `mapstructure:"sse"`
 	SSEAddr            string `mapstructure:"sse-addr"`
+	HTTP               bool   `mapstructure:"http"`
+	HTTPAddr           string `mapstructure:"http-addr"`
 	RestAPIServe       bool   `mapstructure:"rest-api-serve"`
 	KnowledgeBase      string `mapstructure:"knowledge-base"`
 	DbPath             string `mapstructure:"db-path"`
@@ -42,6 +44,8 @@ func Load() (*Config, error) {
 	// Define flags
 	pflag.Bool("sse", false, "Enable SSE transport")
 	pflag.String("sse-addr", ":3000", "Address to bind SSE transport (host:port), can also be set via GOMEM_SSE_ADDR")
+	pflag.Bool("http", false, "Enable HTTP JSON API transport")
+	pflag.String("http-addr", ":8080", "Address to bind HTTP transport (host:port), can also be set via GOMEM_HTTP_ADDR")
 	pflag.Bool("rest-api-serve", false, "Enable REST API server")
 	pflag.String("knowledge-base", "", "Path to the knowledge base directory")
 	pflag.String("db-path", "./remembrances.db", "Path to the embedded SurrealDB database")
