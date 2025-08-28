@@ -34,7 +34,7 @@ builds:
       - goos: windows
         goarch: "arm64"
 
-dist: ./build/outputs/dist
+dist: ./dist/outputs/dist
 
 upx:
   - enabled: true
