@@ -12,15 +12,16 @@ import (
 	"syscall"
 	"time"
 
-	"remembrances-mcp/internal/config"
-	"remembrances-mcp/internal/storage"
-	"remembrances-mcp/internal/transport"
-	"remembrances-mcp/pkg/embedder"
-	"remembrances-mcp/pkg/mcp_tools"
+	"github.com/madeindigio/remembrances-mcp/internal/config"
+	"github.com/madeindigio/remembrances-mcp/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/internal/transport"
+	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/pkg/mcp_tools"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
 	mcptransport "github.com/ThinkInAIXYZ/go-mcp/transport"
+	"github.com/madeindigio/remembrances-mcp/pkg/version"
 )
 
 func main() {
@@ -29,6 +30,14 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Quick version print and exit
+	for _, a := range os.Args[1:] {
+		if a == "--version" || a == "-v" {
+			fmt.Printf("%s\n", version.Version)
+			return
+		}
 	}
 
 	// Setup logging
@@ -85,7 +94,7 @@ func main() {
 		t,
 		mcpserver.WithServerInfo(protocol.Implementation{
 			Name:    "remembrances-mcp",
-			Version: "0.1.0",
+			Version: version.Version,
 		}),
 		mcpserver.WithInstructions(`Welcome to Remembrances-MCP Server!
 

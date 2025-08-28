@@ -1,4 +1,4 @@
-module remembrances-mcp
+module github.com/madeindigio/remembrances-mcp
 
 go 1.23.4
 

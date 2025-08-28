@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"remembrances-mcp/internal/storage"
-	"remembrances-mcp/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"

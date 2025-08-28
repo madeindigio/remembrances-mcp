@@ -170,3 +170,93 @@ interactive: true
 ```bash
 ./tests/run_all.sh
 ```
+
+### tag
+
+Deploys a new tag for the repo.
+
+Specify major/minor/patch with VERSION
+
+Env: PRERELEASE=0, VERSION=minor, FORCE_VERSION=0
+Inputs: VERSION, PRERELEASE, FORCE_VERSION
+
+
+```
+# https://github.com/unegma/bash-functions/blob/main/update.sh
+
+CURRENT_VERSION=`git describe --abbrev=0 --tags 2>/dev/null`
+CURRENT_VERSION_PARTS=(${CURRENT_VERSION//./ })
+VNUM1=${CURRENT_VERSION_PARTS[0]}
+# remove v
+VNUM1=${VNUM1:1}
+VNUM2=${CURRENT_VERSION_PARTS[1]}
+VNUM3=${CURRENT_VERSION_PARTS[2]}
+
+if [[ $VERSION == 'major' ]]
+then
+  VNUM1=$((VNUM1+1))
+  VNUM2=0
+  VNUM3=0
+elif [[ $VERSION == 'minor' ]]
+then
+  VNUM2=$((VNUM2+1))
+  VNUM3=0
+elif [[ $VERSION == 'patch' ]]
+then
+  VNUM3=$((VNUM3+1))
+else
+  echo "Invalid version"
+  exit 1
+fi
+
+NEW_TAG="v$VNUM1.$VNUM2.$VNUM3"
+
+# if command convco is available, use it to check the version
+if command -v convco &> /dev/null
+then
+  # if the version is a prerelease, add the prerelease tag
+  if [[ $PRERELEASE == '1' ]]
+  then
+    NEW_TAG=v$(convco version -b --prerelease)
+  else
+    NEW_TAG=v$(convco version -b)
+  fi
+fi
+
+# if $FORCE_VERSION is different to 0 then use it as the version
+if [[ $FORCE_VERSION != '0' ]]
+then
+  NEW_TAG=v$FORCE_VERSION
+fi
+
+echo Adding git tag with version ${NEW_TAG}
+git tag ${NEW_TAG}
+git push origin ${NEW_TAG}
+```
+
+### changelog
+
+Generate a changelog for the repo.
+
+```
+convco changelog > CHANGELOG.md
+git add CHANGELOG.md
+git commit -m "Update changelog"
+git push
+```
+
+### release
+
+Releasing a new version into the repo.
+
+```
+goreleaser release --clean --skip sign
+```
+
+### release-snapshot
+
+Releasing a new snapshot version into the repo.
+
+```
+goreleaser release --snapshot --skip sign --clean
+```
