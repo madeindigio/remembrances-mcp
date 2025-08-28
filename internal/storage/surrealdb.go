@@ -18,6 +18,9 @@ type SurrealDBStorage struct {
 	config *ConnectionConfig
 }
 
+// Default MTREE embedding dimension used in schema. Keep in sync with schema statements.
+const defaultMtreeDim = 768
+
 // SchemaElement represents a schema element for migrations
 type SchemaElement struct {
 	Type      string // "table", "field", "index"
@@ -124,7 +127,7 @@ func (s *SurrealDBStorage) Ping(ctx context.Context) error {
 	}
 
 	// Simple query to test connection
-	_, err := surrealdb.Query[map[string]interface{}](s.db, "SELECT 1", nil)
+	_, err := surrealdb.Query[[]map[string]interface{}](s.db, "SELECT 1", nil)
 	return err
 }
 
@@ -171,7 +174,7 @@ func (s *SurrealDBStorage) ensureSchemaVersionTable(ctx context.Context) error {
 
 	if !exists {
 		// Create the schema version table
-		_, err := surrealdb.Query[map[string]interface{}](s.db, `
+		_, err := surrealdb.Query[[]map[string]interface{}](s.db, `
 			DEFINE TABLE schema_version SCHEMAFULL;
 			DEFINE FIELD version ON schema_version TYPE int;
 			DEFINE FIELD applied_at ON schema_version TYPE datetime VALUE time::now();
@@ -355,7 +358,7 @@ func (s *SurrealDBStorage) applyMigrationV1(ctx context.Context) error {
 
 		if !exists {
 			log.Printf("Creating %s: %s", element.Type, element.Statement)
-			_, err := surrealdb.Query[map[string]interface{}](s.db, element.Statement, nil)
+			_, err := surrealdb.Query[[]map[string]interface{}](s.db, element.Statement, nil)
 			if err != nil {
 				// Log warning but don't fail for "already exists" type errors
 				if s.isAlreadyExistsError(err) {
@@ -392,8 +395,8 @@ func (s *SurrealDBStorage) checkSchemaElementExists(ctx context.Context, element
 
 // checkTableExists checks if a table exists
 func (s *SurrealDBStorage) checkTableExists(ctx context.Context, tableName string) (bool, error) {
-	// The INFO FOR DB; command returns a single result as a map. Use map-based unmarshalling.
-	result, err := surrealdb.Query[map[string]interface{}](s.db, `INFO FOR DB;`, nil)
+	// The INFO FOR DB; command returns a QueryResult array. Use array-based unmarshalling.
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, `INFO FOR DB;`, nil)
 	if err != nil {
 		return false, err
 	}
@@ -409,8 +412,15 @@ func (s *SurrealDBStorage) checkTableExists(ctx context.Context, tableName strin
 	}
 
 	resMap := qr.Result
+	if len(resMap) == 0 {
+		return false, nil
+	}
+
+	// Extract the result data from the first element
+	resultData := resMap[0]
+
 	// Expect a "tables" key in the returned map
-	tablesRaw, ok := resMap["tables"]
+	tablesRaw, ok := resultData["tables"]
 	if !ok || tablesRaw == nil {
 		return false, nil
 	}
@@ -427,7 +437,7 @@ func (s *SurrealDBStorage) checkTableExists(ctx context.Context, tableName strin
 // checkFieldExists checks if a field exists on a table
 func (s *SurrealDBStorage) checkFieldExists(ctx context.Context, tableName, fieldName string) (bool, error) {
 	query := fmt.Sprintf("INFO FOR TABLE %s;", tableName)
-	result, err := surrealdb.Query[map[string]interface{}](s.db, query, nil)
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
 	if err != nil {
 		return false, err
 	}
@@ -442,7 +452,14 @@ func (s *SurrealDBStorage) checkFieldExists(ctx context.Context, tableName, fiel
 	}
 
 	resMap := qr.Result
-	fieldsRaw, ok := resMap["fields"]
+	if len(resMap) == 0 {
+		return false, nil
+	}
+
+	// Extract the result data from the first element
+	resultData := resMap[0]
+
+	fieldsRaw, ok := resultData["fields"]
 	if !ok || fieldsRaw == nil {
 		return false, nil
 	}
@@ -459,7 +476,7 @@ func (s *SurrealDBStorage) checkFieldExists(ctx context.Context, tableName, fiel
 // checkIndexExists checks if an index exists on a table
 func (s *SurrealDBStorage) checkIndexExists(ctx context.Context, tableName, indexName string) (bool, error) {
 	query := fmt.Sprintf("INFO FOR TABLE %s;", tableName)
-	result, err := surrealdb.Query[map[string]interface{}](s.db, query, nil)
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
 	if err != nil {
 		return false, err
 	}
@@ -474,7 +491,14 @@ func (s *SurrealDBStorage) checkIndexExists(ctx context.Context, tableName, inde
 	}
 
 	resMap := qr.Result
-	indexesRaw, ok := resMap["indexes"]
+	if len(resMap) == 0 {
+		return false, nil
+	}
+
+	// Extract the result data from the first element
+	resultData := resMap[0]
+
+	indexesRaw, ok := resultData["indexes"]
 	if !ok || indexesRaw == nil {
 		return false, nil
 	}
@@ -636,22 +660,47 @@ func (s *SurrealDBStorage) ListFacts(ctx context.Context, userID string) (map[st
 
 // IndexVector stores a vector embedding with content and metadata
 func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content string, embedding []float32, metadata map[string]interface{}) (string, error) {
-	data := map[string]interface{}{
+	// SurrealDB schema defines `metadata` as an object. Ensure we never send NULL.
+	if metadata == nil {
+		metadata = map[string]interface{}{}
+	}
+
+	// Normalize embedding length to the MTREE dimension (pad with zeros or truncate)
+	if embedding == nil {
+		embedding = make([]float32, defaultMtreeDim)
+	} else if len(embedding) != defaultMtreeDim {
+		norm := make([]float32, defaultMtreeDim)
+		copy(norm, embedding)
+		embedding = norm
+	}
+
+	// Convert []float32 to []float64 for serialization compatibility
+	emb64 := make([]float64, len(embedding))
+	for i, v := range embedding {
+		emb64[i] = float64(v)
+	}
+
+	// Use Query with INSERT instead of Create to avoid bincode serialization issues
+	query := `INSERT INTO vector_memories (user_id, content, embedding, metadata) VALUES ($user_id, $content, $embedding, $metadata) RETURN id`
+	params := map[string]interface{}{
 		"user_id":   userID,
 		"content":   content,
-		"embedding": embedding,
+		"embedding": emb64,
 		"metadata":  metadata,
 	}
 
-	result, err := surrealdb.Create[map[string]interface{}](s.db, "vector_memories", data)
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
 		return "", fmt.Errorf("failed to index vector: %w", err)
 	}
 
-	// Extract ID from result
-	if result != nil {
-		if id, ok := (*result)["id"].(string); ok {
-			return id, nil
+	// Extract ID from query result
+	if result != nil && len(*result) > 0 {
+		qr := (*result)[0]
+		if qr.Status == "OK" && qr.Result != nil && len(qr.Result) > 0 {
+			if id, ok := qr.Result[0]["id"].(string); ok && id != "" {
+				return id, nil
+			}
 		}
 	}
 
@@ -683,9 +732,26 @@ func (s *SurrealDBStorage) SearchSimilar(ctx context.Context, userID string, que
 
 // UpdateVector updates an existing vector memory
 func (s *SurrealDBStorage) UpdateVector(ctx context.Context, id, userID, content string, embedding []float32, metadata map[string]interface{}) error {
+	if metadata == nil {
+		metadata = map[string]interface{}{}
+	}
+
+	if embedding == nil {
+		embedding = make([]float32, defaultMtreeDim)
+	} else if len(embedding) != defaultMtreeDim {
+		norm := make([]float32, defaultMtreeDim)
+		copy(norm, embedding)
+		embedding = norm
+	}
+
+	emb64 := make([]float64, len(embedding))
+	for i, v := range embedding {
+		emb64[i] = float64(v)
+	}
+
 	data := map[string]interface{}{
 		"content":   content,
-		"embedding": embedding,
+		"embedding": emb64,
 		"metadata":  metadata,
 	}
 
@@ -709,6 +775,10 @@ func (s *SurrealDBStorage) DeleteVector(ctx context.Context, id, userID string) 
 
 // CreateEntity creates a new entity in the graph
 func (s *SurrealDBStorage) CreateEntity(ctx context.Context, entityType, name string, properties map[string]interface{}) (string, error) {
+	if properties == nil {
+		properties = map[string]interface{}{}
+	}
+
 	data := map[string]interface{}{
 		"type":       entityType,
 		"name":       name,
@@ -746,7 +816,7 @@ func (s *SurrealDBStorage) CreateRelationship(ctx context.Context, fromEntity, t
 		"content": content,
 	}
 
-	_, err := surrealdb.Query[map[string]interface{}](s.db, query, params)
+	_, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
 		return fmt.Errorf("failed to create relationship: %w", err)
 	}
@@ -814,10 +884,28 @@ func (s *SurrealDBStorage) DeleteEntity(ctx context.Context, entityID string) er
 
 // SaveDocument saves a knowledge base document
 func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content string, embedding []float32, metadata map[string]interface{}) error {
+	// Ensure metadata is an object and convert embedding
+	if metadata == nil {
+		metadata = map[string]interface{}{}
+	}
+
+	if embedding == nil {
+		embedding = make([]float32, defaultMtreeDim)
+	} else if len(embedding) != defaultMtreeDim {
+		norm := make([]float32, defaultMtreeDim)
+		copy(norm, embedding)
+		embedding = norm
+	}
+
+	emb64 := make([]float64, len(embedding))
+	for i, v := range embedding {
+		emb64[i] = float64(v)
+	}
+
 	data := map[string]interface{}{
 		"file_path": filePath,
 		"content":   content,
-		"embedding": embedding,
+		"embedding": emb64,
 		"metadata":  metadata,
 	}
 
