@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased (2025-08-28)
+## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.28.10...b2b695290eb170c3f7aec4b03a67a54f20193c8c) (2025-08-28)
 
-### Features
+### v0.28.10 (2025-08-28)
+
+#### Features
 
 * Add goreleaser and update version automatically
 ([36fedd1](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/36fedd18afa08759a9ee2995755164e4ed9bcbb3))
@@ -29,7 +31,7 @@ copilot agent instructions, add MCP configuration for copilot
 * initial project
 ([1266a97](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/1266a975e51501b6f57eb2402bd325cede94b595))
 
-### Fixes
+#### Fixes
 
 * working stdio tests
 ([99b3a24](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/99b3a24ebec482db5415565fe255edb95198e0c7))
