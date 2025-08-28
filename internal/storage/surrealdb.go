@@ -666,41 +666,34 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 	}
 
 	// Normalize embedding length to the MTREE dimension (pad with zeros or truncate)
-	if embedding == nil {
-		embedding = make([]float32, defaultMtreeDim)
-	} else if len(embedding) != defaultMtreeDim {
-		norm := make([]float32, defaultMtreeDim)
-		copy(norm, embedding)
-		embedding = norm
-	}
+	// Temporarily disable normalization to test if this causes the bincode error
+	// if embedding == nil {
+	// 	embedding = make([]float32, defaultMtreeDim)
+	// } else if len(embedding) != defaultMtreeDim {
+	// 	norm := make([]float32, defaultMtreeDim)
+	// 	copy(norm, embedding)
+	// 	embedding = norm
+	// }
 
-	// Convert []float32 to []float64 for serialization compatibility
-	emb64 := make([]float64, len(embedding))
-	for i, v := range embedding {
-		emb64[i] = float64(v)
-	}
+	// Use a very simple, small embedding array for testing
+	embeddingArray := []float32{0.1, 0.2, 0.3}
 
-	// Use Query with INSERT instead of Create to avoid bincode serialization issues
-	query := `INSERT INTO vector_memories (user_id, content, embedding, metadata) VALUES ($user_id, $content, $embedding, $metadata) RETURN id`
-	params := map[string]interface{}{
+	data := map[string]interface{}{
 		"user_id":   userID,
 		"content":   content,
-		"embedding": emb64,
+		"embedding": embeddingArray,
 		"metadata":  metadata,
 	}
 
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := surrealdb.Create[map[string]interface{}](s.db, "vector_memories", data)
 	if err != nil {
 		return "", fmt.Errorf("failed to index vector: %w", err)
 	}
 
-	// Extract ID from query result
-	if result != nil && len(*result) > 0 {
-		qr := (*result)[0]
-		if qr.Status == "OK" && qr.Result != nil && len(qr.Result) > 0 {
-			if id, ok := qr.Result[0]["id"].(string); ok && id != "" {
-				return id, nil
-			}
+	// Extract ID from result
+	if result != nil {
+		if id, ok := (*result)["id"].(string); ok && id != "" {
+			return id, nil
 		}
 	}
 
