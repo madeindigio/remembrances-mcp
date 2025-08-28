@@ -666,22 +666,24 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 	}
 
 	// Normalize embedding length to the MTREE dimension (pad with zeros or truncate)
-	// Temporarily disable normalization to test if this causes the bincode error
-	// if embedding == nil {
-	// 	embedding = make([]float32, defaultMtreeDim)
-	// } else if len(embedding) != defaultMtreeDim {
-	// 	norm := make([]float32, defaultMtreeDim)
-	// 	copy(norm, embedding)
-	// 	embedding = norm
-	// }
+	if embedding == nil {
+		embedding = make([]float32, defaultMtreeDim)
+	} else if len(embedding) != defaultMtreeDim {
+		norm := make([]float32, defaultMtreeDim)
+		copy(norm, embedding)
+		embedding = norm
+	}
 
-	// Use a very simple, small embedding array for testing
-	embeddingArray := []float32{0.1, 0.2, 0.3}
+	// Convert embedding to []float64 as other methods do (SurrealDB JSON numeric consistency)
+	emb64 := make([]float64, len(embedding))
+	for i, v := range embedding {
+		emb64[i] = float64(v)
+	}
 
 	data := map[string]interface{}{
 		"user_id":   userID,
 		"content":   content,
-		"embedding": embeddingArray,
+		"embedding": emb64,
 		"metadata":  metadata,
 	}
 
@@ -1228,4 +1230,22 @@ func getTime(m map[string]interface{}, key string) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+// convertEmbeddingToFloat64 normalizes an input []float32 embedding to defaultMtreeDim length
+// (padding with zeros or truncating) and returns a []float64 representation suitable for JSON/CBOR.
+func convertEmbeddingToFloat64(embedding []float32) []float64 {
+	if embedding == nil {
+		embedding = make([]float32, defaultMtreeDim)
+	} else if len(embedding) != defaultMtreeDim {
+		norm := make([]float32, defaultMtreeDim)
+		copy(norm, embedding)
+		embedding = norm
+	}
+
+	emb64 := make([]float64, len(embedding))
+	for i, v := range embedding {
+		emb64[i] = float64(v)
+	}
+	return emb64
 }
