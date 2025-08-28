@@ -53,3 +53,4 @@ surreal_data/*
 # binaries
 remembrances-mcp
 dist/*
+build/*
