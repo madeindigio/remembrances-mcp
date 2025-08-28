@@ -26,7 +26,7 @@ Important project-specific details
 
 - SurrealDB usage
 
-  - The project supports embedded (rocksdb://) and remote SurrealDB. See `internal/storage/surrealdb.go` for Connect/Use patterns.
+  - The project supports embedded (surrealkv://) and remote SurrealDB. See `internal/storage/surrealdb.go` for Connect/Use patterns.
   - Schema initialization (tables, fields, MTREE indexes) is performed in `InitializeSchema` and assumes embedding dimension 768 for MTREE indexes (`DEFINE INDEX ... MTREE DIMENSION 768 DIST COSINE`).
   - Default namespace/database: `test` unless overridden by flags or `GOMEM_SURREALDB_NAMESPACE` / `GOMEM_SURREALDB_DATABASE`.
 
@@ -54,12 +54,10 @@ Files and locations to inspect when making changes
 - Update storage behavior/schema: `internal/storage/surrealdb.go` and `internal/storage/storage.go`
 - Change CLI/flags/logging: `internal/config/config.go` and `cmd/.../main.go`
 - Embedder contract and wiring: `pkg/embedder/embedder.go` and embedder factory code called from `main.go`.
-- Project intent and constraints: `.ai/initial_prompt.md` and `.ai/custom-instructions.md` (useful context for embedding/KB features).
 
 Quick checks for PRs
 
 - Ensure new tools are registered in `RegisterTools` and follow existing input/handler patterns.
-- If modifying SurrealDB schema or MTREE params, update comments and test locally with embedded DB (set `GOMEM_DB_PATH`) before pushing.
-- Preserve the `GOMEM_` env mapping for CLI flags unless intentionally changing the UX.
+- If modifying SurrealDB schema or MTREE params, review in memories the schema migration implementation.
 
 If something is unclear or you need examples for a specific change (new tool, storage migration, embedder wiring), ask for the exact file to modify and I will add a focused example patch.

@@ -1,0 +1,42 @@
+{
+	"servers": {
+		"hyper-mcp": {
+			"type": "stdio",
+			"command": "hyper-mcp",
+			"args": [
+				"--config-file",
+				"/home/sevir/.config/hyper-mcp/kilo.json"
+			]
+		},
+		"mycommandmcp": {
+			"type": "stdio",
+			"command": "mycommandmcp",
+			"args": [
+				"--config",
+				"/home/sevir/.config/mc-mcp/optimized.yaml",
+				"--log-file",
+				"/www/MCP/MyCommandMCP/mycommandmcp/mcp.log"
+			]
+		},
+		"serena": {
+			"type": "stdio",
+			"command": "pkgx",
+			"args": [
+				"uvx",
+				"--from",
+				"git+https://github.com/oraios/serena",
+				"serena",
+				"start-mcp-server",
+				"--context",
+				"ide-assistant",
+				"--project",
+				"/www/MCP/remembrances-mcp/"
+			]
+		},
+		"bravesearch": {
+			"url": "http://mcplink.madeindigio.com/sse?s=https%3A%2F%2Fgithub.com%2Fautomation-ai-labs%2Fmcp-link%2Fraw%2Frefs%2Fheads%2Fmain%2Fexamples%2Fbrave.yaml&u=https%3A%2F%2Fapi.search.brave.com%2Fres%2Fv1&h=%7B%22X-Subscription-Token%22%3A%22BSAfPg0fhEKKX5sV-Tc2XCVD-qEfyI-%22%7D&f=%2B%2F**",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

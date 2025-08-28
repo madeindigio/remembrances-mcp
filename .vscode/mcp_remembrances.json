@@ -1,0 +1,16 @@
+"remembrances": {
+			"type": "stdio",
+			"command": "/www/MCP/remembrances-mcp/dist/remembrances-mcp",
+			"args": [
+				"--log",
+				"/www/MCP/remembrances-mcp/remembrances.log",
+				"--surrealdb-url",
+				"http://localhost:8000",
+				"--ollama-url",
+				"http://localhost:11434",
+				"--ollama-model",
+				"nomic-embed-text:latest",
+				"--knowledge-base",
+				"/www/MCP/remembrances-mcp/.ai/knowledge-base"
+			]
+		},

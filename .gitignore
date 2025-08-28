@@ -16,7 +16,6 @@ go.work
 /vendor/
 
 # IDE/editor files
-.vscode/
 .idea/
 *.swp
 *.swo
