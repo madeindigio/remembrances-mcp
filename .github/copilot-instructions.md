@@ -24,22 +24,43 @@ When you are testing the tools connected, check the errors of the remembrances t
 
 - Entry point: `cmd/remembrances-mcp/main.go` — sets up config, logging, transport (stdio or SSE), storage and registers MCP tools.
 - Configuration: `internal/config/config.go` — all CLI flags are defined here and map to environment variables prefixed with `GOMEM_` (dashes -> underscores).
-- Storage contract: `internal/storage/storage.go` defines `Storage`/`StorageWithStats` interfaces. Implementation lives in `internal/storage/surrealdb.go`.
-- Tool surface: `pkg/mcp_tools/tools.go` — all MCP tools are declared via `protocol.NewTool(...)` and registered in `ToolManager.RegisterTools`. Handlers accept `context` and a `*protocol.CallToolRequest` and usually `json.Unmarshal(request.RawArguments, &InputStruct{})`.
-- Embeddings: `pkg/embedder/embedder.go` defines the `Embedder` interface (EmbedDocuments, EmbedQuery, Dimension). Concrete embedder implementations are wired from config in `cmd/.../main.go` (Ollama or OpenAI via env/flags).
+
+### Storage Layer (Refactored into specialized files)
+
+- Storage contract: `internal/storage/storage.go` defines `Storage`/`StorageWithStats` interfaces
+- Core implementation: `internal/storage/surrealdb.go` (630 lines) — connection management, entity/graph ops, document ops, utilities
+- Schema management: `internal/storage/surrealdb_schema.go` (444 lines) — migrations, schema validation, table/field/index management
+- Key-value operations: `internal/storage/surrealdb_facts.go` (112 lines) — SaveFact, GetFact, UpdateFact, DeleteFact, ListFacts
+- Vector operations: `internal/storage/surrealdb_vectors.go` (127 lines) — IndexVector, SearchSimilar, UpdateVector, DeleteVector
+
+### MCP Tools Layer (Refactored into functional modules)
+
+- Core registry: `pkg/mcp_tools/tools.go` (135 lines) — tool registration and manager
+- Type definitions: `pkg/mcp_tools/types.go` (117 lines) — input/output structs for all tools
+- Fact tools: `pkg/mcp_tools/fact_tools.go` (173 lines) — key-value memory operations
+- Vector tools: `pkg/mcp_tools/vector_tools.go` (188 lines) — semantic search and RAG operations
+- Graph tools: `pkg/mcp_tools/graph_tools.go` (180 lines) — entity and relationship management
+- Knowledge base tools: `pkg/mcp_tools/kb_tools.go` (191 lines) — document search and management
+- Utility tools: `pkg/mcp_tools/misc_tools.go` (101 lines) — stats and hybrid search
+
+### Embeddings
+
+- Contract: `pkg/embedder/embedder.go` defines the `Embedder` interface (EmbedDocuments, EmbedQuery, Dimension)
+- Implementations: Concrete embedder implementations are wired from config in `cmd/.../main.go` (Ollama or OpenAI via env/flags)
 
 Important project-specific details
 
 - SurrealDB usage
 
   - The project supports embedded (surrealkv://) and remote SurrealDB. See `internal/storage/surrealdb.go` for Connect/Use patterns.
-  - Schema initialization (tables, fields, MTREE indexes) is performed in `InitializeSchema` and assumes embedding dimension 768 for MTREE indexes (`DEFINE INDEX ... MTREE DIMENSION 768 DIST COSINE`).
+  - Schema initialization (tables, fields, MTREE indexes) is performed in `internal/storage/surrealdb_schema.go` via `InitializeSchema` and assumes embedding dimension 768 for MTREE indexes (`DEFINE INDEX ... MTREE DIMENSION 768 DIST COSINE`).
   - Default namespace/database: `test` unless overridden by flags or `GOMEM_SURREALDB_NAMESPACE` / `GOMEM_SURREALDB_DATABASE`.
 
 - MCP tool patterns
-  - Tool names are prefixed by domain: e.g. `mem_...` for memory ops, `kb_...` for knowledge-base ops (see `pkg/mcp_tools/tools.go`).
+  - Tool names are prefixed by domain: e.g. `remembrance_...` for memory ops, `kb_...` for knowledge-base ops (see `pkg/mcp_tools/`).
+  - Tools are organized by function: fact operations in `fact_tools.go`, vector operations in `vector_tools.go`, graph operations in `graph_tools.go`, etc.
   - Handlers return `protocol.NewCallToolResult([]protocol.Content{...}, false)` and commonly include JSON-marshaled results for readability.
-  - When adding a new tool: add the Input struct, a `tool()` factory returning `protocol.NewTool(name, desc, Input{})`, and a handler with the `json.Unmarshal(request.RawArguments, &input)` pattern, then register it in `RegisterTools`.
+  - When adding a new tool: add the Input struct to `types.go`, create the tool factory and handler in the appropriate `*_tools.go` file, and register it in `tools.go`.
 
 Developer workflows & commands (verified from repo)
 
@@ -49,8 +70,8 @@ Developer workflows & commands (verified from repo)
 
 Files and locations to inspect when making changes
 
-- Add new MCP tools: `pkg/mcp_tools/tools.go`
-- Update storage behavior/schema: `internal/storage/surrealdb.go` and `internal/storage/storage.go`
+- Add new MCP tools: `pkg/mcp_tools/tools.go` for registration, appropriate `*_tools.go` file for implementation, `pkg/mcp_tools/types.go` for input/output types
+- Update storage behavior/schema: `internal/storage/surrealdb_schema.go` for schema changes, appropriate storage file (`surrealdb_facts.go`, `surrealdb_vectors.go`, etc.) for operations, `internal/storage/storage.go` for interface changes
 - Change CLI/flags/logging: `internal/config/config.go` and `cmd/.../main.go`
 - Embedder contract and wiring: `pkg/embedder/embedder.go` and embedder factory code called from `main.go`.
 
