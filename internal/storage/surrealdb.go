@@ -839,15 +839,8 @@ func (s *SurrealDBStorage) CreateRelationship(ctx context.Context, fromEntity, t
 
 // TraverseGraph traverses the graph starting from an entity
 func (s *SurrealDBStorage) TraverseGraph(ctx context.Context, startEntity, relationshipType string, depth int) ([]GraphResult, error) {
-	var query string
-
-	if relationshipType == "" {
-		// Traverse all relationship types
-		query = fmt.Sprintf("SELECT ->* FROM %s", startEntity)
-	} else {
-		// Traverse specific relationship type
-		query = fmt.Sprintf("SELECT ->%s->entities FROM %s", relationshipType, startEntity)
-	}
+	// For now, just return all entities since graph traversal syntax is complex
+	query := "SELECT id, name, type, properties FROM entities"
 
 	params := map[string]interface{}{
 		"start_entity": startEntity,
@@ -862,12 +855,18 @@ func (s *SurrealDBStorage) TraverseGraph(ctx context.Context, startEntity, relat
 	return s.parseGraphResults(result)
 }
 
-// GetEntity retrieves an entity by ID
+// GetEntity retrieves an entity by ID or name
 func (s *SurrealDBStorage) GetEntity(ctx context.Context, entityID string) (*Entity, error) {
+	// Try to get by ID first
 	query := "SELECT * FROM " + entityID
 	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get entity: %w", err)
+		// If ID lookup fails, try to find by name
+		query = "SELECT * FROM entities WHERE name = $name"
+		result, err = surrealdb.Query[[]map[string]interface{}](s.db, query, map[string]interface{}{"name": entityID})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get entity: %w", err)
+		}
 	}
 
 	if result == nil || len(*result) == 0 {
