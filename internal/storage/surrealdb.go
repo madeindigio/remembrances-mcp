@@ -156,28 +156,101 @@ func (s *SurrealDBStorage) CreateEntity(ctx context.Context, entityType, name st
 	return fmt.Errorf("failed to create entity")
 }
 
+// resolveEntityID resolves an entity name to its SurrealDB record ID
+func (s *SurrealDBStorage) resolveEntityID(ctx context.Context, entityNameOrID string) (string, error) {
+	// First, try if it's already a valid record ID by checking if it has the format table:id
+	if strings.Contains(entityNameOrID, ":") {
+		// Test if it's a valid record ID by querying it directly (same as GetEntity)
+		query := "SELECT * FROM " + entityNameOrID
+		result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
+		if err == nil && result != nil && len(*result) > 0 {
+			queryResult := (*result)[0]
+			if queryResult.Status == "OK" && queryResult.Result != nil && len(queryResult.Result) > 0 {
+				// It's a valid record ID, return it
+				return entityNameOrID, nil
+			}
+		}
+	}
+
+	// If not a record ID or direct lookup failed, try to find by name (same as GetEntity)
+	query := "SELECT * FROM entities WHERE name = $name"
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, map[string]interface{}{"name": entityNameOrID})
+	if err != nil {
+		return "", fmt.Errorf("failed to query entity by name: %w", err)
+	}
+
+	if result == nil || len(*result) == 0 {
+		return "", fmt.Errorf("entity not found: %s", entityNameOrID)
+	}
+
+	queryResult := (*result)[0]
+	if queryResult.Status != "OK" || queryResult.Result == nil || len(queryResult.Result) == 0 {
+		return "", fmt.Errorf("entity not found: %s", entityNameOrID)
+	}
+
+	resultMap := queryResult.Result[0]
+	entityID := extractRecordID(resultMap["id"])
+	if entityID == "" {
+		return "", fmt.Errorf("entity ID not found for name: %s", entityNameOrID)
+	}
+
+	return entityID, nil
+}
+
 // CreateRelationship creates a relationship between two entities
 func (s *SurrealDBStorage) CreateRelationship(ctx context.Context, fromEntity, toEntity, relationshipType string, properties map[string]interface{}) error {
-	query := fmt.Sprintf("RELATE $from->%s->$to CONTENT $content", relationshipType)
-
-	content := properties
-	if content == nil {
-		content = make(map[string]interface{})
+	// First, resolve entity names to their actual record IDs
+	fromEntityID, err := s.resolveEntityID(ctx, fromEntity)
+	if err != nil {
+		return fmt.Errorf("failed to resolve from entity '%s': %w", fromEntity, err)
 	}
-	content["timestamp"] = time.Now()
+
+	toEntityID, err := s.resolveEntityID(ctx, toEntity)
+	if err != nil {
+		return fmt.Errorf("failed to resolve to entity '%s': %w", toEntity, err)
+	}
+
+	// Use a simple table name based on relationship type
+	tableName := relationshipType
+
+	// Create the table if it doesn't exist (SCHEMALESS)
+	createTableQuery := fmt.Sprintf("DEFINE TABLE %s SCHEMALESS", tableName)
+	_, err = surrealdb.Query[[]map[string]interface{}](s.db, createTableQuery, nil)
+	if err != nil {
+		// Table might already exist, continue
+	}
+
+	// Insert the relationship
+	query := fmt.Sprintf(`
+		INSERT INTO %s {
+			from_entity: $from,
+			to_entity: $to,
+			relationship_type: $relationshipType,
+			properties: $properties
+		}
+	`, tableName)
 
 	params := map[string]interface{}{
-		"from":    fromEntity,
-		"to":      toEntity,
-		"content": content,
+		"from":             fromEntityID,
+		"to":               toEntityID,
+		"relationshipType": relationshipType,
+		"properties":       properties,
 	}
 
-	_, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
 		return fmt.Errorf("failed to create relationship: %w", err)
 	}
 
-	return nil
+	// Check if insert was successful
+	if result != nil && len(*result) > 0 {
+		queryResult := (*result)[0]
+		if queryResult.Status == "OK" {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("failed to create relationship")
 }
 
 // TraverseGraph traverses the graph starting from an entity
@@ -583,6 +656,49 @@ func getString(m map[string]interface{}, key string) string {
 		return val
 	}
 	return ""
+}
+
+// extractRecordID extracts a SurrealDB record ID from various formats
+func extractRecordID(id interface{}) string {
+	if id == nil {
+		return ""
+	}
+
+	// If it's already a string, return it
+	if str, ok := id.(string); ok {
+		return str
+	}
+
+	// If it's a map/struct with Table and ID fields (SurrealDB record format)
+	if idMap, ok := id.(map[string]interface{}); ok {
+		if table, hasTable := idMap["Table"]; hasTable {
+			if tableStr, ok := table.(string); ok {
+				if recordID, hasID := idMap["ID"]; hasID {
+					if idStr, ok := recordID.(string); ok {
+						return tableStr + ":" + idStr
+					}
+				}
+			}
+		}
+	}
+
+	// Handle models.RecordID type (check by string representation)
+	idStr := fmt.Sprintf("%v", id)
+
+	// Check if it looks like a SurrealDB record ID format: {table id}
+	if strings.HasPrefix(idStr, "{") && strings.Contains(idStr, " ") && strings.HasSuffix(idStr, "}") {
+		// Parse {table id} format
+		inner := idStr[1 : len(idStr)-1] // Remove { }
+		parts := strings.SplitN(inner, " ", 2)
+		if len(parts) == 2 {
+			table := parts[0]
+			recordID := parts[1]
+			return table + ":" + recordID
+		}
+	}
+
+	// Try to convert to string as fallback
+	return idStr
 }
 
 func getFloat64(m map[string]interface{}, key string) float64 {

@@ -20,6 +20,8 @@ When you finish the task use remembrances tools for storing the knowledge base, 
 
 When you are testing the tools connected, check the errors of the remembrances tools and try to fix them, then build the binary with `xc build` and wait to the user restart the server manually for continuing.
 
+Always create tests in python files into the `tests` folder not into the root of the project.
+
 ## Architecture Overview
 
 - Entry point: `cmd/remembrances-mcp/main.go` — sets up config, logging, transport (stdio or SSE), storage and registers MCP tools.

@@ -13,10 +13,12 @@ import os
 
 DELIM = "\n"
 
+
 def send_json(pipe, obj):
     data = json.dumps(obj, separators=(",", ":")) + DELIM
     pipe.write(data.encode())
     pipe.flush()
+
 
 class ReaderThread(threading.Thread):
     def __init__(self, stream):
@@ -54,6 +56,7 @@ class ReaderThread(threading.Thread):
                         self.lines.pop(i)
             time.sleep(0.01)
 
+
 def wait_for_response(reader, timeout=5):
     start = time.time()
     while time.time() - start < timeout:
@@ -66,14 +69,15 @@ def wait_for_response(reader, timeout=5):
             continue
     raise TimeoutError("No valid JSON response within timeout")
 
+
 def main():
     bin_path = "./dist/remembrances-mcp"
-    
+
     # Start the process
-    proc = subprocess.Popen([bin_path, "--ollama-model", "llama3.2"], 
-                           stdin=subprocess.PIPE,
-                           stdout=subprocess.PIPE, 
-                           stderr=subprocess.STDOUT)
+    proc = subprocess.Popen([bin_path, "--ollama-model", "llama3.2"],
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
     reader = ReaderThread(proc.stdout)
     reader.start()
 
@@ -96,7 +100,7 @@ def main():
         # Test create_entity
         call_id = 2
         create_entity_params = {
-            "name": "remembrance_create_entity", 
+            "name": "remembrance_create_entity",
             "arguments": {
                 "entity_type": "person",
                 "name": "Bob",
@@ -109,7 +113,7 @@ def main():
         print("Sent create_entity request")
         resp = wait_for_response(reader, timeout=10)
         print("create_entity response:", json.dumps(resp, indent=2))
-        
+
         # Extract entity ID from response if successful
         entity_id = None
         if "result" in resp and "content" in resp["result"]:
@@ -141,6 +145,7 @@ def main():
         except Exception:
             pass
         proc.wait(timeout=5)
+
 
 if __name__ == "__main__":
     main()

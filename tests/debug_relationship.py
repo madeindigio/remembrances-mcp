@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script specifically for the remembrance_create_entity tool
+Debug script to test entity creation and relationship workflow
 """
 
 import argparse
@@ -88,7 +88,7 @@ def main():
             "id": 1,
             "method": "initialize",
             "params": {
-                "clientInfo": {"name": "test-create-entity", "version": "0.1"},
+                "clientInfo": {"name": "debug-entities", "version": "0.1"},
                 "protocolVersion": "2025-03-26"
             }
         }
@@ -97,25 +97,75 @@ def main():
         resp = wait_for_response(reader, timeout=10)
         print("initialize response: OK")
 
-        # Test create_entity
+        # Create entity 1
         call_id = 2
-        create_entity_params = {
+        create_entity1_params = {
             "name": "remembrance_create_entity",
             "arguments": {
                 "entity_type": "person",
-                "name": "Alice",
-                "properties": {"email": "alice@example.com", "role": "developer"}
+                "name": "Alice Debug",
+                "properties": {"role": "developer"}
             }
         }
         call_req = {"jsonrpc": "2.0", "id": call_id,
-                    "method": "tools/call", "params": create_entity_params}
+                    "method": "tools/call", "params": create_entity1_params}
         send_json(proc.stdin, call_req)
-        print("Sent create_entity request")
+        print("Sent create_entity request for Alice")
         resp = wait_for_response(reader, timeout=10)
-        print("create_entity response:", json.dumps(resp, indent=2))
+        print("create_entity Alice response:", json.dumps(resp, indent=2))
+
+        # Create entity 2
+        call_id += 1
+        create_entity2_params = {
+            "name": "remembrance_create_entity",
+            "arguments": {
+                "entity_type": "person",
+                "name": "Bob Debug",
+                "properties": {"role": "manager"}
+            }
+        }
+        call_req = {"jsonrpc": "2.0", "id": call_id,
+                    "method": "tools/call", "params": create_entity2_params}
+        send_json(proc.stdin, call_req)
+        print("Sent create_entity request for Bob")
+        resp = wait_for_response(reader, timeout=10)
+        print("create_entity Bob response:", json.dumps(resp, indent=2))
+
+        # Check stats
+        call_id += 1
+        stats_params = {
+            "name": "remembrance_get_stats",
+            "arguments": {"user_id": "debug_user"}
+        }
+        call_req = {"jsonrpc": "2.0", "id": call_id,
+                    "method": "tools/call", "params": stats_params}
+        send_json(proc.stdin, call_req)
+        print("Sent get_stats request")
+        resp = wait_for_response(reader, timeout=10)
+        print("get_stats response:", json.dumps(resp, indent=2))
+
+        # Try to create relationship
+        call_id += 1
+        create_rel_params = {
+            "name": "remembrance_create_relationship",
+            "arguments": {
+                "from_entity": "Alice Debug",
+                "to_entity": "Bob Debug",
+                "relationship_type": "works_for",
+                "properties": {"since": "2024-01-01"}
+            }
+        }
+        call_req = {"jsonrpc": "2.0", "id": call_id,
+                    "method": "tools/call", "params": create_rel_params}
+        send_json(proc.stdin, call_req)
+        print("Sent create_relationship request")
+        resp = wait_for_response(reader, timeout=10)
+        print("create_relationship response:", json.dumps(resp, indent=2))
 
     except Exception as e:
         print(f"Error during test: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         try:
             proc.send_signal(subprocess.signal.SIGINT)

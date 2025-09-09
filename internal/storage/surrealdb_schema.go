@@ -218,13 +218,13 @@ func (s *SurrealDBStorage) applyMigrationV1(ctx context.Context) error {
 		{Type: "field", Statement: `DEFINE FIELD timestamp ON wrote TYPE datetime VALUE time::now();`, OnTable: "wrote"},
 		{Type: "field", Statement: `DEFINE FIELD properties ON wrote TYPE object;`, OnTable: "wrote"},
 
-		{Type: "field", Statement: `DEFINE FIELD in ON mentioned_in TYPE record;`, OnTable: "mentioned_in"},
-		{Type: "field", Statement: `DEFINE FIELD out ON mentioned_in TYPE record;`, OnTable: "mentioned_in"},
+		{Type: "field", Statement: `DEFINE FIELD in ON mentioned_in TYPE string;`, OnTable: "mentioned_in"},
+		{Type: "field", Statement: `DEFINE FIELD out ON mentioned_in TYPE string;`, OnTable: "mentioned_in"},
 		{Type: "field", Statement: `DEFINE FIELD timestamp ON mentioned_in TYPE datetime VALUE time::now();`, OnTable: "mentioned_in"},
 		{Type: "field", Statement: `DEFINE FIELD properties ON mentioned_in TYPE object;`, OnTable: "mentioned_in"},
 
-		{Type: "field", Statement: `DEFINE FIELD in ON related_to TYPE record;`, OnTable: "related_to"},
-		{Type: "field", Statement: `DEFINE FIELD out ON related_to TYPE record;`, OnTable: "related_to"},
+		{Type: "field", Statement: `DEFINE FIELD in ON related_to TYPE string;`, OnTable: "related_to"},
+		{Type: "field", Statement: `DEFINE FIELD out ON related_to TYPE string;`, OnTable: "related_to"},
 		{Type: "field", Statement: `DEFINE FIELD timestamp ON related_to TYPE datetime VALUE time::now();`, OnTable: "related_to"},
 		{Type: "field", Statement: `DEFINE FIELD properties ON related_to TYPE object;`, OnTable: "related_to"},
 
