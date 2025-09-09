@@ -14,7 +14,11 @@ Always use Serena tools for editing or finding code in this project. Check Seren
 
 Search in serper web search or brave search if faults the first, for more info and fetch pages that you consider useful for the task, if needed. Also use Context7 for finding the API's use and how work the libraries to use.
 
-When you are testing the tools connected, check the errors of the remembrances tools and try to fix them, then build the binary and wait to the user restart the server manually for continuing.
+When you start a new task, first use remembrances tools for getting the knowledge base, facts, entities and relationships related to the task, and read them for understand the context.
+
+When you finish the task use remembrances tools for storing the knowledge base, facts, entities and relationships related to the task, for future use.
+
+When you are testing the tools connected, check the errors of the remembrances tools and try to fix them, then build the binary with `xc build` and wait to the user restart the server manually for continuing.
 
 ## Architecture Overview
 
@@ -41,14 +45,7 @@ Developer workflows & commands (verified from repo)
 
 - Build the binary:
 
-  go mod tidy
-  go build -o remembrances-mcp ./cmd/remembrances-mcp
-
-- Run quickly (example):
-
-  GOMEM_OPENAI_KEY=sk-xxx GOMEM_DB_PATH=./data.db go run ./cmd/remembrances-mcp/main.go --knowledge-base ./kb --rest-api-serve
-
-- Flags can be set via environment variables with `GOMEM_` prefix (see `internal/config/config.go`).
+  xc build
 
 Files and locations to inspect when making changes
 
@@ -56,10 +53,5 @@ Files and locations to inspect when making changes
 - Update storage behavior/schema: `internal/storage/surrealdb.go` and `internal/storage/storage.go`
 - Change CLI/flags/logging: `internal/config/config.go` and `cmd/.../main.go`
 - Embedder contract and wiring: `pkg/embedder/embedder.go` and embedder factory code called from `main.go`.
-
-Quick checks for PRs
-
-- Ensure new tools are registered in `RegisterTools` and follow existing input/handler patterns.
-- If modifying SurrealDB schema or MTREE params, review in memories the schema migration implementation.
 
 If something is unclear or you need examples for a specific change (new tool, storage migration, embedder wiring), ask for the exact file to modify and I will add a focused example patch.
