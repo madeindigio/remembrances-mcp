@@ -23,13 +23,13 @@ type Storage interface {
 	ListFacts(ctx context.Context, userID string) (map[string]interface{}, error)
 
 	// Vector operations for semantic/RAG storage
-	IndexVector(ctx context.Context, userID, content string, embedding []float32, metadata map[string]interface{}) (string, error)
+	IndexVector(ctx context.Context, userID, content string, embedding []float32, metadata map[string]interface{}) error
 	SearchSimilar(ctx context.Context, userID string, queryEmbedding []float32, limit int) ([]VectorResult, error)
 	UpdateVector(ctx context.Context, id, userID, content string, embedding []float32, metadata map[string]interface{}) error
 	DeleteVector(ctx context.Context, id, userID string) error
 
 	// Graph operations for entities and relationships
-	CreateEntity(ctx context.Context, entityType, name string, properties map[string]interface{}) (string, error)
+	CreateEntity(ctx context.Context, entityType, name string, properties map[string]interface{}) error
 	CreateRelationship(ctx context.Context, fromEntity, toEntity, relationshipType string, properties map[string]interface{}) error
 	TraverseGraph(ctx context.Context, startEntity, relationshipType string, depth int) ([]GraphResult, error)
 	GetEntity(ctx context.Context, entityID string) (*Entity, error)

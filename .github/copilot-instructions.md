@@ -14,6 +14,8 @@ Always use Serena tools for editing or finding code in this project. Check Seren
 
 Search in serper web search or brave search if faults the first, for more info and fetch pages that you consider useful for the task, if needed. Also use Context7 for finding the API's use and how work the libraries to use.
 
+When you are testing the tools connected, check the errors of the remembrances tools and try to fix them, then build the binary and wait to the user restart the server manually for continuing.
+
 ## Architecture Overview
 
 - Entry point: `cmd/remembrances-mcp/main.go` — sets up config, logging, transport (stdio or SSE), storage and registers MCP tools.

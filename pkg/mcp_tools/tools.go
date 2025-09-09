@@ -685,7 +685,7 @@ func (tm *ToolManager) addVectorHandler(ctx context.Context, request *protocol.C
 		return nil, fmt.Errorf(errGenEmbedding, err)
 	}
 
-	memoryID, err := tm.storage.IndexVector(ctx, input.UserID, input.Content, embedding, stringMapToInterfaceMap(input.Metadata))
+	err = tm.storage.IndexVector(ctx, input.UserID, input.Content, embedding, stringMapToInterfaceMap(input.Metadata))
 	if err != nil {
 		return nil, fmt.Errorf("failed to add remembrance: %w", err)
 	}
@@ -693,7 +693,7 @@ func (tm *ToolManager) addVectorHandler(ctx context.Context, request *protocol.C
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Successfully added remembrance with ID '%s' for user '%s'", memoryID, input.UserID),
+			Text: fmt.Sprintf("Successfully added remembrance for user '%s'", input.UserID),
 		},
 	}, false), nil
 }
@@ -779,7 +779,7 @@ func (tm *ToolManager) createEntityHandler(ctx context.Context, request *protoco
 		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
-	entityID, err := tm.storage.CreateEntity(ctx, input.EntityType, input.Name, stringMapToInterfaceMap(input.Properties))
+	err := tm.storage.CreateEntity(ctx, input.EntityType, input.Name, stringMapToInterfaceMap(input.Properties))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create entity: %w", err)
 	}
@@ -787,7 +787,7 @@ func (tm *ToolManager) createEntityHandler(ctx context.Context, request *protoco
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Successfully created entity '%s' of type '%s' with ID '%s'", input.Name, input.EntityType, entityID),
+			Text: fmt.Sprintf("Successfully created entity '%s' of type '%s'", input.Name, input.EntityType),
 		},
 	}, false), nil
 }

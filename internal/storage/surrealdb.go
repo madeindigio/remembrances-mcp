@@ -659,7 +659,7 @@ func (s *SurrealDBStorage) ListFacts(ctx context.Context, userID string) (map[st
 }
 
 // IndexVector stores a vector embedding with content and metadata
-func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content string, embedding []float32, metadata map[string]interface{}) (string, error) {
+func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content string, embedding []float32, metadata map[string]interface{}) error {
 	// SurrealDB schema defines `metadata` as an object. Ensure we never send NULL.
 	if metadata == nil {
 		metadata = map[string]interface{}{}
@@ -680,41 +680,50 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 		emb64[i] = float64(v)
 	}
 
-	data := map[string]interface{}{
+	query := `
+		INSERT INTO vector_memories {
+			user_id: $user_id,
+			content: $content,
+			embedding: $embedding,
+			metadata: $metadata
+		} RETURN id
+	`
+
+	params := map[string]interface{}{
 		"user_id":   userID,
 		"content":   content,
 		"embedding": emb64,
 		"metadata":  metadata,
 	}
 
-	result, err := surrealdb.Create[map[string]interface{}](s.db, "vector_memories", data)
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
-		return "", fmt.Errorf("failed to index vector: %w", err)
+		return fmt.Errorf("failed to index vector: %w", err)
 	}
 
-	// Extract ID from result
-	if result != nil {
-		if id, ok := (*result)["id"].(string); ok && id != "" {
-			return id, nil
+	// Check if insert was successful
+	if result != nil && len(*result) > 0 {
+		queryResult := (*result)[0]
+		if queryResult.Status == "OK" {
+			return nil
 		}
 	}
 
-	return "", fmt.Errorf("failed to extract ID from result")
+	return fmt.Errorf("failed to index vector")
 }
 
 // SearchSimilar performs vector similarity search
 func (s *SurrealDBStorage) SearchSimilar(ctx context.Context, userID string, queryEmbedding []float32, limit int) ([]VectorResult, error) {
-	query := `
+	query := fmt.Sprintf(`
 		SELECT id, content, vector::similarity::cosine(embedding, $query_embedding) AS similarity, metadata, created_at, updated_at
 		FROM vector_memories 
-		WHERE user_id = $user_id AND embedding <|$limit|> $query_embedding
+		WHERE user_id = $user_id AND embedding <|%d|> $query_embedding
 		ORDER BY similarity DESC
-	`
+	`, limit)
 
 	params := map[string]interface{}{
 		"user_id":         userID,
 		"query_embedding": queryEmbedding,
-		"limit":           limit,
 	}
 
 	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
@@ -769,30 +778,39 @@ func (s *SurrealDBStorage) DeleteVector(ctx context.Context, id, userID string) 
 }
 
 // CreateEntity creates a new entity in the graph
-func (s *SurrealDBStorage) CreateEntity(ctx context.Context, entityType, name string, properties map[string]interface{}) (string, error) {
+func (s *SurrealDBStorage) CreateEntity(ctx context.Context, entityType, name string, properties map[string]interface{}) error {
 	if properties == nil {
 		properties = map[string]interface{}{}
 	}
 
-	data := map[string]interface{}{
+	query := `
+		INSERT INTO entities {
+			type: $type,
+			name: $name,
+			properties: $properties
+		} RETURN id
+	`
+
+	params := map[string]interface{}{
 		"type":       entityType,
 		"name":       name,
 		"properties": properties,
 	}
 
-	result, err := surrealdb.Create[map[string]interface{}](s.db, "entities", data)
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
-		return "", fmt.Errorf("failed to create entity: %w", err)
+		return fmt.Errorf("failed to create entity: %w", err)
 	}
 
-	// Extract ID from result
-	if result != nil {
-		if id, ok := (*result)["id"].(string); ok {
-			return id, nil
+	// Check if insert was successful
+	if result != nil && len(*result) > 0 {
+		queryResult := (*result)[0]
+		if queryResult.Status == "OK" {
+			return nil
 		}
 	}
 
-	return "", fmt.Errorf("failed to extract ID from result")
+	return fmt.Errorf("failed to create entity")
 }
 
 // CreateRelationship creates a relationship between two entities
@@ -846,16 +864,22 @@ func (s *SurrealDBStorage) TraverseGraph(ctx context.Context, startEntity, relat
 
 // GetEntity retrieves an entity by ID
 func (s *SurrealDBStorage) GetEntity(ctx context.Context, entityID string) (*Entity, error) {
-	result, err := surrealdb.Select[map[string]interface{}](s.db, entityID)
+	query := "SELECT * FROM " + entityID
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get entity: %w", err)
 	}
 
-	if result == nil {
+	if result == nil || len(*result) == 0 {
 		return nil, nil
 	}
 
-	resultMap := *result
+	queryResult := (*result)[0]
+	if queryResult.Status != "OK" || queryResult.Result == nil || len(queryResult.Result) == 0 {
+		return nil, nil
+	}
+
+	resultMap := queryResult.Result[0]
 	entity := &Entity{
 		ID:         getString(resultMap, "id"),
 		Type:       getString(resultMap, "type"),
@@ -897,15 +921,23 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
 		emb64[i] = float64(v)
 	}
 
-	data := map[string]interface{}{
+	query := `
+		UPSERT knowledge_base SET
+			file_path = $file_path,
+			content = $content,
+			embedding = $embedding,
+			metadata = $metadata
+		WHERE file_path = $file_path
+	`
+
+	params := map[string]interface{}{
 		"file_path": filePath,
 		"content":   content,
 		"embedding": emb64,
 		"metadata":  metadata,
 	}
 
-	recordID := fmt.Sprintf("knowledge_base:['%s']", strings.ReplaceAll(filePath, "/", "_"))
-	_, err := surrealdb.Create[map[string]interface{}](s.db, recordID, data)
+	_, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
 		return fmt.Errorf("failed to save document: %w", err)
 	}
@@ -915,17 +947,16 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
 
 // SearchDocuments performs similarity search on knowledge base documents
 func (s *SurrealDBStorage) SearchDocuments(ctx context.Context, queryEmbedding []float32, limit int) ([]DocumentResult, error) {
-	query := `
+	query := fmt.Sprintf(`
 		SELECT id, file_path, content, embedding, metadata, created_at, updated_at,
 		       vector::similarity::cosine(embedding, $query_embedding) AS similarity
 		FROM knowledge_base 
-		WHERE embedding <|$limit|> $query_embedding
+		WHERE embedding <|%d|> $query_embedding
 		ORDER BY similarity DESC
-	`
+	`, limit)
 
 	params := map[string]interface{}{
 		"query_embedding": queryEmbedding,
-		"limit":           limit,
 	}
 
 	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
@@ -952,16 +983,22 @@ func (s *SurrealDBStorage) DeleteDocument(ctx context.Context, filePath string) 
 func (s *SurrealDBStorage) GetDocument(ctx context.Context, filePath string) (*Document, error) {
 	recordID := fmt.Sprintf("knowledge_base:['%s']", strings.ReplaceAll(filePath, "/", "_"))
 
-	result, err := surrealdb.Select[map[string]interface{}](s.db, recordID)
+	query := "SELECT * FROM " + recordID
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get document: %w", err)
 	}
 
-	if result == nil {
+	if result == nil || len(*result) == 0 {
 		return nil, nil
 	}
 
-	resultMap := *result
+	queryResult := (*result)[0]
+	if queryResult.Status != "OK" || queryResult.Result == nil || len(queryResult.Result) == 0 {
+		return nil, nil
+	}
+
+	resultMap := queryResult.Result[0]
 	// Convert embedding from interface{} to []float32
 	var embedding []float32
 	if embeddingSlice, ok := resultMap["embedding"].([]interface{}); ok {
