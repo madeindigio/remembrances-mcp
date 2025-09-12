@@ -46,6 +46,9 @@ coverage.*
 .env.*
 kvagerc
 
+tests/clients
+*.pyc
+
 # SurrealDB local database files
 *.db
 surreal_data/*

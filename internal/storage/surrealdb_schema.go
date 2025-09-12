@@ -37,7 +37,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 1 // Current target version
+	targetVersion := 2 // Current target version - updated to support user_stats table
 	if currentVersion < targetVersion {
 		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -161,6 +161,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 	switch version {
 	case 1:
 		return s.applyMigrationV1(ctx)
+	case 2:
+		return s.applyMigrationV2(ctx)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}
@@ -236,6 +238,54 @@ func (s *SurrealDBStorage) applyMigrationV1(ctx context.Context) error {
 		{Type: "index", Statement: `DEFINE INDEX idx_kb_embedding ON knowledge_base FIELDS embedding MTREE DIMENSION 768 DIST COSINE;`, OnTable: "knowledge_base"},
 		{Type: "index", Statement: `DEFINE INDEX idx_entity_name ON entities FIELDS name;`, OnTable: "entities"},
 		{Type: "index", Statement: `DEFINE INDEX idx_entity_type ON entities FIELDS type;`, OnTable: "entities"},
+	}
+
+	// Apply each schema element with error handling
+	for i, element := range elements {
+		exists, err := s.checkSchemaElementExists(ctx, element)
+		if err != nil {
+			log.Printf("Warning: Could not check existence of %s, attempting to create anyway: %v", element.Type, err)
+		}
+
+		if !exists {
+			log.Printf("Creating %s: %s", element.Type, element.Statement)
+			_, err := surrealdb.Query[[]map[string]interface{}](s.db, element.Statement, nil)
+			if err != nil {
+				// Log warning but don't fail for "already exists" type errors
+				if s.isAlreadyExistsError(err) {
+					log.Printf("Warning: %s already exists, continuing...", element.Type)
+				} else {
+					return fmt.Errorf("failed to execute migration statement %d '%s': %w", i+1, element.Statement, err)
+				}
+			}
+		} else {
+			log.Printf("Skipping existing %s", element.Type)
+		}
+	}
+
+	return nil
+}
+
+// applyMigrationV2 adds the user_stats table for tracking user-scoped memory statistics
+func (s *SurrealDBStorage) applyMigrationV2(ctx context.Context) error {
+	log.Println("Applying migration v2: Adding user_stats table")
+
+	elements := []SchemaElement{
+		// Add user_stats table
+		{Type: "table", Statement: `DEFINE TABLE user_stats SCHEMAFULL;`},
+
+		// Fields for user_stats
+		{Type: "field", Statement: `DEFINE FIELD user_id ON user_stats TYPE string;`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD key_value_count ON user_stats TYPE int VALUE 0;`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD vector_count ON user_stats TYPE int VALUE 0;`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD entity_count ON user_stats TYPE int VALUE 0;`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD relationship_count ON user_stats TYPE int VALUE 0;`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD document_count ON user_stats TYPE int VALUE 0;`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD created_at ON user_stats TYPE datetime VALUE time::now();`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD updated_at ON user_stats TYPE datetime VALUE time::now();`, OnTable: "user_stats"},
+
+		// Index for efficient user lookups
+		{Type: "index", Statement: `DEFINE INDEX idx_user_stats_user_id ON user_stats FIELDS user_id UNIQUE;`, OnTable: "user_stats"},
 	}
 
 	// Apply each schema element with error handling

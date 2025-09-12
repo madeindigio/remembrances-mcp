@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -54,6 +55,11 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 	if result != nil && len(*result) > 0 {
 		queryResult := (*result)[0]
 		if queryResult.Status == "OK" {
+			// Update user statistics on successful insert
+			if err := s.updateUserStat(ctx, userID, "vector_count", 1); err != nil {
+				// Log the error but don't fail the operation
+				log.Printf("Warning: failed to update vector_count stat for user %s: %v", userID, err)
+			}
 			return nil
 		}
 	}
@@ -121,6 +127,12 @@ func (s *SurrealDBStorage) DeleteVector(ctx context.Context, id, userID string) 
 	_, err := surrealdb.Delete[map[string]interface{}](s.db, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete vector: %w", err)
+	}
+
+	// Update user statistics
+	if err := s.updateUserStat(ctx, userID, "vector_count", -1); err != nil {
+		// Log the error but don't fail the operation
+		log.Printf("Warning: failed to update vector_count stat for user %s: %v", userID, err)
 	}
 
 	return nil

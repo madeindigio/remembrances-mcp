@@ -10,6 +10,8 @@ This project is a Go-based MCP (Model Context Protocol) server that implements a
 
 ## Work methodology
 
+Use the plan in the `.serena/memories/plan.md` file for guiding your work, and update it when you finish a task or start a new one.
+
 Always use Serena tools for editing or finding code in this project. Check Serena onboarding performed in the work session, and list and read memories before start the work for is we have previous knowledge about the task that you are working on.
 
 Search in serper web search or brave search if faults the first, for more info and fetch pages that you consider useful for the task, if needed. Also use Context7 for finding the API's use and how work the libraries to use.

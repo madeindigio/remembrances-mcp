@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -19,6 +20,12 @@ func (s *SurrealDBStorage) SaveFact(ctx context.Context, userID, key string, val
 	_, err := surrealdb.Create[map[string]interface{}](s.db, recordID, data)
 	if err != nil {
 		return fmt.Errorf("failed to save fact: %w", err)
+	}
+
+	// Update user statistics
+	if err := s.updateUserStat(ctx, userID, "key_value_count", 1); err != nil {
+		// Log the error but don't fail the operation
+		log.Printf("Warning: failed to update key_value_count stat for user %s: %v", userID, err)
 	}
 
 	return nil
@@ -71,6 +78,12 @@ func (s *SurrealDBStorage) DeleteFact(ctx context.Context, userID, key string) e
 	_, err := surrealdb.Delete[interface{}](s.db, recordID)
 	if err != nil {
 		return fmt.Errorf("failed to delete fact: %w", err)
+	}
+
+	// Update user statistics
+	if err := s.updateUserStat(ctx, userID, "key_value_count", -1); err != nil {
+		// Log the error but don't fail the operation
+		log.Printf("Warning: failed to update key_value_count stat for user %s: %v", userID, err)
 	}
 
 	return nil

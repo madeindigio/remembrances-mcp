@@ -30,15 +30,15 @@
 				"--context",
 				"ide-assistant",
 				"--project",
-				"/www/MCP/remembrances-mcp/"
+				"./"
 			]
 		},
 		"remembrances": {
 			"type": "stdio",
-			"command": "/www/MCP/remembrances-mcp/dist/remembrances-mcp",
+			"command": "./dist/remembrances-mcp",
 			"args": [
 				"--log",
-				"/www/MCP/remembrances-mcp/remembrances.log",
+				"./remembrances.log",
 				"--surrealdb-url",
 				"ws://localhost:8000",
 				"--ollama-url",
@@ -46,7 +46,7 @@
 				"--ollama-model",
 				"nomic-embed-text:latest",
 				"--knowledge-base",
-				"/www/MCP/remembrances-mcp/.serena/memories",
+				"./.serena/memories",
 				"--surrealdb-start-cmd",
 				"surreal start --user root --pass root surrealkv:///www/Remembrances/programming"
 			]

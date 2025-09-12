@@ -149,6 +149,11 @@ func (s *SurrealDBStorage) CreateEntity(ctx context.Context, entityType, name st
 	if result != nil && len(*result) > 0 {
 		queryResult := (*result)[0]
 		if queryResult.Status == "OK" {
+			// Update global entity statistics (entities are global, not user-scoped)
+			if err := s.updateUserStat(ctx, "global", "entity_count", 1); err != nil {
+				// Log the error but don't fail the operation
+				log.Printf("Warning: failed to update entity_count stat: %v", err)
+			}
 			return nil
 		}
 	}
@@ -246,6 +251,11 @@ func (s *SurrealDBStorage) CreateRelationship(ctx context.Context, fromEntity, t
 	if result != nil && len(*result) > 0 {
 		queryResult := (*result)[0]
 		if queryResult.Status == "OK" {
+			// Update global relationship statistics
+			if err := s.updateUserStat(ctx, "global", "relationship_count", 1); err != nil {
+				// Log the error but don't fail the operation
+				log.Printf("Warning: failed to update relationship_count stat: %v", err)
+			}
 			return nil
 		}
 	}
@@ -313,6 +323,12 @@ func (s *SurrealDBStorage) DeleteEntity(ctx context.Context, entityID string) er
 		return fmt.Errorf("failed to delete entity: %w", err)
 	}
 
+	// Update global entity statistics
+	if err := s.updateUserStat(ctx, "global", "entity_count", -1); err != nil {
+		// Log the error but don't fail the operation
+		log.Printf("Warning: failed to update entity_count stat: %v", err)
+	}
+
 	return nil
 }
 
@@ -336,6 +352,20 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
 		emb64[i] = float64(v)
 	}
 
+	// First, check if the document already exists to determine if this is a new document
+	existsQuery := "SELECT id FROM knowledge_base WHERE file_path = $file_path"
+	existsResult, err := surrealdb.Query[[]map[string]interface{}](s.db, existsQuery, map[string]interface{}{
+		"file_path": filePath,
+	})
+
+	var isNewDocument bool
+	if err != nil || existsResult == nil || len(*existsResult) == 0 {
+		isNewDocument = true
+	} else {
+		queryResult := (*existsResult)[0]
+		isNewDocument = queryResult.Status != "OK" || len(queryResult.Result) == 0
+	}
+
 	query := `
 		UPSERT knowledge_base SET
 			file_path = $file_path,
@@ -352,9 +382,17 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
 		"metadata":  metadata,
 	}
 
-	_, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	_, err = surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
 		return fmt.Errorf("failed to save document: %w", err)
+	}
+
+	// Update global document statistics only if this is a new document
+	if isNewDocument {
+		if err := s.updateUserStat(ctx, "global", "document_count", 1); err != nil {
+			// Log the error but don't fail the operation
+			log.Printf("Warning: failed to update document_count stat: %v", err)
+		}
 	}
 
 	return nil
@@ -389,6 +427,12 @@ func (s *SurrealDBStorage) DeleteDocument(ctx context.Context, filePath string) 
 	_, err := surrealdb.Delete[map[string]interface{}](s.db, recordID)
 	if err != nil {
 		return fmt.Errorf("failed to delete document: %w", err)
+	}
+
+	// Update global document statistics
+	if err := s.updateUserStat(ctx, "global", "document_count", -1); err != nil {
+		// Log the error but don't fail the operation
+		log.Printf("Warning: failed to update document_count stat: %v", err)
 	}
 
 	return nil
@@ -482,52 +526,113 @@ func (s *SurrealDBStorage) HybridSearch(ctx context.Context, userID string, quer
 func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*MemoryStats, error) {
 	stats := &MemoryStats{}
 
-	// Count key-value memories
-	kvQuery := "SELECT count() FROM kv_memories WHERE user_id = $user_id GROUP ALL"
-	kvResult, err := surrealdb.Query[[]map[string]interface{}](s.db, kvQuery, map[string]interface{}{"user_id": userID})
-	if err == nil {
-		if count := s.extractCount(kvResult); count >= 0 {
-			stats.KeyValueCount = count
+	// Get user-specific stats from user_stats table
+	userQuery := "SELECT * FROM user_stats WHERE user_id = $user_id"
+	userResult, err := surrealdb.Query[[]map[string]interface{}](s.db, userQuery, map[string]interface{}{"user_id": userID})
+	if err == nil && userResult != nil && len(*userResult) > 0 {
+		queryResult := (*userResult)[0]
+		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+			userStatsData := queryResult.Result[0]
+			// Extract user-specific statistics
+			if kvCount, ok := userStatsData["key_value_count"]; ok {
+				if count, ok := kvCount.(float64); ok {
+					stats.KeyValueCount = int(count)
+				}
+			}
+			if vectorCount, ok := userStatsData["vector_count"]; ok {
+				if count, ok := vectorCount.(float64); ok {
+					stats.VectorCount = int(count)
+				}
+			}
 		}
 	}
 
-	// Count vector memories
-	vectorQuery := "SELECT count() FROM vector_memories WHERE user_id = $user_id GROUP ALL"
-	vectorResult, err := surrealdb.Query[[]map[string]interface{}](s.db, vectorQuery, map[string]interface{}{"user_id": userID})
-	if err == nil {
-		if count := s.extractCount(vectorResult); count >= 0 {
-			stats.VectorCount = count
+	// Get global stats from global user_stats entry
+	globalQuery := "SELECT * FROM user_stats WHERE user_id = 'global'"
+	globalResult, err := surrealdb.Query[[]map[string]interface{}](s.db, globalQuery, nil)
+	if err == nil && globalResult != nil && len(*globalResult) > 0 {
+		queryResult := (*globalResult)[0]
+		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+			globalStatsData := queryResult.Result[0]
+			// Extract global statistics
+			if entityCount, ok := globalStatsData["entity_count"]; ok {
+				if count, ok := entityCount.(float64); ok {
+					stats.EntityCount = int(count)
+				}
+			}
+			if relCount, ok := globalStatsData["relationship_count"]; ok {
+				if count, ok := relCount.(float64); ok {
+					stats.RelationshipCount = int(count)
+				}
+			}
+			if docCount, ok := globalStatsData["document_count"]; ok {
+				if count, ok := docCount.(float64); ok {
+					stats.DocumentCount = int(count)
+				}
+			}
 		}
 	}
 
-	// Count entities
-	entityQuery := "SELECT count() FROM entities GROUP ALL"
-	entityResult, err := surrealdb.Query[[]map[string]interface{}](s.db, entityQuery, nil)
-	if err == nil {
-		if count := s.extractCount(entityResult); count >= 0 {
-			stats.EntityCount = count
-		}
-	}
-
-	// Count relationships
-	relQuery := "SELECT count() FROM wrote GROUP ALL"
-	relResult, err := surrealdb.Query[[]map[string]interface{}](s.db, relQuery, nil)
-	if err == nil {
-		if count := s.extractCount(relResult); count >= 0 {
-			stats.RelationshipCount = count
-		}
-	}
-
-	// Count knowledge base documents
-	kbQuery := "SELECT count() FROM knowledge_base GROUP ALL"
-	kbResult, err := surrealdb.Query[[]map[string]interface{}](s.db, kbQuery, nil)
-	if err == nil {
-		if count := s.extractCount(kbResult); count >= 0 {
-			stats.DocumentCount = count
-		}
-	}
+	// Note: TotalSize is not implemented in the new stats system
+	// It would require additional tracking or calculations
 
 	return stats, nil
+}
+
+// updateUserStat atomically updates a specific statistic for a user.
+// It uses an upsert approach to ensure consistency and handle new users.
+func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField string, delta int) error {
+	// First, try to get the existing record
+	selectQuery := "SELECT * FROM user_stats WHERE user_id = $user_id"
+	selectResult, err := surrealdb.Query[[]map[string]interface{}](s.db, selectQuery, map[string]interface{}{
+		"user_id": userID,
+	})
+
+	var currentValue int
+	recordExists := false
+
+	if err == nil && selectResult != nil && len(*selectResult) > 0 {
+		queryResult := (*selectResult)[0]
+		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+			recordExists = true
+			if val, ok := queryResult.Result[0][statField]; ok {
+				if floatVal, ok := val.(float64); ok {
+					currentValue = int(floatVal)
+				}
+			}
+		}
+	}
+
+	newValue := currentValue + delta
+
+	if recordExists {
+		// Update existing record
+		updateQuery := fmt.Sprintf("UPDATE user_stats SET %s = $new_value, updated_at = time::now() WHERE user_id = $user_id", statField)
+		_, err = surrealdb.Query[[]map[string]interface{}](s.db, updateQuery, map[string]interface{}{
+			"user_id":   userID,
+			"new_value": newValue,
+		})
+	} else {
+		// Create new record
+		createData := map[string]interface{}{
+			"user_id":            userID,
+			statField:            newValue,
+			"key_value_count":    0,
+			"vector_count":       0,
+			"entity_count":       0,
+			"relationship_count": 0,
+			"document_count":     0,
+		}
+		createData[statField] = newValue
+
+		_, err = surrealdb.Create[map[string]interface{}](s.db, "user_stats", createData)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to update user stat %s for user %s: %w", statField, userID, err)
+	}
+
+	return nil
 }
 
 // Helper function to extract count from query result
