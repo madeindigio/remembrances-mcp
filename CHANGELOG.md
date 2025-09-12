@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.29.13...9e1a37cc2fc4ca2c06e2db0361b4363478ddf531) (2025-09-12)
+
+### Features
+
+* add tests
+([9e1a37c](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/9e1a37cc2fc4ca2c06e2db0361b4363478ddf531))
+
 ### [v0.29.13](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.29.12...v0.29.13) (2025-09-12)
 
 #### Fixes
