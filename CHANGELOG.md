@@ -1,11 +1,16 @@
 # Changelog
 
-## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.29.13...9e1a37cc2fc4ca2c06e2db0361b4363478ddf531) (2025-09-12)
+## [v0.30.0](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.29.13...v0.30.0) (2025-09-12)
 
 ### Features
 
 * add tests
 ([9e1a37c](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/9e1a37cc2fc4ca2c06e2db0361b4363478ddf531))
+
+### Fixes
+
+* recovering functionality to save knowledge base into fisical md files
+([27ae5b8](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/27ae5b86d934e15ae18aa4558c94ad5b0ef49fe0))
 
 ### [v0.29.13](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.29.12...v0.29.13) (2025-09-12)
 
@@ -21,7 +26,7 @@
 * fixed create_relationship
 ([1dd1e7c](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/1dd1e7c9397a00504e56dc0c493523c7809a9206))
 
-### [v0.29.11](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.29.10...v0.29.11) (2025-09-09)
+### [v0.29.11](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.28.10...v0.29.11) (2025-09-09)
 
 #### Fixes
 
@@ -36,8 +41,6 @@ unit tests
 ([8ca77ea](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/8ca77ea823c83082d542c6113dd82cd7b867cc73))
 * Working version cli argument and starting to test the mcp server at all
 ([0852947](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/08529475071d6a3dae79e8b75b213c481ac543c6))
-
-### [v0.29.10](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.28.10...v0.29.10) (2025-08-28)
 
 ### v0.28.10 (2025-08-28)
 
