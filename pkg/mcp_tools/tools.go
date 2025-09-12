@@ -15,15 +15,17 @@ import (
 
 // ToolManager manages all MCP tools for the remembrances server
 type ToolManager struct {
-	storage  storage.StorageWithStats
-	embedder embedder.Embedder
+	storage           storage.StorageWithStats
+	embedder          embedder.Embedder
+	knowledgeBasePath string // Path to knowledge base directory for markdown files
 }
 
 // NewToolManager creates a new tool manager
-func NewToolManager(storage storage.StorageWithStats, embedder embedder.Embedder) *ToolManager {
+func NewToolManager(storage storage.StorageWithStats, embedder embedder.Embedder, knowledgeBasePath string) *ToolManager {
 	return &ToolManager{
-		storage:  storage,
-		embedder: embedder,
+		storage:           storage,
+		embedder:          embedder,
+		knowledgeBasePath: knowledgeBasePath,
 	}
 }
 

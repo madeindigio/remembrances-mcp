@@ -423,9 +423,12 @@ func (s *SurrealDBStorage) SearchDocuments(ctx context.Context, queryEmbedding [
 
 // DeleteDocument deletes a knowledge base document
 func (s *SurrealDBStorage) DeleteDocument(ctx context.Context, filePath string) error {
-	recordID := fmt.Sprintf("knowledge_base:['%s']", strings.ReplaceAll(filePath, "/", "_"))
+	query := "DELETE FROM knowledge_base WHERE file_path = $file_path"
+	params := map[string]interface{}{
+		"file_path": filePath,
+	}
 
-	_, err := surrealdb.Delete[map[string]interface{}](s.db, recordID)
+	_, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
 		return fmt.Errorf("failed to delete document: %w", err)
 	}
@@ -441,10 +444,12 @@ func (s *SurrealDBStorage) DeleteDocument(ctx context.Context, filePath string) 
 
 // GetDocument retrieves a knowledge base document by file path
 func (s *SurrealDBStorage) GetDocument(ctx context.Context, filePath string) (*Document, error) {
-	recordID := fmt.Sprintf("knowledge_base:['%s']", strings.ReplaceAll(filePath, "/", "_"))
+	query := "SELECT * FROM knowledge_base WHERE file_path = $file_path"
+	params := map[string]interface{}{
+		"file_path": filePath,
+	}
 
-	query := "SELECT * FROM " + recordID
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get document: %w", err)
 	}

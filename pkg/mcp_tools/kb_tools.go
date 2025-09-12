@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 )
@@ -82,6 +85,89 @@ Example arguments/values:
 }
 
 // Knowledge Base tool handlers
+// saveMarkdownFile saves a document as a markdown file in the knowledge base directory
+func (tm *ToolManager) saveMarkdownFile(filePath, content string) error {
+	if tm.knowledgeBasePath == "" {
+		// Knowledge base path not configured, skip filesystem storage
+		return nil
+	}
+
+	// Ensure the file has .md extension
+	if !strings.HasSuffix(filePath, ".md") {
+		filePath = filePath + ".md"
+	}
+
+	// Create the full path
+	fullPath := filepath.Join(tm.knowledgeBasePath, filePath)
+
+	// Create directories if they don't exist
+	dir := filepath.Dir(fullPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", dir, err)
+	}
+
+	// Write the content to file
+	if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+		return fmt.Errorf("failed to write file %s: %w", fullPath, err)
+	}
+
+	return nil
+}
+
+// removeMarkdownFile removes a markdown file from the knowledge base directory
+func (tm *ToolManager) removeMarkdownFile(filePath string) error {
+	if tm.knowledgeBasePath == "" {
+		// Knowledge base path not configured, skip filesystem operation
+		return nil
+	}
+
+	// Ensure the file has .md extension
+	if !strings.HasSuffix(filePath, ".md") {
+		filePath = filePath + ".md"
+	}
+
+	// Create the full path
+	fullPath := filepath.Join(tm.knowledgeBasePath, filePath)
+
+	// Log the attempted removal
+	slog.Info("Attempting to remove markdown file", "file_path", filePath, "full_path", fullPath)
+
+	// Remove the file if it exists
+	if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove file %s: %w", fullPath, err)
+	}
+
+	slog.Info("Successfully removed markdown file", "file_path", filePath, "full_path", fullPath)
+	return nil
+}
+
+// readMarkdownFile reads a markdown file from the knowledge base directory
+func (tm *ToolManager) readMarkdownFile(filePath string) (string, error) {
+	if tm.knowledgeBasePath == "" {
+		// Knowledge base path not configured, return empty content
+		return "", nil
+	}
+
+	// Ensure the file has .md extension
+	if !strings.HasSuffix(filePath, ".md") {
+		filePath = filePath + ".md"
+	}
+
+	// Create the full path
+	fullPath := filepath.Join(tm.knowledgeBasePath, filePath)
+
+	// Read the file
+	content, err := os.ReadFile(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil // File doesn't exist, return empty content
+		}
+		return "", fmt.Errorf("failed to read file %s: %w", fullPath, err)
+	}
+
+	return string(content), nil
+}
+
 func (tm *ToolManager) addDocumentHandler(ctx context.Context, request *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input AddDocumentInput
 	if err := json.Unmarshal(request.RawArguments, &input); err != nil {
@@ -94,15 +180,29 @@ func (tm *ToolManager) addDocumentHandler(ctx context.Context, request *protocol
 		return nil, fmt.Errorf(errGenEmbedding, err)
 	}
 
+	// Save to database
 	err = tm.storage.SaveDocument(ctx, input.FilePath, input.Content, embedding, stringMapToInterfaceMap(input.Metadata))
 	if err != nil {
-		return nil, fmt.Errorf("failed to add document: %w", err)
+		return nil, fmt.Errorf("failed to add document to database: %w", err)
+	}
+
+	// Save to filesystem as markdown file (if knowledge base path is configured)
+	if err := tm.saveMarkdownFile(input.FilePath, input.Content); err != nil {
+		slog.Warn("failed to save document to filesystem", "file_path", input.FilePath, "error", err)
+		// Don't fail the operation if filesystem save fails, but log it
+	}
+
+	var message string
+	if tm.knowledgeBasePath != "" {
+		message = fmt.Sprintf("Successfully added document '%s' to knowledge base (database and filesystem)", input.FilePath)
+	} else {
+		message = fmt.Sprintf("Successfully added document '%s' to knowledge base (database only)", input.FilePath)
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Successfully added document '%s' to knowledge base", input.FilePath),
+			Text: message,
 		},
 	}, false), nil
 }
@@ -144,29 +244,48 @@ func (tm *ToolManager) getDocumentHandler(ctx context.Context, request *protocol
 		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
+	// First try to get from database
 	document, err := tm.storage.GetDocument(ctx, input.FilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get document: %w", err)
 	}
 
-	if document == nil {
+	if document != nil {
+		// Found in database, return it
+		// Don't include embedding in response (too large)
+		doc := *document
+		doc.Embedding = nil
+		docBytes, _ := json.MarshalIndent(doc, "", "  ")
+
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{
 				Type: "text",
-				Text: fmt.Sprintf("No document found at path '%s'", input.FilePath),
+				Text: fmt.Sprintf("Document '%s' (from database):\n%s", input.FilePath, string(docBytes)),
 			},
 		}, false), nil
 	}
 
-	// Don't include embedding in response (too large)
-	doc := *document
-	doc.Embedding = nil
-	docBytes, _ := json.MarshalIndent(doc, "", "  ")
+	// Not found in database, try to read from filesystem
+	if tm.knowledgeBasePath != "" {
+		content, err := tm.readMarkdownFile(input.FilePath)
+		if err != nil {
+			slog.Warn("failed to read document from filesystem", "file_path", input.FilePath, "error", err)
+		} else if content != "" {
+			// Found in filesystem, return it as a simple content response
+			return protocol.NewCallToolResult([]protocol.Content{
+				&protocol.TextContent{
+					Type: "text",
+					Text: fmt.Sprintf("Document '%s' (from filesystem):\n%s", input.FilePath, content),
+				},
+			}, false), nil
+		}
+	}
 
+	// Not found in either location
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Document '%s':\n%s", input.FilePath, string(docBytes)),
+			Text: fmt.Sprintf("No document found at path '%s' in database or filesystem", input.FilePath),
 		},
 	}, false), nil
 }
@@ -177,15 +296,36 @@ func (tm *ToolManager) deleteDocumentHandler(ctx context.Context, request *proto
 		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
+	slog.Info("Processing delete document request", "file_path", input.FilePath)
+
+	// Delete from database
 	err := tm.storage.DeleteDocument(ctx, input.FilePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to delete document: %w", err)
+		slog.Error("Failed to delete document from database", "file_path", input.FilePath, "error", err)
+		return nil, fmt.Errorf("failed to delete document from database: %w", err)
 	}
+
+	slog.Info("Successfully deleted document from database", "file_path", input.FilePath)
+
+	// Remove from filesystem (if knowledge base path is configured)
+	if err := tm.removeMarkdownFile(input.FilePath); err != nil {
+		slog.Warn("failed to remove document from filesystem", "file_path", input.FilePath, "error", err)
+		// Don't fail the operation if filesystem removal fails, but log it
+	}
+
+	var message string
+	if tm.knowledgeBasePath != "" {
+		message = fmt.Sprintf("Successfully deleted document '%s' from knowledge base (database and filesystem)", input.FilePath)
+	} else {
+		message = fmt.Sprintf("Successfully deleted document '%s' from knowledge base (database only)", input.FilePath)
+	}
+
+	slog.Info("Completed delete document request", "file_path", input.FilePath, "message", message)
 
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Successfully deleted document '%s'", input.FilePath),
+			Text: message,
 		},
 	}, false), nil
 }

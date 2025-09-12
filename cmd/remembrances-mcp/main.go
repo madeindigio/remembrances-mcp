@@ -257,7 +257,7 @@ Choose the right tool for your data:
 	}
 
 	// Register MCP tools
-	toolManager := mcp_tools.NewToolManager(storageInstance, embedderInstance)
+	toolManager := mcp_tools.NewToolManager(storageInstance, embedderInstance, cfg.KnowledgeBase)
 	if err := toolManager.RegisterTools(srv); err != nil {
 		slog.Error("failed to register MCP tools", "error", err)
 		os.Exit(1)
