@@ -37,7 +37,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 2 // Current target version - updated to support user_stats table
+	targetVersion := 3 // Current target version - updated to fix user_stats field definitions
 	if currentVersion < targetVersion {
 		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -163,6 +163,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		return s.applyMigrationV1(ctx)
 	case 2:
 		return s.applyMigrationV2(ctx)
+	case 3:
+		return s.applyMigrationV3(ctx)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}
@@ -311,6 +313,52 @@ func (s *SurrealDBStorage) applyMigrationV2(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+// applyMigrationV3 fixes the user_stats field definitions by removing VALUE constraints
+func (s *SurrealDBStorage) applyMigrationV3(ctx context.Context) error {
+	log.Println("Applying migration v3: Fixing user_stats field definitions")
+
+	// Remove the problematic fields that have VALUE constraints
+	dropStatements := []string{
+		"REMOVE FIELD key_value_count ON user_stats;",
+		"REMOVE FIELD vector_count ON user_stats;",
+		"REMOVE FIELD entity_count ON user_stats;",
+		"REMOVE FIELD relationship_count ON user_stats;",
+		"REMOVE FIELD document_count ON user_stats;",
+	}
+
+	// Execute drop statements
+	for _, stmt := range dropStatements {
+		log.Printf("Executing: %s", stmt)
+		_, err := surrealdb.Query[[]map[string]interface{}](s.db, stmt, nil)
+		if err != nil {
+			// Log warning but continue - field might not exist
+			log.Printf("Warning: Failed to drop field: %v", err)
+		}
+	}
+
+	// Define the corrected fields without VALUE constraints
+	elements := []SchemaElement{
+		{Type: "field", Statement: `DEFINE FIELD key_value_count ON user_stats TYPE int;`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD vector_count ON user_stats TYPE int;`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD entity_count ON user_stats TYPE int;`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD relationship_count ON user_stats TYPE int;`, OnTable: "user_stats"},
+		{Type: "field", Statement: `DEFINE FIELD document_count ON user_stats TYPE int;`, OnTable: "user_stats"},
+	}
+
+	// Apply the corrected field definitions
+	for i, element := range elements {
+		log.Printf("Creating corrected field: %s", element.Statement)
+		_, err := surrealdb.Query[[]map[string]interface{}](s.db, element.Statement, nil)
+		if err != nil {
+			// This should succeed since we removed the old definitions
+			return fmt.Errorf("failed to execute migration v3 statement %d '%s': %w", i+1, element.Statement, err)
+		}
+	}
+
+	log.Println("Migration v3 completed successfully")
 	return nil
 }
 

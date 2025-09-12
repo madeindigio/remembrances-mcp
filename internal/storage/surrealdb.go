@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -533,16 +534,12 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 		queryResult := (*userResult)[0]
 		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
 			userStatsData := queryResult.Result[0]
-			// Extract user-specific statistics
+			// Extract user-specific statistics with improved type handling
 			if kvCount, ok := userStatsData["key_value_count"]; ok {
-				if count, ok := kvCount.(float64); ok {
-					stats.KeyValueCount = int(count)
-				}
+				stats.KeyValueCount = convertToInt(kvCount)
 			}
 			if vectorCount, ok := userStatsData["vector_count"]; ok {
-				if count, ok := vectorCount.(float64); ok {
-					stats.VectorCount = int(count)
-				}
+				stats.VectorCount = convertToInt(vectorCount)
 			}
 		}
 	}
@@ -554,21 +551,15 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 		queryResult := (*globalResult)[0]
 		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
 			globalStatsData := queryResult.Result[0]
-			// Extract global statistics
+			// Extract global statistics with improved type handling
 			if entityCount, ok := globalStatsData["entity_count"]; ok {
-				if count, ok := entityCount.(float64); ok {
-					stats.EntityCount = int(count)
-				}
+				stats.EntityCount = convertToInt(entityCount)
 			}
 			if relCount, ok := globalStatsData["relationship_count"]; ok {
-				if count, ok := relCount.(float64); ok {
-					stats.RelationshipCount = int(count)
-				}
+				stats.RelationshipCount = convertToInt(relCount)
 			}
 			if docCount, ok := globalStatsData["document_count"]; ok {
-				if count, ok := docCount.(float64); ok {
-					stats.DocumentCount = int(count)
-				}
+				stats.DocumentCount = convertToInt(docCount)
 			}
 		}
 	}
@@ -579,14 +570,54 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 	return stats, nil
 }
 
+// convertToInt safely converts various numeric types to int
+func convertToInt(value interface{}) int {
+	if value == nil {
+		return 0
+	}
+
+	switch v := value.(type) {
+	case int:
+		return v
+	case int64:
+		return int(v)
+	case int32:
+		return int(v)
+	case uint64:
+		return int(v)
+	case uint32:
+		return int(v)
+	case float64:
+		return int(v)
+	case float32:
+		return int(v)
+	case string:
+		// Try to parse numeric string
+		if parsed, err := strconv.Atoi(v); err == nil {
+			return parsed
+		}
+	}
+	return 0
+}
+
 // updateUserStat atomically updates a specific statistic for a user.
 // It uses an upsert approach to ensure consistency and handle new users.
 func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField string, delta int) error {
+	log.Printf("DEBUG: updateUserStat called - userID: %s, statField: %s, delta: %d", userID, statField, delta)
+
 	// First, try to get the existing record
 	selectQuery := "SELECT * FROM user_stats WHERE user_id = $user_id"
 	selectResult, err := surrealdb.Query[[]map[string]interface{}](s.db, selectQuery, map[string]interface{}{
 		"user_id": userID,
 	})
+
+	log.Printf("DEBUG: Select query result - err: %v", err)
+	if selectResult != nil {
+		log.Printf("DEBUG: Select result length: %d", len(*selectResult))
+		if len(*selectResult) > 0 {
+			log.Printf("DEBUG: First result: %+v", (*selectResult)[0])
+		}
+	}
 
 	var currentValue int
 	recordExists := false
@@ -595,6 +626,7 @@ func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField
 		queryResult := (*selectResult)[0]
 		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
 			recordExists = true
+			log.Printf("DEBUG: Found existing record: %+v", queryResult.Result[0])
 			if val, ok := queryResult.Result[0][statField]; ok {
 				if floatVal, ok := val.(float64); ok {
 					currentValue = int(floatVal)
@@ -604,19 +636,61 @@ func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField
 	}
 
 	newValue := currentValue + delta
+	log.Printf("DEBUG: recordExists: %t, currentValue: %d, newValue: %d", recordExists, currentValue, newValue)
 
 	if recordExists {
-		// Update existing record
-		updateQuery := fmt.Sprintf("UPDATE user_stats SET %s = $new_value, updated_at = time::now() WHERE user_id = $user_id", statField)
-		_, err = surrealdb.Query[[]map[string]interface{}](s.db, updateQuery, map[string]interface{}{
-			"user_id":   userID,
-			"new_value": newValue,
-		})
+		// Update existing record using UPSERT which might handle updates better
+		upsertQuery := `
+			LET $record = (SELECT * FROM user_stats WHERE user_id = $user_id)[0];
+			UPDATE user_stats CONTENT {
+				user_id: $user_id,
+				key_value_count: $record.key_value_count OR 0,
+				vector_count: $record.vector_count OR 0,
+				entity_count: $record.entity_count OR 0,
+				relationship_count: $record.relationship_count OR 0,
+				document_count: $record.document_count OR 0,
+				updated_at: time::now()
+			} WHERE user_id = $user_id;
+		`
+
+		// Set the specific field to the new value
+		params := map[string]interface{}{
+			"user_id": userID,
+		}
+
+		// Add the updated field value
+		switch statField {
+		case "key_value_count":
+			upsertQuery = `
+				UPDATE user_stats SET key_value_count = $new_value, updated_at = time::now() WHERE user_id = $user_id;
+			`
+		case "vector_count":
+			upsertQuery = `
+				UPDATE user_stats SET vector_count = $new_value, updated_at = time::now() WHERE user_id = $user_id;
+			`
+		case "entity_count":
+			upsertQuery = `
+				UPDATE user_stats SET entity_count = $new_value, updated_at = time::now() WHERE user_id = $user_id;
+			`
+		case "relationship_count":
+			upsertQuery = `
+				UPDATE user_stats SET relationship_count = $new_value, updated_at = time::now() WHERE user_id = $user_id;
+			`
+		case "document_count":
+			upsertQuery = `
+				UPDATE user_stats SET document_count = $new_value, updated_at = time::now() WHERE user_id = $user_id;
+			`
+		default:
+			return fmt.Errorf("invalid stat field: %s", statField)
+		}
+
+		params["new_value"] = newValue
+
+		_, err = surrealdb.Query[[]map[string]interface{}](s.db, upsertQuery, params)
 	} else {
 		// Create new record
 		createData := map[string]interface{}{
 			"user_id":            userID,
-			statField:            newValue,
 			"key_value_count":    0,
 			"vector_count":       0,
 			"entity_count":       0,
@@ -625,13 +699,16 @@ func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField
 		}
 		createData[statField] = newValue
 
-		_, err = surrealdb.Create[map[string]interface{}](s.db, "user_stats", createData)
+		log.Printf("DEBUG: Creating new record with data: %+v", createData)
+		createResult, err := surrealdb.Create[map[string]interface{}](s.db, "user_stats", createData)
+		log.Printf("DEBUG: Create result - err: %v, result: %+v", err, createResult)
 	}
 
 	if err != nil {
 		return fmt.Errorf("failed to update user stat %s for user %s: %w", statField, userID, err)
 	}
 
+	log.Printf("DEBUG: updateUserStat completed successfully")
 	return nil
 }
 
