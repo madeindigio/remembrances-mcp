@@ -21,7 +21,7 @@ Explanation: Embeds the document content and stores it together with file path a
 When to call: Use when onboarding reference documents, manuals, or files you want to query semantically.
 
 Example arguments/values:
-	file_path: "/kb/guide.pdf"
+	file_path: "guide.md"
 	content: "Full text of the document..."
 	metadata: { source: "import" }
 `, AddDocumentInput{})
@@ -58,7 +58,7 @@ Explanation: Returns the document metadata and content (embedding omitted in res
 When to call: Use when you know the exact document path and need its contents or metadata.
 
 Example arguments/values:
-	file_path: "/kb/guide.pdf"
+	file_path: "guide.md"
 `, GetDocumentInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "kb_get_document", "err", err)
@@ -75,7 +75,7 @@ Explanation: Removes the stored document and its embedding.
 When to call: Use to remove outdated or sensitive documents.
 
 Example arguments/values:
-	file_path: "/kb/guide.pdf"
+	file_path: "guide.md"
 `, DeleteDocumentInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "kb_delete_document", "err", err)
