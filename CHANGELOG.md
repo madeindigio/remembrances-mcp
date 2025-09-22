@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.1...84f3c0831cfc76314b9f46d7a00d55a3d5199960) (2025-09-22)
+### [v0.30.2](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.1...v0.30.2) (2025-09-22)
 
-### Fixes
+#### Fixes
 
 * update description of knowledgebase for not using subfolder
 ([84f3c08](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/84f3c0831cfc76314b9f46d7a00d55a3d5199960))
