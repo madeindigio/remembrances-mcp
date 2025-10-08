@@ -1,0 +1,7 @@
+#!/usr/bin/with-contenv sh
+echo "S6-INIT: Downloading ollama models..."
+
+# Descargar modelo de embeddings en Ollama 
+/usr/bin/ollama pull nomic-embed-text:latest
+
+echo "S6-INIT: Model downloaded, continuing with startup..."
