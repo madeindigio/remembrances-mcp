@@ -359,22 +359,17 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
 		"file_path": filePath,
 	})
 
-	var isNewDocument bool
-	if err != nil || existsResult == nil || len(*existsResult) == 0 {
-		isNewDocument = true
-	} else {
-		queryResult := (*existsResult)[0]
-		isNewDocument = queryResult.Status != "OK" || len(queryResult.Result) == 0
+	isNewDocument := true
+	if err != nil {
+		return fmt.Errorf("failed to check existing document: %w", err)
 	}
 
-	query := `
-		UPSERT knowledge_base SET
-			file_path = $file_path,
-			content = $content,
-			embedding = $embedding,
-			metadata = $metadata
-		WHERE file_path = $file_path
-	`
+	if existsResult != nil && len(*existsResult) > 0 {
+		queryResult := (*existsResult)[0]
+		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+			isNewDocument = false
+		}
+	}
 
 	params := map[string]interface{}{
 		"file_path": filePath,
@@ -383,9 +378,30 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
 		"metadata":  metadata,
 	}
 
-	_, err = surrealdb.Query[[]map[string]interface{}](s.db, query, params)
-	if err != nil {
-		return fmt.Errorf("failed to save document: %w", err)
+	if isNewDocument {
+		query := `
+			CREATE knowledge_base CONTENT {
+				file_path: $file_path,
+				content: $content,
+				embedding: $embedding,
+				metadata: $metadata
+			}
+		`
+		if _, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params); err != nil {
+			return fmt.Errorf("failed to create document: %w", err)
+		}
+	} else {
+		query := `
+			UPDATE knowledge_base
+			SET content = $content,
+				embedding = $embedding,
+				metadata = $metadata,
+				updated_at = time::now()
+			WHERE file_path = $file_path
+		`
+		if _, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params); err != nil {
+			return fmt.Errorf("failed to update document: %w", err)
+		}
 	}
 
 	// Update global document statistics only if this is a new document
