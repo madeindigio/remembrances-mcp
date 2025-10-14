@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
+	"gopkg.in/yaml.v3"
 )
 
 // Knowledge Base tool definitions
@@ -228,7 +229,14 @@ func (tm *ToolManager) searchDocumentsHandler(ctx context.Context, request *prot
 		return nil, fmt.Errorf("failed to search documents: %w", err)
 	}
 
-	resultsBytes, _ := json.MarshalIndent(results, "", "  ")
+	// Omit embeddings from the response
+	for _, result := range results {
+		if result.Document != nil {
+			result.Document.Embedding = nil
+		}
+	}
+
+	resultsBytes, _ := yaml.Marshal(results)
 
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
