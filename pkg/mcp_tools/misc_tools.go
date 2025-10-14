@@ -17,6 +17,8 @@ Explanation: Combines semantic vector search, graph traversal (filtered by entit
 
 When to call: Use when you need the broadest coverage for a query that may be answered by facts, documents, graph links, or semantic memories.
 
+Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
+
 Example arguments/values:
 	user_id: "user123"
 	query: "Who worked on project X and what notes exist?"
@@ -36,6 +38,8 @@ func (tm *ToolManager) getStatsTool() *protocol.Tool {
 Explanation: Returns counts for facts, vectors, documents, entities, relationships and other usage metrics.
 
 When to call: Use for monitoring, quota checks, or to provide an overview dashboard for a user.
+
+Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
 
 Example arguments/values:
 	user_id: "user123"

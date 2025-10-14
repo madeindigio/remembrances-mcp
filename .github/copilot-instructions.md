@@ -18,6 +18,7 @@ The system has undergone major refactoring (September 2025) and is fully operati
 ### Development Workflow
 
 - **Always use Serena tools** for code editing and navigation
+- Use always english as language for all code, comments, and documentation although the user may write in other languages
 - **Build command**: `xc build` (rebuild after code changes)
 - **Testing**: Create tests in `tests/` folder (Python files, not in root)
 - **Server restart**: Wait for user to manually restart MCP server after fixes

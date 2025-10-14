@@ -17,6 +17,8 @@ Explanation: Stores a simple key -> value pair scoped to a user. Values can be s
 
 When to call: Use when you need to persist small, structured facts or preferences (e.g. contact info, settings, short user preferences) that will be retrieved by exact key later.
 
+Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
+
 Example arguments/values:
 	user_id: "user123"
 	key: "favorite_color"
@@ -36,6 +38,8 @@ Explanation: Returns the stored value for the given user/key. If not found, retu
 
 When to call: Use when you know the exact key you stored and need the precise value back (no semantic matching).
 
+Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
+
 Example arguments/values:
 	user_id: "user123"
 	key: "favorite_color"
@@ -54,6 +58,8 @@ Explanation: Returns all facts previously saved for the specified user as a map 
 
 When to call: Use when you need an overview of stored preferences or when initializing a user session.
 
+Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
+
 Example arguments/values:
 	user_id: "user123"
 `, ListFactsInput{})
@@ -70,6 +76,8 @@ func (tm *ToolManager) deleteFactTool() *protocol.Tool {
 Explanation: Permanently removes the specified key for the user.
 
 When to call: Use to correct mistakes or to forget outdated personal data (e.g., user requested deletion).
+
+Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
 
 Example arguments/values:
 	user_id: "user123"

@@ -17,6 +17,8 @@ Explanation: Converts the provided text into an embedding and stores it with opt
 
 When to call: Use for storing notes, messages, or any content you may later find by conceptual similarity (e.g., meeting notes, ideas, long-form content).
 
+Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
+
 Example arguments/values:
 	user_id: "user123"
 	content: "Met Alice about project X; action: follow up on budget."
@@ -35,6 +37,8 @@ func (tm *ToolManager) searchVectorsTool() *protocol.Tool {
 Explanation: Embeds the query and returns the closest stored vectors for the user.
 
 When to call: Use when you want results related by meaning (e.g., find notes about "budget" even if the note doesn't contain the word). Set "limit" to control result count.
+
+Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
 
 Example arguments/values:
 	user_id: "user123"
@@ -55,6 +59,8 @@ Explanation: Recomputes embedding for the new content and updates metadata. Requ
 
 When to call: Use when correcting or improving previously stored content.
 
+Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
+
 Example arguments/values:
 	id: "vec_abc123"
 	user_id: "user123"
@@ -74,6 +80,8 @@ func (tm *ToolManager) deleteVectorTool() *protocol.Tool {
 Explanation: Removes the vector record and its embedding. Requires the vector ID and user for authorization/scoping.
 
 When to call: Use to remove obsolete or sensitive semantic items.
+
+Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
 
 Example arguments/values:
 	id: "vec_abc123"

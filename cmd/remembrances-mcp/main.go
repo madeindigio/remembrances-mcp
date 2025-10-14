@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/madeindigio/remembrances-mcp/internal/config"
+	"github.com/madeindigio/remembrances-mcp/internal/kb"
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
 	"github.com/madeindigio/remembrances-mcp/internal/transport"
 	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
@@ -263,6 +264,17 @@ Choose the right tool for your data:
 		os.Exit(1)
 	}
 
+	// Knowledge base watcher
+	var kbWatcher *kb.Watcher
+	if cfg.KnowledgeBase != "" {
+		w, err := kb.StartWatcher(ctx, cfg.KnowledgeBase, storageInstance, embedderInstance)
+		if err != nil {
+			slog.Warn("failed to start knowledge base watcher", "error", err)
+		} else {
+			kbWatcher = w
+		}
+	}
+
 	// If HTTP transport is enabled, set it up now that the server is configured
 	if cfg.HTTP {
 		addr := cfg.HTTPAddr
@@ -292,6 +304,11 @@ Choose the right tool for your data:
 		// Shutdown HTTP transport if running
 		if httpTransport != nil {
 			_ = httpTransport.Shutdown(shutdownCtx)
+		}
+
+		// Stop knowledge base watcher
+		if kbWatcher != nil {
+			kbWatcher.Stop()
 		}
 
 		_ = srv.Shutdown(shutdownCtx)
