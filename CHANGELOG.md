@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.3...d0a25a38e890c856447e09f655db822752b4469b) (2025-10-14)
+
+### Features
+
+* Update tools descriptions for using user_id as the project name, know the
+knowledge base embeddings is update then files in knowledge base path are
+created or modified
+([d0a25a3](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/d0a25a38e890c856447e09f655db822752b4469b))
+* change kb_search_documents response to YAML format
+([d61cc5d](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/d61cc5d8b35d7cce4c30129993af9256b3d5f10d))
+* update AI config mcp tools and remove embeddings response from knowledge
+base response
+([b0bb978](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/b0bb9787b738cfebea232082886bfaf1e6c0d459))
+* try to add docker image (not working by now
+([0d59abf](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/0d59abf7978fa3c3ccb2fd26fb4a13ae87e3cea7))
+
+### Fixes
+
+* fix timestamps of documents in knowledge base
+([28b729e](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/28b729eed15e936fdb4571f115b0d9ff0034719d))
+
+### [v0.30.3](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.2...v0.30.3) (2025-09-22)
+
 ### [v0.30.2](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.1...v0.30.2) (2025-09-22)
 
 #### Fixes
