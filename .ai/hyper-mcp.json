@@ -1,0 +1,45 @@
+{
+  "plugins": [
+    {
+      "name": "time",
+      "path": "oci://ghcr.io/tuananh/time-plugin:latest"
+    },
+    {
+      "name": "think",
+      "path": "oci://ghcr.io/tuananh/think-plugin:latest"
+    },
+    {
+      "name": "hash",
+      "path": "oci://ghcr.io/tuananh/hash-plugin:latest"
+    },
+    {
+      "name": "fetch",
+      "path": "oci://ghcr.io/tuananh/fetch-plugin:latest",
+      "runtime_config": {
+        "allowed_hosts": ["*"],
+        "memory_limit": "100 MB"
+      }
+    },
+    {
+      "name": "context7",
+      "path": "oci://ghcr.io/tuananh/context7-plugin:nightly",
+      "runtime_config": {
+        "allowed_hosts": ["context7.com"]
+      }
+    },
+    {
+      "name": "sequentialthinking",
+      "path": "oci://ghcr.io/sevir/sequentialthinking-plugin:latest"
+    },
+    {
+      "name": "serper",
+      "path": "oci://ghcr.io/tuananh/serper-plugin:latest",
+      "runtime_config": {
+        "env_vars": {
+          "SERPER_API_KEY": "d2ab856bac4b9c819ebbdbf5d33e9b29d369a3c3"
+        },
+        "allowed_hosts": ["google.serper.dev"]
+      }
+    }
+  ]
+}

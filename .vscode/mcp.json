@@ -5,7 +5,7 @@
 			"command": "hyper-mcp",
 			"args": [
 				"--config-file",
-				"/home/sevir/.config/hyper-mcp/kilo.json"
+				".ai/hyper-mcp.yaml"
 			]
 		},
 		"mycommandmcp": {
@@ -13,9 +13,7 @@
 			"command": "mycommandmcp",
 			"args": [
 				"--config",
-				"/home/sevir/.config/mc-mcp/optimized.yaml",
-				"--log-file",
-				"/www/MCP/MyCommandMCP/mycommandmcp/mcp.log"
+				".ai/mycommand-mcp.yaml"
 			]
 		},
 		"serena": {

@@ -228,6 +228,13 @@ func (tm *ToolManager) searchDocumentsHandler(ctx context.Context, request *prot
 		return nil, fmt.Errorf("failed to search documents: %w", err)
 	}
 
+	// Omit embeddings from the response
+	for _, result := range results {
+		if result.Document != nil {
+			result.Document.Embedding = nil
+		}
+	}
+
 	resultsBytes, _ := json.MarshalIndent(results, "", "  ")
 
 	return protocol.NewCallToolResult([]protocol.Content{
