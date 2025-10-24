@@ -56,3 +56,7 @@ surreal_data/*
 # binaries
 remembrances-mcp
 dist/*
+
+# Build cache
+.cache/
+build-*.log

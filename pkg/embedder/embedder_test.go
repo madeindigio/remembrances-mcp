@@ -19,6 +19,7 @@ func (m *MockConfig) GetOpenAIKey() string   { return m.openaiKey }
 func (m *MockConfig) GetOpenAIURL() string   { return m.openaiURL }
 func (m *MockConfig) GetOpenAIModel() string { return m.openaiModel }
 
+
 func TestNewEmbedderFromConfig(t *testing.T) {
 	tests := []struct {
 		name        string

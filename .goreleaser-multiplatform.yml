@@ -1,0 +1,265 @@
+# GoReleaser configuration for remembrances-mcp with multi-platform CGO support
+# This configuration is designed to work with goreleaser-cross Docker image
+# Usage: docker run --rm --privileged -v $(pwd):/go/src/github.com/madeindigio/remembrances-mcp \
+#        -v /var/run/docker.sock:/var/run/docker.sock \
+#        -w /go/src/github.com/madeindigio/remembrances-mcp \
+#        ghcr.io/goreleaser/goreleaser-cross:v1.21 release --snapshot --clean
+
+version: 2
+
+# Note: Static libraries are built automatically via before hooks
+# This ensures all platform dependencies are ready before compilation
+
+before:
+  hooks:
+    # Build llama.cpp static libraries for all platforms
+    - bash -c "cd go-llama.cpp && chmod +x scripts/build-static-multi.sh && ./scripts/build-static-multi.sh linux amd64"
+    - bash -c "cd go-llama.cpp && ./scripts/build-static-multi.sh linux arm64"
+    - bash -c "cd go-llama.cpp && ./scripts/build-static-multi.sh darwin amd64"
+    - bash -c "cd go-llama.cpp && ./scripts/build-static-multi.sh darwin arm64"
+    - bash -c "cd go-llama.cpp && ./scripts/build-static-multi.sh windows amd64"
+    # Ensure go.mod is tidy
+    - go mod tidy
+
+builds:
+  # Linux AMD64
+  - id: linux-amd64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+      - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
+      - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
+      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-linux-amd64 -lm -lstdc++
+    ldflags:
+      - -s
+      - -w
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}
+    flags:
+      - -trimpath
+
+  # Linux ARM64
+  - id: linux-arm64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - linux
+    goarch:
+      - arm64
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+      - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
+      - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
+      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-linux-arm64 -lm -lstdc++
+    ldflags:
+      - -s
+      - -w
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}
+    flags:
+      - -trimpath
+
+  # Darwin AMD64 (macOS Intel)
+  - id: darwin-amd64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+      - CXX=o64-clang++
+      - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
+      - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
+      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-darwin-amd64 -lm -lstdc++ -framework Accelerate -framework Foundation -framework Metal -framework MetalKit -framework MetalPerformanceShaders
+    ldflags:
+      - -s
+      - -w
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}
+    flags:
+      - -trimpath
+
+  # Darwin ARM64 (macOS Apple Silicon M1/M2)
+  - id: darwin-arm64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+      - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
+      - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
+      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-darwin-arm64 -lm -lstdc++ -framework Accelerate -framework Foundation -framework Metal -framework MetalKit -framework MetalPerformanceShaders
+    ldflags:
+      - -s
+      - -w
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}
+    flags:
+      - -trimpath
+
+  # Windows AMD64
+  - id: windows-amd64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - windows
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+      - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
+      - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
+      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-windows-amd64 -lm -lstdc++ -static
+    ldflags:
+      - -s
+      - -w
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}
+      - -extldflags=-static
+    flags:
+      - -trimpath
+      - -buildmode=exe
+
+dist: ./dist/outputs/dist
+
+upx:
+  - enabled: true
+    ids:
+      - linux-amd64
+      - linux-arm64
+      - windows-amd64
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    compress: "1"
+    lzma: true
+    brute: false
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^build:"
+      - "^ci:"
+      - "Merge pull request"
+      - "Merge branch"
+  groups:
+    - title: "New Features"
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: "Bug Fixes"
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: "Performance Improvements"
+      regexp: "^.*perf[(\\w)]*:+.*$"
+      order: 2
+    - title: "Refactoring"
+      regexp: "^.*refactor[(\\w)]*:+.*$"
+      order: 3
+    - title: "Other Changes"
+      order: 999
+
+release:
+  github:
+    owner: madeindigio
+    name: remembrances-mcp
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+  footer: |
+    ## Installation
+
+    ### Linux / macOS
+    ```bash
+    # Download and extract
+    tar xzf remembrances-mcp_*.tar.gz
+
+    # Move to PATH
+    sudo mv remembrances-mcp /usr/local/bin/
+
+    # Verify installation
+    remembrances-mcp --version
+    ```
+
+    ### Windows
+    ```powershell
+    # Extract the zip file and add to PATH
+    # Or run directly from extracted location
+    .\remembrances-mcp.exe --version
+    ```
+
+    ## Usage
+
+    ### With llama.cpp (local embeddings)
+    ```bash
+    remembrances-mcp \
+      --llama-model-path ./models/nomic-embed-text-v1.5.Q8_0.gguf \
+      --llama-dimension 768 \
+      --surrealdb-url ws://localhost:8000
+    ```
+
+    ### With Ollama
+    ```bash
+    remembrances-mcp \
+      --ollama-model nomic-embed-text \
+      --surrealdb-url ws://localhost:8000
+    ```
+
+    ### With OpenAI
+    ```bash
+    export GOMEM_OPENAI_KEY=sk-...
+    remembrances-mcp \
+      --openai-model text-embedding-3-large \
+      --surrealdb-url ws://localhost:8000
+    ```
+
+    **Full Changelog**: https://github.com/madeindigio/remembrances-mcp/compare/{{.PreviousTag}}...{{.Tag}}

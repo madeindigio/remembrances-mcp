@@ -1,0 +1,72 @@
+# GoReleaser test configuration for remembrances-mcp
+# This is a minimal configuration to test the build process quickly
+# Only builds Linux amd64 for faster testing
+
+# Build llama.cpp static library automatically
+before:
+  hooks:
+    # Build only Linux amd64 for testing
+    - bash -c "cd go-llama.cpp && chmod +x scripts/build-static-multi.sh && ./scripts/build-static-multi.sh linux amd64"
+    # Ensure go.mod is tidy
+    - go mod tidy
+
+builds:
+  # Linux AMD64 only (for testing)
+  - id: linux-amd64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+      - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
+      - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
+      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-linux-amd64 -lm -lstdc++
+    ldflags:
+      - -s
+      - -w
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}
+      - -X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}
+    flags:
+      - -trimpath
+
+dist: ./dist/outputs/dist
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-SNAPSHOT-{{.ShortCommit}}"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^build:"
+      - "^ci:"
+      - "Merge pull request"
+      - "Merge branch"

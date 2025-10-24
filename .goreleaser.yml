@@ -2,37 +2,30 @@
 # Adapted from: https://raw.githubusercontent.com/sevir/essh/refs/heads/master/.goreleaser.yml
 version: 2
 
+# Note: before hooks don't support templating for Os/Arch in goreleaser v2
+# Static library must be built before running goreleaser
+# Run: make llama-deps before goreleaser
+
 builds:
   - id: remembrances-mcp
     main: ./cmd/remembrances-mcp
     binary: remembrances-mcp
     goos:
-      - darwin
       - linux
-      - windows
     goarch:
-      - "386"
-      - "amd64"
-      - "arm"
-      - "arm64"
-    goarm:
-      - "7"
+      - amd64
     ldflags:
       - "-s"
       - "-w"
       - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
       - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
     env:
-      - CGO_ENABLED=0
-    ignore:
-      - goos: darwin
-        goarch: "386"
-      - goos: windows
-        goarch: "386"
-      - goos: windows
-        goarch: "arm"
-      - goos: windows
-        goarch: "arm64"
+      - CGO_ENABLED=1
+      - CC=gcc
+      - CXX=g++
+      - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
+      - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
+      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding -lm -lstdc++
 
 dist: ./dist/outputs/dist
 
@@ -41,30 +34,29 @@ upx:
     # Filter by build ID(s) to compress. Leave empty to allow all builds.
     ids:
       - remembrances-mcp
-    # Only compress linux amd64/arm64 by default
+    # Only compress linux amd64 by default
     goos:
       - linux
     goarch:
       - amd64
-      - arm64
-    compress: '1'
+    compress: "1"
     lzma: true
     brute: false
 
 archives:
   - id: xc
-    formats: ['binary']
+    formats: ["binary"]
   - id: tar
-    formats: ['tar.gz']
+    formats: ["tar.gz"]
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
-      - '^build:'
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^build:"

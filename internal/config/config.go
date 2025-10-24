@@ -34,6 +34,11 @@ type Config struct {
 	// established. Can be set via CLI flag --surrealdb-start-cmd or
 	// environment variable GOMEM_SURREALDB_START_CMD.
 	SurrealDBStartCmd string `mapstructure:"surrealdb-start-cmd"`
+	LlamaModelPath    string `mapstructure:"llama-model-path"`
+	LlamaDimension    int    `mapstructure:"llama-dimension"`
+	LlamaThreads      int    `mapstructure:"llama-threads"`
+	LlamaGPULayers    int    `mapstructure:"llama-gpu-layers"`
+	LlamaContext      int    `mapstructure:"llama-context"`
 	OllamaURL         string `mapstructure:"ollama-url"`
 	OllamaModel       string `mapstructure:"ollama-model"`
 	OpenAIKey         string `mapstructure:"openai-key"`
@@ -67,6 +72,11 @@ func Load() (*Config, error) {
 	pflag.String("surrealdb-namespace", "test", "Namespace for SurrealDB")
 	pflag.String("surrealdb-database", "test", "Database for SurrealDB")
 	pflag.String("surrealdb-start-cmd", "", "External command to start SurrealDB when connection fails")
+	pflag.String("llama-model-path", "", "Path to the llama.cpp model file (.gguf)")
+	pflag.Int("llama-dimension", 768, "Dimension of llama.cpp embeddings (must match model)")
+	pflag.Int("llama-threads", 0, "Number of threads for llama.cpp (0 = auto)")
+	pflag.Int("llama-gpu-layers", 0, "Number of GPU layers for llama.cpp")
+	pflag.Int("llama-context", 512, "Context size for llama.cpp")
 	pflag.String("ollama-url", "http://localhost:11434", "URL for the Ollama server")
 	pflag.String("ollama-model", "", "Ollama model to use for embeddings")
 	pflag.String("openai-key", "", "OpenAI API key")
@@ -127,8 +137,8 @@ func Load() (*Config, error) {
 // Validate checks if the configuration is valid.
 func (c *Config) Validate() error {
 	// Validate that at least one embedder is configured
-	if c.OllamaModel == "" && c.OpenAIKey == "" {
-		return errors.New("at least one embedder (Ollama or OpenAI) must be configured")
+	if c.LlamaModelPath == "" && c.OllamaModel == "" && c.OpenAIKey == "" {
+		return errors.New("at least one embedder (llama.cpp, Ollama, or OpenAI) must be configured")
 	}
 
 	// Validate database configuration
@@ -137,6 +147,31 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// GetLlamaModelPath returns the llama.cpp model path.
+func (c *Config) GetLlamaModelPath() string {
+	return c.LlamaModelPath
+}
+
+// GetLlamaDimension returns the llama.cpp embedding dimension.
+func (c *Config) GetLlamaDimension() int {
+	return c.LlamaDimension
+}
+
+// GetLlamaThreads returns the number of threads for llama.cpp.
+func (c *Config) GetLlamaThreads() int {
+	return c.LlamaThreads
+}
+
+// GetLlamaGPULayers returns the number of GPU layers for llama.cpp.
+func (c *Config) GetLlamaGPULayers() int {
+	return c.LlamaGPULayers
+}
+
+// GetLlamaContext returns the context size for llama.cpp.
+func (c *Config) GetLlamaContext() int {
+	return c.LlamaContext
 }
 
 // GetOllamaURL returns the Ollama server URL.
