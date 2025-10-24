@@ -10,6 +10,16 @@ Remembrances-MCP is a Go-based MCP server that provides long-term memory capabil
 - Embedding generation via Ollama (local), OpenAI API, or llama.cpp (embedded)
 - Multiple transport options: stdio (default), SSE, and HTTP JSON API
 
+## Supported Platforms
+
+Cross-platform support with pre-built binaries for:
+
+- **Linux**: x86_64 (amd64), ARM64
+- **macOS**: Intel (x86_64), Apple Silicon (ARM64)
+- **Windows**: x86_64 (amd64)
+
+All binaries are statically linked with llama.cpp for standalone deployment.
+
 ## 🚀 Quick Start
 
 ### Pre-built Binaries
