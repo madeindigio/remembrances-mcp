@@ -54,7 +54,11 @@ echo "  Using goreleaser-cross:v1.21 container..."
 echo ""
 
 # Run the build in Docker
+# Use --network=none to avoid networking issues (build doesn't need network)
+# Use --entrypoint="" to bypass the image's default entrypoint
 docker run --rm \
+    --network=none \
+    --entrypoint="" \
     -v "$(pwd):/go/src/github.com/madeindigio/remembrances-mcp" \
     -w /go/src/github.com/madeindigio/remembrances-mcp/go-llama.cpp \
     -e BUILD_NUMBER=0 \
