@@ -1,6 +1,6 @@
 # GoReleaser configuration for remembrances-mcp
 # Adapted from: https://raw.githubusercontent.com/sevir/essh/refs/heads/master/.goreleaser.yml
-version: 2
+version: 1
 
 # Note: before hooks don't support templating for Os/Arch in goreleaser v2
 # Static library must be built before running goreleaser

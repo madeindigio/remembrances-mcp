@@ -5,7 +5,7 @@
 #        -w /go/src/github.com/madeindigio/remembrances-mcp \
 #        ghcr.io/goreleaser/goreleaser-cross:v1.21 release --snapshot --clean
 
-version: 2
+version: 1
 
 # Note: Static libraries are built automatically via before hooks
 # This ensures all platform dependencies are ready before compilation
@@ -17,7 +17,9 @@ before:
     - bash -c "cd go-llama.cpp && ./scripts/build-static-multi.sh linux arm64"
     - bash -c "cd go-llama.cpp && ./scripts/build-static-multi.sh darwin amd64"
     - bash -c "cd go-llama.cpp && ./scripts/build-static-multi.sh darwin arm64"
-    - bash -c "cd go-llama.cpp && ./scripts/build-static-multi.sh windows amd64"
+    # Windows: BLOCKED by MinGW API compatibility (WIN32_MEMORY_RANGE_ENTRY missing from old headers)
+    # See docs/WINDOWS_BUILD_BLOCKER.md for details and solutions
+    # - bash -c "cd go-llama.cpp && ./scripts/build-static-multi.sh windows amd64"
     # Ensure go.mod is tidy
     - go mod tidy
 
@@ -82,7 +84,7 @@ builds:
       - CXX=o64-clang++
       - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
       - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
-      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-darwin-amd64 -lm -lstdc++ -framework Accelerate -framework Foundation -framework Metal -framework MetalKit -framework MetalPerformanceShaders
+      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-darwin-amd64 -lm -lstdc++
     ldflags:
       - -s
       - -w
@@ -105,7 +107,7 @@ builds:
       - CXX=oa64-clang++
       - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
       - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
-      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-darwin-arm64 -lm -lstdc++ -framework Accelerate -framework Foundation -framework Metal -framework MetalKit -framework MetalPerformanceShaders
+      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-darwin-arm64 -lm -lstdc++
     ldflags:
       - -s
       - -w
@@ -114,30 +116,33 @@ builds:
     flags:
       - -trimpath
 
-  # Windows AMD64
-  - id: windows-amd64
-    main: ./cmd/remembrances-mcp
-    binary: remembrances-mcp
-    goos:
-      - windows
-    goarch:
-      - amd64
-    env:
-      - CGO_ENABLED=1
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-      - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
-      - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
-      - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-windows-amd64 -lm -lstdc++ -static
-    ldflags:
-      - -s
-      - -w
-      - -X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}
-      - -X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}
-      - -extldflags=-static
-    flags:
-      - -trimpath
-      - -buildmode=exe
+  # Windows AMD64 - BLOCKED: MinGW API compatibility issue
+  # Issue: WIN32_MEMORY_RANGE_ENTRY not available in old MinGW headers (GCC 10.0.0-posix 2021)
+  # Threading fixed with POSIX compilers, but blocked by Windows 8+ API usage in llama.cpp
+  # See docs/WINDOWS_BUILD_BLOCKER.md for solutions and workarounds
+  # - id: windows-amd64
+  #   main: ./cmd/remembrances-mcp
+  #   binary: remembrances-mcp
+  #   goos:
+  #     - windows
+  #   goarch:
+  #     - amd64
+  #   env:
+  #     - CGO_ENABLED=1
+  #     - CC=x86_64-w64-mingw32-gcc
+  #     - CXX=x86_64-w64-mingw32-g++
+  #     - CGO_CFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp
+  #     - CGO_CXXFLAGS=-I./go-llama.cpp/llama.cpp -I./go-llama.cpp -I./go-llama.cpp/llama.cpp/common -I./go-llama.cpp/common
+  #     - CGO_LDFLAGS=-L./go-llama.cpp -lbinding-windows-amd64 -lm -lstdc++ -static
+  #   ldflags:
+  #     - -s
+  #     - -w
+  #     - -X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}
+  #     - -X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}
+  #     - -extldflags=-static
+  #   flags:
+  #     - -trimpath
+  #     - -buildmode=exe
 
 dist: ./dist/outputs/dist
 
@@ -146,10 +151,10 @@ upx:
     ids:
       - linux-amd64
       - linux-arm64
-      - windows-amd64
+      # - windows-amd64  # Disabled - build blocked by API compatibility
     goos:
       - linux
-      - windows
+      # - windows  # Disabled - build blocked by API compatibility
     goarch:
       - amd64
       - arm64

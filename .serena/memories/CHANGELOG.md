@@ -1,5 +1,27 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+* **build**: Fixed multiplatform cross-compilation system for Linux and macOS
+  - Changed GoReleaser version from v2 to v1 for compatibility with goreleaser-cross:v1.21
+  - Added non-interactive mode (`SKIP_CONFIRM`) for CI/CD builds
+  - Fixed BUILD_NUMBER undefined error in llama.cpp compilation
+  - Disabled Apple frameworks (Accelerate, Metal) for cross-compilation
+  - Fixed archiver tools for macOS targets (using osxcross darwin21.1 toolchain)
+  - Removed hardcoded `-lbinding` from CGO flags to avoid linking conflicts
+  - Upgraded C++ standard from C++11 to C++14 for better compatibility
+  - Created LICENSE symlink for GoReleaser archive step
+  - Successfully building for: Linux (amd64, arm64), macOS (amd64, arm64)
+  - Temporarily disabled Windows builds due to MinGW threading issues
+
+### Documentation
+
+* Added comprehensive multiplatform build fix documentation
+  - `docs/MULTIPLATFORM_BUILD_FIXES.md` - detailed technical documentation
+  - `docs/BUILD_FIXES_SUMMARY.md` - executive summary
+
 ### [v0.30.2](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.1...v0.30.2) (2025-09-22)
 
 #### Fixes

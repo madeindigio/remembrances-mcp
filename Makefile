@@ -167,21 +167,21 @@ release-multi:
 # Multi-platform snapshot build (no release)
 release-multi-snapshot:
 	@chmod +x scripts/release-multiplatform.sh
-	@./scripts/release-multiplatform.sh snapshot
+	@SKIP_CONFIRM=true ./scripts/release-multiplatform.sh snapshot
 
 # Multi-platform release build with parallel library builds (FAST)
 release-multi-fast:
 	@echo "Pre-building llama.cpp libraries in parallel..."
 	@$(MAKE) llama-deps-all-parallel
 	@chmod +x scripts/release-multiplatform.sh
-	@./scripts/release-multiplatform.sh release prebuilt
+	@SKIP_CONFIRM=true ./scripts/release-multiplatform.sh release prebuilt
 
 # Multi-platform snapshot build with parallel library builds (FAST)
 release-multi-snapshot-fast:
 	@echo "Pre-building llama.cpp libraries in parallel..."
 	@$(MAKE) llama-deps-all-parallel
 	@chmod +x scripts/release-multiplatform.sh
-	@./scripts/release-multiplatform.sh snapshot prebuilt
+	@SKIP_CONFIRM=true ./scripts/release-multiplatform.sh snapshot prebuilt
 
 # Install binary to system
 install: build

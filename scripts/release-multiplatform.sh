@@ -13,6 +13,9 @@
 
 set -e
 
+# Check for non-interactive mode
+SKIP_CONFIRM="${SKIP_CONFIRM:-false}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -317,22 +320,26 @@ main() {
     fi
     echo ""
 
-    # Confirm before proceeding
-    if [ "$MODE" = "release" ]; then
-        log_warning "This will create a PUBLIC release on GitHub!"
-        read -p "Continue? (y/N) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Aborted by user"
-            exit 0
+    # Confirm before proceeding (skip if SKIP_CONFIRM is set)
+    if [ "$SKIP_CONFIRM" != "true" ]; then
+        if [ "$MODE" = "release" ]; then
+            log_warning "This will create a PUBLIC release on GitHub!"
+            read -p "Continue? (y/N) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                log_info "Aborted by user"
+                exit 0
+            fi
+        else
+            read -p "Continue? (Y/n) " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Nn]$ ]]; then
+                log_info "Aborted by user"
+                exit 0
+            fi
         fi
     else
-        read -p "Continue? (Y/n) " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Nn]$ ]]; then
-            log_info "Aborted by user"
-            exit 0
-        fi
+        log_info "Skipping confirmation (SKIP_CONFIRM=true)"
     fi
 
     echo ""

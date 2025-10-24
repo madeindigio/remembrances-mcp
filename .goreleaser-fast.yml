@@ -8,7 +8,7 @@
 #
 # This skips the before hooks for faster builds when libraries are cached
 
-version: 2
+version: 1
 
 # Note: Static libraries MUST be pre-built before using this config
 # Run: make llama-deps-all-parallel
