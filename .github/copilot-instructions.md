@@ -14,6 +14,7 @@ The system has undergone major refactoring (September 2025) and is fully operati
 2. **Read memories**: Use `mcp_serena_list_memories` and read relevant ones for context
 3. **Search knowledge base**: Use `mcp_remembrances_kb_search_documents` for project information
 4. **Check the plan**: Review `.serena/memories/plan.md` for current tasks
+5. **Get the current time and date**: Use `get_time_utc` or similar tool
 
 ### Development Workflow
 
@@ -62,9 +63,11 @@ The system has undergone major refactoring (September 2025) and is fully operati
 ### 🧠 Embeddings Support
 
 - `pkg/embedder/embedder.go` — Interface definition (`EmbedDocuments`, `EmbedQuery`, `Dimension`)
-- `pkg/embedder/factory.go` — Factory for Ollama/OpenAI implementation selection
+- `pkg/embedder/factory.go` — Factory for Search/Ollama/OpenAI implementation selection
+- `pkg/embedder/search.go` — kelindar/search implementation (BERT GGUF models, no cgo)
 - `pkg/embedder/ollama.go` — Local Ollama implementation
 - `pkg/embedder/openai.go` — OpenAI cloud implementation
+- `pkg/embedder/llama.go` — DEPRECATED (use search.go instead)
 
 ## ⚡ Key Technical Details
 
@@ -85,8 +88,9 @@ The system has undergone major refactoring (September 2025) and is fully operati
 ### Environment Variables
 
 - **Prefix**: `GOMEM_` (CLI flags with dashes become underscores)
-- **Required**: Either `GOMEM_OLLAMA_MODEL` or `GOMEM_OPENAI_KEY` must be set
-- **Example**: `GOMEM_DB_PATH=./data.db GOMEM_OPENAI_KEY=sk-xxx`
+- **Required**: Either `GOMEM_SEARCH_MODEL_PATH`, `GOMEM_OLLAMA_MODEL` or `GOMEM_OPENAI_KEY` must be set
+- **Example**: `GOMEM_DB_PATH=./data.db GOMEM_SEARCH_MODEL_PATH=./models/nomic-embed-text-v1.5.Q4_K_M.gguf`
+- **Migration**: `GOMEM_LLAMA_*` variables automatically migrate to `GOMEM_SEARCH_*`
 
 ## 🧪 Development Patterns
 
@@ -137,7 +141,10 @@ The system has undergone major refactoring (September 2025) and is fully operati
 ## 🚨 Important Constraints & Warnings
 
 1. **MTREE Dimension**: Embedder.Dimension() must return 768 to match schema indexes
-2. **Config Validation**: Either OllamaModel or OpenAIKey required - intentional but blocks local dev without setup
-3. **SurrealDB Syntax**: Some queries use custom parameterization syntax specific to SurrealDB Go client
-4. **Tool Testing**: Mock storage and embedder in tests to avoid external API calls
-5. **Schema Changes**: Be careful with migrations - embedded SurrealDB data persistence matters
+2. **Config Validation**: Either SearchModelPath, OllamaModel or OpenAIKey required
+3. **BERT Models Only**: kelindar/search supports BERT-based GGUF models (nomic-embed-text, MiniLM, etc.), not LLaMA/Mistral
+4. **No CGO Required**: kelindar/search uses purego, simplifying builds and cross-compilation
+5. **SurrealDB Syntax**: Some queries use custom parameterization syntax specific to SurrealDB Go client
+6. **Tool Testing**: Mock storage and embedder in tests to avoid external API calls
+7. **Schema Changes**: Be careful with migrations - embedded SurrealDB data persistence matters
+8. **Migration**: LLAMA_* environment variables auto-migrate to SEARCH_* but update configs to use new variables

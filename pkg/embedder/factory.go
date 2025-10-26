@@ -18,7 +18,12 @@ type Config struct {
 	OpenAIBaseURL string
 	OpenAIModel   string
 
-	// Llama.cpp configuration
+	// Search (kelindar/search) configuration - NEW: Replaces llama.cpp
+	SearchModelPath string
+	SearchDimension int
+	SearchGPULayers int
+
+	// DEPRECATED: Llama.cpp configuration (use Search instead)
 	LlamaModelPath string
 	LlamaDimension int
 	LlamaThreads   int
@@ -27,25 +32,33 @@ type Config struct {
 }
 
 // NewEmbedderFromConfig crea una instancia de Embedder basada en la configuración disponible.
-// Prioridad: si LLAMA_MODEL_PATH está configurado, usa llama.cpp; si OLLAMA_URL está configurado, usa Ollama; si OPENAI_API_KEY está configurado, usa OpenAI.
+// Prioridad: si SEARCH_MODEL_PATH está configurado, usa kelindar/search; si OLLAMA_URL está configurado, usa Ollama; si OPENAI_API_KEY está configurado, usa OpenAI.
+// DEPRECATED: LLAMA_MODEL_PATH aún soportado pero se recomienda migrar a SEARCH_MODEL_PATH.
 // Retorna error si no se encuentra ninguna configuración válida.
 func NewEmbedderFromConfig(cfg *Config) (Embedder, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("configuration is required")
 	}
 
-	// Prioridad 1: Llama.cpp (si ruta del modelo está disponible)
+	// Prioridad 1: Search (kelindar/search) - NEW: Soporta modelos BERT en GGUF
+	if cfg.SearchModelPath != "" {
+		if cfg.SearchDimension <= 0 {
+			cfg.SearchDimension = 768 // dimensión por defecto para modelos BERT
+		}
+		if cfg.SearchGPULayers < 0 {
+			cfg.SearchGPULayers = 0
+		}
+		return NewSearchEmbedderWithDimension(cfg.SearchModelPath, cfg.SearchDimension, cfg.SearchGPULayers)
+	}
+
+	// Compatibilidad con configuración antigua de llama.cpp
+	// Redirigir a Search si se usa LlamaModelPath
 	if cfg.LlamaModelPath != "" {
 		if cfg.LlamaDimension <= 0 {
-			cfg.LlamaDimension = 768 // dimensión por defecto para modelos de embeddings
+			cfg.LlamaDimension = 768
 		}
-		if cfg.LlamaThreads <= 0 {
-			cfg.LlamaThreads = 1 // hilo por defecto
-		}
-		if cfg.LlamaContext <= 0 {
-			cfg.LlamaContext = 512 // contexto por defecto
-		}
-		return NewLlamaEmbedder(cfg.LlamaModelPath, cfg.LlamaDimension, cfg.LlamaThreads, cfg.LlamaGPULayers, cfg.LlamaContext)
+		// Migrar automáticamente a kelindar/search
+		return NewSearchEmbedderWithDimension(cfg.LlamaModelPath, cfg.LlamaDimension, cfg.LlamaGPULayers)
 	}
 
 	// Prioridad 2: Ollama (si URL está disponible)
@@ -65,16 +78,17 @@ func NewEmbedderFromConfig(cfg *Config) (Embedder, error) {
 		return NewOpenAIEmbedder(cfg.OpenAIKey, cfg.OpenAIBaseURL, cfg.OpenAIModel)
 	}
 
-	return nil, fmt.Errorf("no valid embedder configuration found: either LLAMA_MODEL_PATH, OLLAMA_URL or OPENAI_API_KEY must be provided")
+	return nil, fmt.Errorf("no valid embedder configuration found: either SEARCH_MODEL_PATH, LLAMA_MODEL_PATH, OLLAMA_URL or OPENAI_API_KEY must be provided")
 }
 
 // NewEmbedderFromEnv crea una instancia de Embedder leyendo la configuración desde variables de entorno.
 // Variables de entorno soportadas:
-// - LLAMA_MODEL_PATH: Ruta al archivo de modelo .gguf
+// - SEARCH_MODEL_PATH: Ruta al archivo de modelo .gguf (kelindar/search - RECOMENDADO)
+// - SEARCH_DIMENSION: Dimensión de los embeddings (por defecto: 768)
+// - SEARCH_GPU_LAYERS: Número de capas GPU (por defecto: 0)
+// - LLAMA_MODEL_PATH: Ruta al archivo de modelo .gguf (DEPRECATED - usar SEARCH_MODEL_PATH)
 // - LLAMA_DIMENSION: Dimensión de los embeddings (por defecto: 768)
-// - LLAMA_THREADS: Número de hilos (por defecto: número de CPUs)
 // - LLAMA_GPU_LAYERS: Número de capas GPU (por defecto: 0)
-// - LLAMA_CONTEXT: Tamaño del contexto (por defecto: 512)
 // - OLLAMA_URL: URL del servidor Ollama
 // - OLLAMA_EMBEDDING_MODEL: Modelo de embedding de Ollama
 // - OPENAI_API_KEY: Clave API de OpenAI
@@ -82,16 +96,19 @@ func NewEmbedderFromConfig(cfg *Config) (Embedder, error) {
 // - OPENAI_EMBEDDING_MODEL: Modelo de embedding de OpenAI
 func NewEmbedderFromEnv() (Embedder, error) {
 	cfg := &Config{
-		LlamaModelPath: getEnv("LLAMA_MODEL_PATH", ""),
-		LlamaDimension: getEnvAsInt("LLAMA_DIMENSION", 768),
-		LlamaThreads:   getEnvAsInt("LLAMA_THREADS", 0), // 0 = auto-detect
-		LlamaGPULayers: getEnvAsInt("LLAMA_GPU_LAYERS", 0),
-		LlamaContext:   getEnvAsInt("LLAMA_CONTEXT", 512),
-		OllamaURL:      getEnv("OLLAMA_URL", ""),
-		OllamaModel:    getEnv("OLLAMA_EMBEDDING_MODEL", ""),
-		OpenAIKey:      getEnv("OPENAI_API_KEY", ""),
-		OpenAIBaseURL:  getEnv("OPENAI_API_BASE", ""),
-		OpenAIModel:    getEnv("OPENAI_EMBEDDING_MODEL", ""),
+		SearchModelPath: getEnv("SEARCH_MODEL_PATH", ""),
+		SearchDimension: getEnvAsInt("SEARCH_DIMENSION", 768),
+		SearchGPULayers: getEnvAsInt("SEARCH_GPU_LAYERS", 0),
+		LlamaModelPath:  getEnv("LLAMA_MODEL_PATH", ""),
+		LlamaDimension:  getEnvAsInt("LLAMA_DIMENSION", 768),
+		LlamaThreads:    getEnvAsInt("LLAMA_THREADS", 0), // Deprecated
+		LlamaGPULayers:  getEnvAsInt("LLAMA_GPU_LAYERS", 0),
+		LlamaContext:    getEnvAsInt("LLAMA_CONTEXT", 512), // Deprecated
+		OllamaURL:       getEnv("OLLAMA_URL", ""),
+		OllamaModel:     getEnv("OLLAMA_EMBEDDING_MODEL", ""),
+		OpenAIKey:       getEnv("OPENAI_API_KEY", ""),
+		OpenAIBaseURL:   getEnv("OPENAI_API_BASE", ""),
+		OpenAIModel:     getEnv("OPENAI_EMBEDDING_MODEL", ""),
 	}
 
 	return NewEmbedderFromConfig(cfg)
@@ -103,27 +120,32 @@ func ValidateConfig(cfg *Config) error {
 		return fmt.Errorf("configuration cannot be nil")
 	}
 
+	hasSearch := cfg.SearchModelPath != ""
 	hasLlama := cfg.LlamaModelPath != ""
 	hasOllama := cfg.OllamaURL != ""
 	hasOpenAI := cfg.OpenAIKey != ""
 
-	if !hasLlama && !hasOllama && !hasOpenAI {
-		return fmt.Errorf("at least one embedder must be configured (Llama.cpp, Ollama or OpenAI)")
+	if !hasSearch && !hasLlama && !hasOllama && !hasOpenAI {
+		return fmt.Errorf("at least one embedder must be configured (Search, Llama.cpp, Ollama or OpenAI)")
 	}
 
-	// Validar configuración de Llama.cpp
-	if hasLlama {
+	// Validar configuración de Search (kelindar/search)
+	if hasSearch {
+		if cfg.SearchDimension <= 0 {
+			return fmt.Errorf("search dimension must be positive")
+		}
+		if cfg.SearchGPULayers < 0 {
+			return fmt.Errorf("search GPU layers cannot be negative")
+		}
+	}
+
+	// Validar configuración de Llama.cpp (deprecated pero aún soportado)
+	if hasLlama && !hasSearch {
 		if cfg.LlamaDimension <= 0 {
 			return fmt.Errorf("llama dimension must be positive")
 		}
-		if cfg.LlamaThreads < 0 {
-			return fmt.Errorf("llama threads cannot be negative")
-		}
 		if cfg.LlamaGPULayers < 0 {
 			return fmt.Errorf("llama GPU layers cannot be negative")
-		}
-		if cfg.LlamaContext <= 0 {
-			return fmt.Errorf("llama context must be positive")
 		}
 	}
 
@@ -156,8 +178,12 @@ func GetEmbedderType(cfg *Config) string {
 		return "none"
 	}
 
+	if cfg.SearchModelPath != "" {
+		return "search"
+	}
+
 	if cfg.LlamaModelPath != "" {
-		return "llama"
+		return "search" // Auto-migrated to search
 	}
 
 	if cfg.OllamaURL != "" {
@@ -213,22 +239,27 @@ type MainConfig interface {
 }
 
 // NewEmbedderFromMainConfig crea un embedder usando la configuración principal de la aplicación.
+// Nota: Automáticamente migra de llama.cpp a kelindar/search para compatibilidad.
 func NewEmbedderFromMainConfig(mainCfg MainConfig) (Embedder, error) {
 	if mainCfg == nil {
 		return nil, fmt.Errorf("main configuration is required")
 	}
 
+	// Migrar automáticamente la configuración de llama.cpp a search
 	cfg := &Config{
-		LlamaModelPath: mainCfg.GetLlamaModelPath(),
-		LlamaDimension: mainCfg.GetLlamaDimension(),
-		LlamaThreads:   mainCfg.GetLlamaThreads(),
-		LlamaGPULayers: mainCfg.GetLlamaGPULayers(),
-		LlamaContext:   mainCfg.GetLlamaContext(),
-		OllamaURL:      mainCfg.GetOllamaURL(),
-		OllamaModel:    mainCfg.GetOllamaModel(),
-		OpenAIKey:      mainCfg.GetOpenAIKey(),
-		OpenAIBaseURL:  mainCfg.GetOpenAIURL(),
-		OpenAIModel:    mainCfg.GetOpenAIModel(),
+		SearchModelPath: mainCfg.GetLlamaModelPath(), // Auto-migrate
+		SearchDimension: mainCfg.GetLlamaDimension(),
+		SearchGPULayers: mainCfg.GetLlamaGPULayers(),
+		LlamaModelPath:  mainCfg.GetLlamaModelPath(), // Mantener para compatibilidad
+		LlamaDimension:  mainCfg.GetLlamaDimension(),
+		LlamaThreads:    mainCfg.GetLlamaThreads(),
+		LlamaGPULayers:  mainCfg.GetLlamaGPULayers(),
+		LlamaContext:    mainCfg.GetLlamaContext(),
+		OllamaURL:       mainCfg.GetOllamaURL(),
+		OllamaModel:     mainCfg.GetOllamaModel(),
+		OpenAIKey:       mainCfg.GetOpenAIKey(),
+		OpenAIBaseURL:   mainCfg.GetOpenAIURL(),
+		OpenAIModel:     mainCfg.GetOpenAIModel(),
 	}
 
 	return NewEmbedderFromConfig(cfg)
