@@ -63,23 +63,15 @@ func TestSurrealDBStorage_Basic(t *testing.T) {
 	embedding := []float32{0.1, 0.2, 0.3, 0.4, 0.5}
 	metadata := map[string]interface{}{"source": "test"}
 
-	vectorID, err := storage.IndexVector(ctx, userID, content, embedding, metadata)
+	err = storage.IndexVector(ctx, userID, content, embedding, metadata)
 	if err != nil {
 		t.Fatalf("Failed to index vector: %v", err)
 	}
 
-	if vectorID == "" {
-		t.Fatal("Expected non-empty vector ID")
-	}
-
 	// Test entity creation
-	entityID, err := storage.CreateEntity(ctx, "person", "John Doe", map[string]interface{}{"age": 30})
+	err = storage.CreateEntity(ctx, "person", "John Doe", map[string]interface{}{"age": 30})
 	if err != nil {
 		t.Fatalf("Failed to create entity: %v", err)
-	}
-
-	if entityID == "" {
-		t.Fatal("Expected non-empty entity ID")
 	}
 
 	// Test document operations

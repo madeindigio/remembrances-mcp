@@ -35,7 +35,9 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 			user_id: $user_id,
 			content: $content,
 			embedding: $embedding,
-			metadata: $metadata
+			metadata: $metadata,
+			created_at: time::now(),
+			updated_at: time::now()
 		} RETURN id
 	`
 

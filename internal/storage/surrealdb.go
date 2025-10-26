@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"reflect"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -921,13 +922,38 @@ func getMap(m map[string]interface{}, key string) map[string]interface{} {
 	return make(map[string]interface{})
 }
 
+
 func getTime(m map[string]interface{}, key string) time.Time {
-	if val, ok := m[key].(string); ok {
-		if t, err := time.Parse(time.RFC3339, val); err == nil {
-			return t
-		}
-	}
-	return time.Time{}
+       val, ok := m[key]
+       if !ok {
+	       return time.Time{}
+       }
+       // Log the type for debugging
+       log.Printf("getTime: key=%s type=%s value=%#v", key, reflect.TypeOf(val), val)
+       switch v := val.(type) {
+       case string:
+	       if t, err := time.Parse(time.RFC3339, v); err == nil {
+		       return t
+	       }
+       case time.Time:
+	       return v
+       case float64:
+	       // SurrealDB could return a unix timestamp (seconds)
+	       return time.Unix(int64(v), 0)
+       case int64:
+	       return time.Unix(v, 0)
+       default:
+	       // Handle custom types (e.g., models.CustomDateTime)
+	       rv := reflect.ValueOf(val)
+	       if rv.Kind() == reflect.Struct {
+		       // Try to find a Time field
+		       f := rv.FieldByName("Time")
+		       if f.IsValid() && f.Type() == reflect.TypeOf(time.Time{}) {
+			       return f.Interface().(time.Time)
+		       }
+	       }
+       }
+       return time.Time{}
 }
 
 // convertEmbeddingToFloat64 normalizes an input []float32 embedding to defaultMtreeDim length
