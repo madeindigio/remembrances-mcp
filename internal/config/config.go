@@ -54,6 +54,7 @@ func Load() (*Config, error) {
 	// can be handled immediately after parsing, before continuing with config
 	// initialization.
 
+	pflag.String("config", "", "Path to YAML configuration file")
 	pflag.Bool("sse", false, "Enable SSE transport")
 	pflag.String("sse-addr", ":3000", "Address to bind SSE transport (host:port), can also be set via GOMEM_SSE_ADDR")
 	pflag.Bool("http", false, "Enable HTTP JSON API transport")
@@ -99,8 +100,18 @@ func Load() (*Config, error) {
 		os.Exit(0)
 	}
 
-	// Bind flags to viper
+	// Initialize viper
 	v := viper.New()
+
+	// Read YAML config file if provided
+	if configPath := pflag.Lookup("config").Value.String(); configPath != "" {
+		v.SetConfigFile(configPath)
+		if err := v.ReadInConfig(); err != nil {
+			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
+	}
+
+	// Bind flags to viper
 	if err := v.BindPFlags(pflag.CommandLine); err != nil {
 		return nil, fmt.Errorf("failed to bind pflags: %w", err)
 	}

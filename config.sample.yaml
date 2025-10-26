@@ -1,0 +1,66 @@
+# Sample YAML configuration file for Remembrances-MCP
+# This file contains all available configuration options with their default values.
+# You can copy this file to config.yaml and modify the values as needed.
+# Configuration can be overridden by command-line flags or environment variables.
+# Environment variables use the GOMEM_ prefix (e.g., GOMEM_SSE_ADDR).
+# Command-line flags take precedence over YAML, and environment variables over both.
+
+# Enable SSE transport (default: false)
+#sse: false
+
+# Address to bind SSE transport (host:port) (default: ":3000")
+#sse-addr: "3000"
+
+# Enable HTTP JSON API transport (default: false)
+#http: false
+
+# Address to bind HTTP transport (host:port) (default: ":8080")
+#http-addr: "8080"
+
+# Enable REST API server (default: false)
+#rest-api-serve: false
+
+# Path to the knowledge base directory (default: "")
+knowledge-base: ""
+
+# ========== SurrealDB Configuration ==========
+# Path to the embedded SurrealDB database (default: "./remembrances.db")
+#db-path: "./remembrances.db"
+
+# URL for the remote SurrealDB instance (default: "")
+surrealdb-url: "ws://localhost:8000"
+
+# Username for SurrealDB (default: "root")
+surrealdb-user: "root"
+
+# Password for SurrealDB (default: "root")
+surrealdb-pass: "root"
+
+# Namespace for SurrealDB (default: "test")
+surrealdb-namespace: "test"
+
+# Database for SurrealDB (default: "test")
+surrealdb-database: "test"
+
+# External command to start SurrealDB when connection fails (default: "")
+surrealdb-start-cmd: "surreal start --user root --pass root surrealkv:///www/Remembrances/programming"
+
+# ========== Ollama Configuration ==========
+# URL for the Ollama server (default: "http://localhost:11434")
+ollama-url: "http://localhost:11434"
+
+# Ollama model to use for embeddings (default: "")
+ollama-model: "nomic-embed-text:latest"
+# ========== OpenAI Configuration ==========
+# OpenAI API key (default: "")
+#openai-key: ""
+
+# OpenAI base URL (default: "https://api.openai.com/v1")
+#openai-url: "https://api.openai.com/v1"
+
+# OpenAI model to use for embeddings (default: "text-embedding-3-large")
+#openai-model: "text-embedding-3-large"
+
+# ========== Logging Configuration ==========
+# Path to the log file (logs will be written to both stdout and file) (default: "")
+#log: ""

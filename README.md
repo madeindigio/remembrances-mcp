@@ -20,6 +20,7 @@ go run ./cmd/remembrances-mcp/main.go [flags]
 
 ### CLI Flags
 
+- `--config`: Path to YAML configuration file
 - `--sse` (default: false): Enable SSE transport
 - `--sse-addr` (default: :3000): Address to bind SSE transport (host:port). Can also be set via `GOMEM_SSE_ADDR`.
 - `--http` (default: false): Enable HTTP JSON API transport
@@ -65,6 +66,37 @@ All flags can be set via environment variables prefixed with `GOMEM_` and dashes
 Additionally, there is an optional environment variable/flag to help auto-start a local SurrealDB when the server cannot connect at startup:
 
 - `GOMEM_SURREALDB_START_CMD` / `--surrealdb-start-cmd`
+
+### YAML Configuration
+
+You can also configure the server using a YAML file. Use the `--config` flag to specify the path to the YAML configuration file.
+
+The YAML file should contain the configuration options using the same keys as the CLI flags (with dashes replaced by underscores if needed, but matching the `mapstructure` tags). CLI flags and environment variables override YAML settings.
+
+Example YAML configuration file (`config.yaml`):
+
+```yaml
+# Enable SSE transport
+sse: true
+sse-addr: ":4000"
+
+# Database configuration
+db-path: "./mydata.db"
+
+# Embedder configuration
+ollama-model: "llama2"
+
+# Logging
+log: "./server.log"
+```
+
+Example usage:
+
+```bash
+go run ./cmd/remembrances-mcp/main.go --config config.yaml
+```
+
+A sample configuration file with all options and default values is provided in `config.sample.yaml`.
 
 Example usage (start command provided via env):
 
