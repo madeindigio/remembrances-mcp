@@ -203,6 +203,19 @@ interactive: true
 ./tests/run_all.sh
 ```
 
+### run-tests-all
+
+Runs the full Go unit tests plus the MCP integration tests executed above.
+
+interactive: true
+
+```bash
+go test ./...
+python3 tests/test_user_stats.py
+python3 tests/test_kb_simple.py
+python3 tests/test_kb_comprehensive.py
+```
+
 ### tag
 
 Deploys a new tag for the repo.

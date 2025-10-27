@@ -30,29 +30,29 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 		emb64[i] = float64(v)
 	}
 
-       // Si userID es vacío, no incluir el campo en el insert
-       query := `
+	// Si userID es vacío, no incluir el campo en el insert
+	query := `
 	       INSERT INTO vector_memories {
 		       content: $content,
 		       embedding: $embedding,
 		       metadata: $metadata,
 		       created_at: time::now(),
 		       updated_at: time::now()` + func() string {
-	       if userID != "" {
-		       return ",\n\t\tuser_id: $user_id"
-	       }
-	       return ""
-       }() + `
+		if userID != "" {
+			return ",\n\t\tuser_id: $user_id"
+		}
+		return ""
+	}() + `
 	       } RETURN id
        `
-       params := map[string]interface{}{
-	       "content":   content,
-	       "embedding": emb64,
-	       "metadata":  metadata,
-       }
-       if userID != "" {
-	       params["user_id"] = userID
-       }
+	params := map[string]interface{}{
+		"content":   content,
+		"embedding": emb64,
+		"metadata":  metadata,
+	}
+	if userID != "" {
+		params["user_id"] = userID
+	}
 
 	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
@@ -64,7 +64,7 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 		queryResult := (*result)[0]
 		if queryResult.Status == "OK" {
 			// Update user statistics on successful insert
-			   if err := s.updateUserStat(ctx, userID, "vector_count", 0); err != nil {
+			if err := s.updateUserStat(ctx, userID, "vector_count", 0); err != nil {
 				// Log the error but don't fail the operation
 				log.Printf("Warning: failed to update vector_count stat for user %s: %v", userID, err)
 			}
@@ -144,4 +144,28 @@ func (s *SurrealDBStorage) DeleteVector(ctx context.Context, id, userID string) 
 	}
 
 	return nil
+}
+
+func (s *SurrealDBStorage) parseVectorResults(result *[]surrealdb.QueryResult[[]map[string]interface{}]) ([]VectorResult, error) {
+	var results []VectorResult
+
+	if result != nil && len(*result) > 0 {
+		queryResult := (*result)[0]
+		if queryResult.Status == "OK" && queryResult.Result != nil {
+			resultSlice := queryResult.Result
+			for _, itemMap := range resultSlice {
+				vectorResult := VectorResult{
+					ID:         getString(itemMap, "id"),
+					Content:    getString(itemMap, "content"),
+					Similarity: getFloat64(itemMap, "similarity"),
+					Metadata:   getMap(itemMap, "metadata"),
+					CreatedAt:  getTime(itemMap, "created_at"),
+					UpdatedAt:  getTime(itemMap, "updated_at"),
+				}
+				results = append(results, vectorResult)
+			}
+		}
+	}
+
+	return results, nil
 }
