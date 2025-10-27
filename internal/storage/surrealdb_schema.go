@@ -30,7 +30,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 4 // v4: user_id everywhere, dynamic metadata
+	targetVersion := 5 // v5: flexible metadata/properties across tables
 	if currentVersion < targetVersion {
 		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -162,6 +162,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewMigrationV3(s.db)
 	case 4:
 		migration = migrations.NewMigrationV4(s.db)
+	case 5:
+		migration = migrations.NewMigrationV5(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}

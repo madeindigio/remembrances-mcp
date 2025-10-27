@@ -92,7 +92,7 @@ func (tm *ToolManager) createEntityHandler(ctx context.Context, request *protoco
 		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
-	err := tm.storage.CreateEntity(ctx, input.EntityType, input.Name, stringMapToInterfaceMap(input.Properties))
+	err := tm.storage.CreateEntity(ctx, input.EntityType, input.Name, input.Properties.AsMap())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create entity: %w", err)
 	}
@@ -111,7 +111,7 @@ func (tm *ToolManager) createRelationshipHandler(ctx context.Context, request *p
 		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
-	err := tm.storage.CreateRelationship(ctx, input.FromEntity, input.ToEntity, input.RelationshipType, stringMapToInterfaceMap(input.Properties))
+	err := tm.storage.CreateRelationship(ctx, input.FromEntity, input.ToEntity, input.RelationshipType, input.Properties.AsMap())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create relationship: %w", err)
 	}

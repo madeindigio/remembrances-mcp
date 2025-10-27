@@ -182,6 +182,8 @@ Build the project
 ```bash
 go mod tidy
 go build -o dist/remembrances-mcp ./cmd/remembrances-mcp
+#try to copy to project root if error, remove the binary in the project root first
+cp dist/remembrances-mcp ./remembrances-mcp || (rm -f ./remembrances-mcp && cp dist/remembrances-mcp ./remembrances-mcp)
 ```
 
 ### starts-surrealdb

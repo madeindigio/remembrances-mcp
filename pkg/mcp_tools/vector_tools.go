@@ -107,7 +107,7 @@ func (tm *ToolManager) addVectorHandler(ctx context.Context, request *protocol.C
 		return nil, fmt.Errorf(errGenEmbedding, err)
 	}
 
-	err = tm.storage.IndexVector(ctx, input.UserID, input.Content, embedding, stringMapToInterfaceMap(input.Metadata))
+	err = tm.storage.IndexVector(ctx, input.UserID, input.Content, embedding, input.Metadata.AsMap())
 	if err != nil {
 		return nil, fmt.Errorf("failed to add remembrance: %w", err)
 	}
@@ -163,7 +163,7 @@ func (tm *ToolManager) updateVectorHandler(ctx context.Context, request *protoco
 		return nil, fmt.Errorf(errGenEmbedding, err)
 	}
 
-	err = tm.storage.UpdateVector(ctx, input.ID, input.UserID, input.Content, embedding, stringMapToInterfaceMap(input.Metadata))
+	err = tm.storage.UpdateVector(ctx, input.ID, input.UserID, input.Content, embedding, input.Metadata.AsMap())
 	if err != nil {
 		return nil, fmt.Errorf("failed to update remembrance: %w", err)
 	}
