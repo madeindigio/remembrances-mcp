@@ -1,5 +1,55 @@
 # Changelog
 
+## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.40.0...4bf7e103475fa793c27175b0a09a153395449c83) (2025-10-27)
+
+### Features
+
+* refactor surrealdb storage code
+([a1af4cb](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a1af4cb419c858243b712656ad8fe7d245ea4411))
+
+### Fixes
+
+* update stats and user stats
+([f581744](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/f581744b5ef43a0246c5cd552aa2403064e81ec7))
+* upgrade stats
+([c65d9c0](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/c65d9c04a5b05f6413c5f4adefbd839bc9e16b74))
+* error working with dates when inserts information
+([9339687](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/9339687a491fd06a7f989920280f9212bfce0d89))
+
+## [v0.40.0](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.35.3...v0.40.0) (2025-10-26)
+
+### Features
+
+* Add configuration file and sample
+([7e38ac6](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/7e38ac64df073948eea8b7cb5d250b1c7d6167f0))
+
+### [v0.35.3](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.4...v0.35.3) (2025-10-14)
+
+### [v0.30.4](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.3...v0.30.4) (2025-10-26)
+
+#### Features
+
+* Add configuration file and sample
+([7e38ac6](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/7e38ac64df073948eea8b7cb5d250b1c7d6167f0))
+* Update tools descriptions for using user_id as the project name, know the
+knowledge base embeddings is update then files in knowledge base path are
+created or modified
+([d0a25a3](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/d0a25a38e890c856447e09f655db822752b4469b))
+* change kb_search_documents response to YAML format
+([d61cc5d](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/d61cc5d8b35d7cce4c30129993af9256b3d5f10d))
+* update AI config mcp tools and remove embeddings response from knowledge
+base response
+([b0bb978](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/b0bb9787b738cfebea232082886bfaf1e6c0d459))
+* try to add docker image (not working by now
+([0d59abf](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/0d59abf7978fa3c3ccb2fd26fb4a13ae87e3cea7))
+
+#### Fixes
+
+* fix timestamps of documents in knowledge base
+([28b729e](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/28b729eed15e936fdb4571f115b0d9ff0034719d))
+
+### [v0.30.3](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.2...v0.30.3) (2025-09-22)
+
 ### [v0.30.2](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.1...v0.30.2) (2025-09-22)
 
 #### Fixes
