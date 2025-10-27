@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.40.0...4bf7e103475fa793c27175b0a09a153395449c83) (2025-10-27)
+## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.40.0...7eb20461949830c943049a9475ba6b4a5ffdcb9f) (2025-10-27)
 
 ### Features
 
