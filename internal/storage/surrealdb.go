@@ -586,9 +586,96 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 		}
 	}
 
-	// Note: TotalSize is not implemented in the new stats system
-	// It would require additional tracking or calculations
+	// Calculate total_size_bytes for the user/global
+	var totalSize int64
 
+	// For user: sum content lengths in vector_memories, kv_memories, knowledge_base
+	if userID != "global" {
+		// vector_memories
+		q := "SELECT content FROM vector_memories WHERE user_id = $user_id"
+		res, _ := surrealdb.Query[[]map[string]interface{}](s.db, q, map[string]interface{}{ "user_id": userID })
+		if res != nil && len(*res) > 0 {
+			qr := (*res)[0]
+			if qr.Status == "OK" && len(qr.Result) > 0 {
+				for _, row := range qr.Result {
+					if c, ok := row["content"].(string); ok {
+						totalSize += int64(len(c))
+					}
+				}
+			}
+		}
+		// kv_memories
+		q = "SELECT value FROM kv_memories WHERE user_id = $user_id"
+		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, map[string]interface{}{ "user_id": userID })
+		if res != nil && len(*res) > 0 {
+			qr := (*res)[0]
+			if qr.Status == "OK" && len(qr.Result) > 0 {
+				for _, row := range qr.Result {
+					if v, ok := row["value"].(string); ok {
+						totalSize += int64(len(v))
+					}
+				}
+			}
+		}
+		// knowledge_base
+		q = "SELECT content FROM knowledge_base"
+		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
+		if res != nil && len(*res) > 0 {
+			qr := (*res)[0]
+			if qr.Status == "OK" && len(qr.Result) > 0 {
+				for _, row := range qr.Result {
+					if c, ok := row["content"].(string); ok {
+						totalSize += int64(len(c))
+					}
+				}
+			}
+		}
+	} else {
+		// For global: sum content lengths in entities, all relationship tables, knowledge_base
+		// entities
+		q := "SELECT name FROM entities"
+		res, _ := surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
+		if res != nil && len(*res) > 0 {
+			qr := (*res)[0]
+			if qr.Status == "OK" && len(qr.Result) > 0 {
+				for _, row := range qr.Result {
+					if n, ok := row["name"].(string); ok {
+						totalSize += int64(len(n))
+					}
+				}
+			}
+		}
+		// all relationship tables
+		relTables, _ := s.getRelationshipTables(ctx)
+		for _, tbl := range relTables {
+			q = "SELECT relationship_type FROM " + tbl
+			res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
+			if res != nil && len(*res) > 0 {
+				qr := (*res)[0]
+				if qr.Status == "OK" && len(qr.Result) > 0 {
+					for _, row := range qr.Result {
+						if t, ok := row["relationship_type"].(string); ok {
+							totalSize += int64(len(t))
+						}
+					}
+				}
+			}
+		}
+		// knowledge_base
+		q = "SELECT content FROM knowledge_base"
+		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
+		if res != nil && len(*res) > 0 {
+			qr := (*res)[0]
+			if qr.Status == "OK" && len(qr.Result) > 0 {
+				for _, row := range qr.Result {
+					if c, ok := row["content"].(string); ok {
+						totalSize += int64(len(c))
+					}
+				}
+			}
+		}
+	}
+	stats.TotalSize = totalSize
 	return stats, nil
 }
 
@@ -625,113 +712,119 @@ func convertToInt(value interface{}) int {
 // updateUserStat atomically updates a specific statistic for a user.
 // It uses an upsert approach to ensure consistency and handle new users.
 func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField string, delta int) error {
-	log.Printf("DEBUG: updateUserStat called - userID: %s, statField: %s, delta: %d", userID, statField, delta)
+       log.Printf("DEBUG: updateUserStat called - userID: %s, statField: %s, delta: %d", userID, statField, delta)
 
-	// First, try to get the existing record
-	selectQuery := "SELECT * FROM user_stats WHERE user_id = $user_id"
-	selectResult, err := surrealdb.Query[[]map[string]interface{}](s.db, selectQuery, map[string]interface{}{
-		"user_id": userID,
-	})
+	// Determine the table and query for the stat field
+	// Stat field logic:
+	// - vector_count: user-specific, from vector_memories
+	// - entity_count: global, from entities
+	// - relationship_count: global, sum of all relationship tables (dynamic)
+	// - document_count: global, from knowledge_base
+	// - key_value_count: user-specific, from kv_memories
+       var countQuery string
+       var params map[string]interface{}
+       var newValue int
+       switch statField {
+       case "vector_count":
+	       countQuery = "SELECT count() AS count FROM vector_memories WHERE user_id = $user_id"
+	       params = map[string]interface{}{ "user_id": userID }
+	       newValue = s.getCount(ctx, countQuery, params)
+       case "entity_count":
+	       // Entities are global, no user_id filter
+	       countQuery = "SELECT count() AS count FROM entities"
+	       params = map[string]interface{}{}
+	       newValue = s.getCount(ctx, countQuery, params)
+       case "relationship_count":
+	       // Sum all relationships across all relationship tables (excluding SurrealDB system tables)
+	       relTables, _ := s.getRelationshipTables(ctx)
+	       for _, tbl := range relTables {
+		       q := "SELECT count() AS count FROM " + tbl
+		       newValue += s.getCount(ctx, q, map[string]interface{}{})
+	       }
+       case "document_count":
+	       // Documents are global
+	       countQuery = "SELECT count() AS count FROM knowledge_base"
+	       params = map[string]interface{}{}
+	       newValue = s.getCount(ctx, countQuery, params)
+       case "key_value_count":
+	       countQuery = "SELECT count() AS count FROM kv_memories WHERE user_id = $user_id"
+	       params = map[string]interface{}{ "user_id": userID }
+	       newValue = s.getCount(ctx, countQuery, params)
+       default:
+	       return fmt.Errorf("invalid stat field: %s", statField)
+       }
 
-	log.Printf("DEBUG: Select query result - err: %v", err)
-	if selectResult != nil {
-		log.Printf("DEBUG: Select result length: %d", len(*selectResult))
-		if len(*selectResult) > 0 {
-			log.Printf("DEBUG: First result: %+v", (*selectResult)[0])
-		}
-	}
+       // Upsert the stat value
+       upsertQuery := "UPDATE user_stats SET " + statField + " = $new_value, updated_at = time::now() WHERE user_id = $user_id;"
+       upsertParams := map[string]interface{}{
+	       "user_id":  userID,
+	       "new_value": newValue,
+       }
+       if _, err := surrealdb.Query[[]map[string]interface{}](s.db, upsertQuery, upsertParams); err != nil {
+	       // If update fails, try to create the record
+	       createData := map[string]interface{}{
+		       "user_id":            userID,
+		       "key_value_count":    0,
+		       "vector_count":       0,
+		       "entity_count":       0,
+		       "relationship_count": 0,
+		       "document_count":     0,
+	       }
+	       createData[statField] = newValue
+	       if _, err := surrealdb.Create[map[string]interface{}](s.db, "user_stats", createData); err != nil {
+		       return fmt.Errorf("failed to create user stat %s for user %s: %w", statField, userID, err)
+	       }
+       }
+       log.Printf("DEBUG: updateUserStat completed successfully; %s = %d", statField, newValue)
+       return nil
+}
 
-	var currentValue int
-	recordExists := false
+// getCount is a helper to run a count query and extract the count
+func (s *SurrealDBStorage) getCount(ctx context.Context, query string, params map[string]interface{}) int {
+       countResult, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+       if err != nil || countResult == nil || len(*countResult) == 0 {
+	       return 0
+       }
+       queryResult := (*countResult)[0]
+       if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+	       for _, row := range queryResult.Result {
+		       if val, ok := row["count"]; ok {
+			       switch v := val.(type) {
+			       case float64:
+				       return int(v)
+			       case int:
+				       return v
+			       case uint64:
+				       return int(v)
+			       }
+		       }
+	       }
+       }
+       return 0
+}
 
-	if err == nil && selectResult != nil && len(*selectResult) > 0 {
-		queryResult := (*selectResult)[0]
-		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
-			recordExists = true
-			log.Printf("DEBUG: Found existing record: %+v", queryResult.Result[0])
-			if val, ok := queryResult.Result[0][statField]; ok {
-				if floatVal, ok := val.(float64); ok {
-					currentValue = int(floatVal)
-				}
-			}
-		}
-	}
-
-	newValue := currentValue + delta
-	log.Printf("DEBUG: recordExists: %t, currentValue: %d, newValue: %d", recordExists, currentValue, newValue)
-
-	if recordExists {
-		// Update existing record using UPSERT which might handle updates better
-		upsertQuery := `
-			LET $record = (SELECT * FROM user_stats WHERE user_id = $user_id)[0];
-			UPDATE user_stats CONTENT {
-				user_id: $user_id,
-				key_value_count: $record.key_value_count OR 0,
-				vector_count: $record.vector_count OR 0,
-				entity_count: $record.entity_count OR 0,
-				relationship_count: $record.relationship_count OR 0,
-				document_count: $record.document_count OR 0,
-				updated_at: time::now()
-			} WHERE user_id = $user_id;
-		`
-
-		// Set the specific field to the new value
-		params := map[string]interface{}{
-			"user_id": userID,
-		}
-
-		// Add the updated field value
-		switch statField {
-		case "key_value_count":
-			upsertQuery = `
-				UPDATE user_stats SET key_value_count = $new_value, updated_at = time::now() WHERE user_id = $user_id;
-			`
-		case "vector_count":
-			upsertQuery = `
-				UPDATE user_stats SET vector_count = $new_value, updated_at = time::now() WHERE user_id = $user_id;
-			`
-		case "entity_count":
-			upsertQuery = `
-				UPDATE user_stats SET entity_count = $new_value, updated_at = time::now() WHERE user_id = $user_id;
-			`
-		case "relationship_count":
-			upsertQuery = `
-				UPDATE user_stats SET relationship_count = $new_value, updated_at = time::now() WHERE user_id = $user_id;
-			`
-		case "document_count":
-			upsertQuery = `
-				UPDATE user_stats SET document_count = $new_value, updated_at = time::now() WHERE user_id = $user_id;
-			`
-		default:
-			return fmt.Errorf("invalid stat field: %s", statField)
-		}
-
-		params["new_value"] = newValue
-
-		_, err = surrealdb.Query[[]map[string]interface{}](s.db, upsertQuery, params)
-	} else {
-		// Create new record
-		createData := map[string]interface{}{
-			"user_id":            userID,
-			"key_value_count":    0,
-			"vector_count":       0,
-			"entity_count":       0,
-			"relationship_count": 0,
-			"document_count":     0,
-		}
-		createData[statField] = newValue
-
-		log.Printf("DEBUG: Creating new record with data: %+v", createData)
-		createResult, err := surrealdb.Create[map[string]interface{}](s.db, "user_stats", createData)
-		log.Printf("DEBUG: Create result - err: %v, result: %+v", err, createResult)
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to update user stat %s for user %s: %w", statField, userID, err)
-	}
-
-	log.Printf("DEBUG: updateUserStat completed successfully")
-	return nil
+// getRelationshipTables returns all relationship tables (excluding system tables)
+func (s *SurrealDBStorage) getRelationshipTables(ctx context.Context) ([]string, error) {
+	// This assumes relationship tables are dynamically created and not named 'entities', 'vector_memories', etc.
+	// We'll list all tables and filter out known non-relationship tables
+	// This is critical for correct relationship_count stats.
+	// total_size_bytes: for user, sum content in vector_memories, kv_memories, knowledge_base; for global, sum in entities, all relationship tables, knowledge_base
+       tables := []string{}
+       result, err := surrealdb.Query[[]map[string]interface{}](s.db, "SHOW TABLES", nil)
+       if err != nil || result == nil || len(*result) == 0 {
+	       return tables, nil
+       }
+       queryResult := (*result)[0]
+       if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+	       for _, row := range queryResult.Result {
+		       if tbl, ok := row["name"].(string); ok {
+			       if tbl != "entities" && tbl != "vector_memories" && tbl != "kv_memories" && tbl != "knowledge_base" && tbl != "user_stats" && tbl != "schema_version" {
+				       tables = append(tables, tbl)
+			       }
+		       }
+	       }
+       }
+       return tables, nil
 }
 
 // Helper function to extract count from query result

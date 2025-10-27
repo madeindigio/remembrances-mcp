@@ -58,7 +58,7 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 		queryResult := (*result)[0]
 		if queryResult.Status == "OK" {
 			// Update user statistics on successful insert
-			if err := s.updateUserStat(ctx, userID, "vector_count", 1); err != nil {
+			   if err := s.updateUserStat(ctx, userID, "vector_count", 0); err != nil {
 				// Log the error but don't fail the operation
 				log.Printf("Warning: failed to update vector_count stat for user %s: %v", userID, err)
 			}
@@ -132,7 +132,7 @@ func (s *SurrealDBStorage) DeleteVector(ctx context.Context, id, userID string) 
 	}
 
 	// Update user statistics
-	if err := s.updateUserStat(ctx, userID, "vector_count", -1); err != nil {
+	if err := s.updateUserStat(ctx, userID, "vector_count", 0); err != nil {
 		// Log the error but don't fail the operation
 		log.Printf("Warning: failed to update vector_count stat for user %s: %v", userID, err)
 	}
