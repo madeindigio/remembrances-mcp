@@ -48,6 +48,7 @@ type Storage interface {
 // VectorResult represents a result from vector similarity search
 type VectorResult struct {
 	ID         string                 `json:"id"`
+	UserID     *string                `json:"user_id,omitempty"`
 	Content    string                 `json:"content"`
 	Similarity float64                `json:"similarity"`
 	Metadata   map[string]interface{} `json:"metadata"`
@@ -58,6 +59,7 @@ type VectorResult struct {
 // Entity represents a graph node
 type Entity struct {
 	ID         string                 `json:"id"`
+	UserID     *string                `json:"user_id,omitempty"`
 	Type       string                 `json:"type"`
 	Name       string                 `json:"name"`
 	Properties map[string]interface{} `json:"properties"`
@@ -68,6 +70,7 @@ type Entity struct {
 // Relationship represents a graph edge
 type Relationship struct {
 	ID         string                 `json:"id"`
+	UserID     *string                `json:"user_id,omitempty"`
 	From       string                 `json:"from"`
 	To         string                 `json:"to"`
 	Type       string                 `json:"type"`
@@ -86,6 +89,7 @@ type GraphResult struct {
 // Document represents a knowledge base document
 type Document struct {
 	ID        string                 `json:"id"`
+	UserID    *string                `json:"user_id,omitempty"`
 	FilePath  string                 `json:"file_path"`
 	Content   string                 `json:"content"`
 	Embedding []float32              `json:"embedding"`

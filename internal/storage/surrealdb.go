@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
-	"reflect"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -545,55 +545,51 @@ func (s *SurrealDBStorage) HybridSearch(ctx context.Context, userID string, quer
 	return result, nil
 }
 
-// GetStats returns statistics about stored memories
+// GetStats returns statistics about stored memories by counting current records.
 func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*MemoryStats, error) {
 	stats := &MemoryStats{}
+	scoped := userID != "" && userID != "global"
 
-	// Get user-specific stats from user_stats table
-	userQuery := "SELECT * FROM user_stats WHERE user_id = $user_id"
-	userResult, err := surrealdb.Query[[]map[string]interface{}](s.db, userQuery, map[string]interface{}{"user_id": userID})
-	if err == nil && userResult != nil && len(*userResult) > 0 {
-		queryResult := (*userResult)[0]
-		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
-			userStatsData := queryResult.Result[0]
-			// Extract user-specific statistics with improved type handling
-			if kvCount, ok := userStatsData["key_value_count"]; ok {
-				stats.KeyValueCount = convertToInt(kvCount)
-			}
-			if vectorCount, ok := userStatsData["vector_count"]; ok {
-				stats.VectorCount = convertToInt(vectorCount)
-			}
-		}
+	var params map[string]interface{}
+	if scoped {
+		params = map[string]interface{}{"user_id": userID}
 	}
 
-	// Get global stats from global user_stats entry
-	globalQuery := "SELECT * FROM user_stats WHERE user_id = 'global'"
-	globalResult, err := surrealdb.Query[[]map[string]interface{}](s.db, globalQuery, nil)
-	if err == nil && globalResult != nil && len(*globalResult) > 0 {
-		queryResult := (*globalResult)[0]
-		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
-			globalStatsData := queryResult.Result[0]
-			// Extract global statistics with improved type handling
-			if entityCount, ok := globalStatsData["entity_count"]; ok {
-				stats.EntityCount = convertToInt(entityCount)
-			}
-			if relCount, ok := globalStatsData["relationship_count"]; ok {
-				stats.RelationshipCount = convertToInt(relCount)
-			}
-			if docCount, ok := globalStatsData["document_count"]; ok {
-				stats.DocumentCount = convertToInt(docCount)
-			}
-		}
+	// Key-value memories
+	if scoped {
+		stats.KeyValueCount = s.getCount(ctx, "SELECT count() AS count FROM kv_memories WHERE user_id = $user_id", params)
+	} else {
+		stats.KeyValueCount = s.getCount(ctx, "SELECT count() AS count FROM kv_memories", nil)
 	}
 
-	// Calculate total_size_bytes for the user/global
+	// Vector memories
+	if scoped {
+		stats.VectorCount = s.getCount(ctx, "SELECT count() AS count FROM vector_memories WHERE user_id = $user_id", params)
+	} else {
+		stats.VectorCount = s.getCount(ctx, "SELECT count() AS count FROM vector_memories", nil)
+	}
+
+	// Entities are global, return aggregate count regardless of scope
+	stats.EntityCount = s.getCount(ctx, "SELECT count() AS count FROM entities", nil)
+
+	// Relationships across all dynamic relationship tables
+	relTables, _ := s.getRelationshipTables(ctx)
+	relationshipCount := 0
+	for _, tbl := range relTables {
+		count := s.getCount(ctx, "SELECT count() AS count FROM "+tbl, nil)
+		relationshipCount += count
+	}
+	stats.RelationshipCount = relationshipCount
+
+	// Knowledge base documents are global aggregates
+	stats.DocumentCount = s.getCount(ctx, "SELECT count() AS count FROM knowledge_base", nil)
+
+	// Calculate total_size_bytes for the requested scope
 	var totalSize int64
-
-	// For user: sum content lengths in vector_memories, kv_memories, knowledge_base
-	if userID != "global" {
-		// vector_memories
+	if scoped {
+		// vector_memories content length
 		q := "SELECT content FROM vector_memories WHERE user_id = $user_id"
-		res, _ := surrealdb.Query[[]map[string]interface{}](s.db, q, map[string]interface{}{ "user_id": userID })
+		res, _ := surrealdb.Query[[]map[string]interface{}](s.db, q, params)
 		if res != nil && len(*res) > 0 {
 			qr := (*res)[0]
 			if qr.Status == "OK" && len(qr.Result) > 0 {
@@ -604,9 +600,10 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 				}
 			}
 		}
-		// kv_memories
+
+		// kv_memories value length
 		q = "SELECT value FROM kv_memories WHERE user_id = $user_id"
-		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, map[string]interface{}{ "user_id": userID })
+		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, params)
 		if res != nil && len(*res) > 0 {
 			qr := (*res)[0]
 			if qr.Status == "OK" && len(qr.Result) > 0 {
@@ -617,9 +614,10 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 				}
 			}
 		}
-		// knowledge_base
-		q = "SELECT content FROM knowledge_base"
-		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
+
+		// knowledge_base content length for the user
+		q = "SELECT content FROM knowledge_base WHERE user_id = $user_id"
+		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, params)
 		if res != nil && len(*res) > 0 {
 			qr := (*res)[0]
 			if qr.Status == "OK" && len(qr.Result) > 0 {
@@ -631,8 +629,7 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 			}
 		}
 	} else {
-		// For global: sum content lengths in entities, all relationship tables, knowledge_base
-		// entities
+		// For global stats, reuse prior behaviour: entities + relationships + knowledge base
 		q := "SELECT name FROM entities"
 		res, _ := surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
 		if res != nil && len(*res) > 0 {
@@ -645,8 +642,7 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 				}
 			}
 		}
-		// all relationship tables
-		relTables, _ := s.getRelationshipTables(ctx)
+
 		for _, tbl := range relTables {
 			q = "SELECT relationship_type FROM " + tbl
 			res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
@@ -661,7 +657,7 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 				}
 			}
 		}
-		// knowledge_base
+
 		q = "SELECT content FROM knowledge_base"
 		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
 		if res != nil && len(*res) > 0 {
@@ -675,6 +671,7 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 			}
 		}
 	}
+
 	stats.TotalSize = totalSize
 	return stats, nil
 }
@@ -712,7 +709,7 @@ func convertToInt(value interface{}) int {
 // updateUserStat atomically updates a specific statistic for a user.
 // It uses an upsert approach to ensure consistency and handle new users.
 func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField string, delta int) error {
-       log.Printf("DEBUG: updateUserStat called - userID: %s, statField: %s, delta: %d", userID, statField, delta)
+	log.Printf("DEBUG: updateUserStat called - userID: %s, statField: %s, delta: %d", userID, statField, delta)
 
 	// Determine the table and query for the stat field
 	// Stat field logic:
@@ -721,86 +718,102 @@ func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField
 	// - relationship_count: global, sum of all relationship tables (dynamic)
 	// - document_count: global, from knowledge_base
 	// - key_value_count: user-specific, from kv_memories
-       var countQuery string
-       var params map[string]interface{}
-       var newValue int
-       switch statField {
-       case "vector_count":
-	       countQuery = "SELECT count() AS count FROM vector_memories WHERE user_id = $user_id"
-	       params = map[string]interface{}{ "user_id": userID }
-	       newValue = s.getCount(ctx, countQuery, params)
-       case "entity_count":
-	       // Entities are global, no user_id filter
-	       countQuery = "SELECT count() AS count FROM entities"
-	       params = map[string]interface{}{}
-	       newValue = s.getCount(ctx, countQuery, params)
-       case "relationship_count":
-	       // Sum all relationships across all relationship tables (excluding SurrealDB system tables)
-	       relTables, _ := s.getRelationshipTables(ctx)
-	       for _, tbl := range relTables {
-		       q := "SELECT count() AS count FROM " + tbl
-		       newValue += s.getCount(ctx, q, map[string]interface{}{})
-	       }
-       case "document_count":
-	       // Documents are global
-	       countQuery = "SELECT count() AS count FROM knowledge_base"
-	       params = map[string]interface{}{}
-	       newValue = s.getCount(ctx, countQuery, params)
-       case "key_value_count":
-	       countQuery = "SELECT count() AS count FROM kv_memories WHERE user_id = $user_id"
-	       params = map[string]interface{}{ "user_id": userID }
-	       newValue = s.getCount(ctx, countQuery, params)
-       default:
-	       return fmt.Errorf("invalid stat field: %s", statField)
-       }
+	var countQuery string
+	var params map[string]interface{}
+	var newValue int
+	switch statField {
+	case "vector_count":
+		countQuery = "SELECT count() AS count FROM vector_memories WHERE user_id = $user_id"
+		params = map[string]interface{}{"user_id": userID}
+		newValue = s.getCount(ctx, countQuery, params)
+	case "entity_count":
+		// Entities are global, no user_id filter
+		countQuery = "SELECT count() AS count FROM entities"
+		params = map[string]interface{}{}
+		newValue = s.getCount(ctx, countQuery, params)
+	case "relationship_count":
+		// Sum all relationships across all relationship tables (excluding SurrealDB system tables)
+		relTables, _ := s.getRelationshipTables(ctx)
+		for _, tbl := range relTables {
+			q := "SELECT count() AS count FROM " + tbl
+			newValue += s.getCount(ctx, q, map[string]interface{}{})
+		}
+	case "document_count":
+		// Documents are global
+		countQuery = "SELECT count() AS count FROM knowledge_base"
+		params = map[string]interface{}{}
+		newValue = s.getCount(ctx, countQuery, params)
+	case "key_value_count":
+		countQuery = "SELECT count() AS count FROM kv_memories WHERE user_id = $user_id"
+		params = map[string]interface{}{"user_id": userID}
+		newValue = s.getCount(ctx, countQuery, params)
+	default:
+		return fmt.Errorf("invalid stat field: %s", statField)
+	}
 
-       // Upsert the stat value
-       upsertQuery := "UPDATE user_stats SET " + statField + " = $new_value, updated_at = time::now() WHERE user_id = $user_id;"
-       upsertParams := map[string]interface{}{
-	       "user_id":  userID,
-	       "new_value": newValue,
-       }
-       if _, err := surrealdb.Query[[]map[string]interface{}](s.db, upsertQuery, upsertParams); err != nil {
-	       // If update fails, try to create the record
-	       createData := map[string]interface{}{
-		       "user_id":            userID,
-		       "key_value_count":    0,
-		       "vector_count":       0,
-		       "entity_count":       0,
-		       "relationship_count": 0,
-		       "document_count":     0,
-	       }
-	       createData[statField] = newValue
-	       if _, err := surrealdb.Create[map[string]interface{}](s.db, "user_stats", createData); err != nil {
-		       return fmt.Errorf("failed to create user stat %s for user %s: %w", statField, userID, err)
-	       }
-       }
-       log.Printf("DEBUG: updateUserStat completed successfully; %s = %d", statField, newValue)
-       return nil
+	// Upsert the stat value
+	upsertQuery := "UPDATE user_stats SET " + statField + " = $new_value, updated_at = time::now() WHERE user_id = $user_id;"
+	upsertParams := map[string]interface{}{
+		"user_id":   userID,
+		"new_value": newValue,
+	}
+	if _, err := surrealdb.Query[[]map[string]interface{}](s.db, upsertQuery, upsertParams); err != nil {
+		// If update fails, try to create the record
+		createData := map[string]interface{}{
+			"user_id":            userID,
+			"key_value_count":    0,
+			"vector_count":       0,
+			"entity_count":       0,
+			"relationship_count": 0,
+			"document_count":     0,
+		}
+		createData[statField] = newValue
+		if _, err := surrealdb.Create[map[string]interface{}](s.db, "user_stats", createData); err != nil {
+			return fmt.Errorf("failed to create user stat %s for user %s: %w", statField, userID, err)
+		}
+	}
+	log.Printf("DEBUG: updateUserStat completed successfully; %s = %d", statField, newValue)
+	return nil
 }
 
 // getCount is a helper to run a count query and extract the count
 func (s *SurrealDBStorage) getCount(ctx context.Context, query string, params map[string]interface{}) int {
-       countResult, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
-       if err != nil || countResult == nil || len(*countResult) == 0 {
-	       return 0
-       }
-       queryResult := (*countResult)[0]
-       if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
-	       for _, row := range queryResult.Result {
-		       if val, ok := row["count"]; ok {
-			       switch v := val.(type) {
-			       case float64:
-				       return int(v)
-			       case int:
-				       return v
-			       case uint64:
-				       return int(v)
-			       }
-		       }
-	       }
-       }
-       return 0
+	countResult, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	if err != nil || countResult == nil || len(*countResult) == 0 {
+		return 0
+	}
+	queryResult := (*countResult)[0]
+	if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+		total := 0
+		for _, row := range queryResult.Result {
+			val, ok := row["count"]
+			if !ok {
+				continue
+			}
+			switch v := val.(type) {
+			case float64:
+				total += int(v)
+			case float32:
+				total += int(v)
+			case int:
+				total += v
+			case int64:
+				total += int(v)
+			case uint64:
+				total += int(v)
+			case string:
+				if parsed, err := strconv.Atoi(v); err == nil {
+					total += parsed
+				}
+			default:
+				if parsed, err := strconv.Atoi(fmt.Sprint(v)); err == nil {
+					total += parsed
+				}
+			}
+		}
+		return total
+	}
+	return 0
 }
 
 // getRelationshipTables returns all relationship tables (excluding system tables)
@@ -809,22 +822,22 @@ func (s *SurrealDBStorage) getRelationshipTables(ctx context.Context) ([]string,
 	// We'll list all tables and filter out known non-relationship tables
 	// This is critical for correct relationship_count stats.
 	// total_size_bytes: for user, sum content in vector_memories, kv_memories, knowledge_base; for global, sum in entities, all relationship tables, knowledge_base
-       tables := []string{}
-       result, err := surrealdb.Query[[]map[string]interface{}](s.db, "SHOW TABLES", nil)
-       if err != nil || result == nil || len(*result) == 0 {
-	       return tables, nil
-       }
-       queryResult := (*result)[0]
-       if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
-	       for _, row := range queryResult.Result {
-		       if tbl, ok := row["name"].(string); ok {
-			       if tbl != "entities" && tbl != "vector_memories" && tbl != "kv_memories" && tbl != "knowledge_base" && tbl != "user_stats" && tbl != "schema_version" {
-				       tables = append(tables, tbl)
-			       }
-		       }
-	       }
-       }
-       return tables, nil
+	tables := []string{}
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, "SHOW TABLES", nil)
+	if err != nil || result == nil || len(*result) == 0 {
+		return tables, nil
+	}
+	queryResult := (*result)[0]
+	if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+		for _, row := range queryResult.Result {
+			if tbl, ok := row["name"].(string); ok {
+				if tbl != "entities" && tbl != "vector_memories" && tbl != "kv_memories" && tbl != "knowledge_base" && tbl != "user_stats" && tbl != "schema_version" {
+					tables = append(tables, tbl)
+				}
+			}
+		}
+	}
+	return tables, nil
 }
 
 // Helper function to extract count from query result
@@ -1015,38 +1028,37 @@ func getMap(m map[string]interface{}, key string) map[string]interface{} {
 	return make(map[string]interface{})
 }
 
-
 func getTime(m map[string]interface{}, key string) time.Time {
-       val, ok := m[key]
-       if !ok {
-	       return time.Time{}
-       }
-       // Log the type for debugging
-       log.Printf("getTime: key=%s type=%s value=%#v", key, reflect.TypeOf(val), val)
-       switch v := val.(type) {
-       case string:
-	       if t, err := time.Parse(time.RFC3339, v); err == nil {
-		       return t
-	       }
-       case time.Time:
-	       return v
-       case float64:
-	       // SurrealDB could return a unix timestamp (seconds)
-	       return time.Unix(int64(v), 0)
-       case int64:
-	       return time.Unix(v, 0)
-       default:
-	       // Handle custom types (e.g., models.CustomDateTime)
-	       rv := reflect.ValueOf(val)
-	       if rv.Kind() == reflect.Struct {
-		       // Try to find a Time field
-		       f := rv.FieldByName("Time")
-		       if f.IsValid() && f.Type() == reflect.TypeOf(time.Time{}) {
-			       return f.Interface().(time.Time)
-		       }
-	       }
-       }
-       return time.Time{}
+	val, ok := m[key]
+	if !ok {
+		return time.Time{}
+	}
+	// Log the type for debugging
+	log.Printf("getTime: key=%s type=%s value=%#v", key, reflect.TypeOf(val), val)
+	switch v := val.(type) {
+	case string:
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			return t
+		}
+	case time.Time:
+		return v
+	case float64:
+		// SurrealDB could return a unix timestamp (seconds)
+		return time.Unix(int64(v), 0)
+	case int64:
+		return time.Unix(v, 0)
+	default:
+		// Handle custom types (e.g., models.CustomDateTime)
+		rv := reflect.ValueOf(val)
+		if rv.Kind() == reflect.Struct {
+			// Try to find a Time field
+			f := rv.FieldByName("Time")
+			if f.IsValid() && f.Type() == reflect.TypeOf(time.Time{}) {
+				return f.Interface().(time.Time)
+			}
+		}
+	}
+	return time.Time{}
 }
 
 // convertEmbeddingToFloat64 normalizes an input []float32 embedding to defaultMtreeDim length

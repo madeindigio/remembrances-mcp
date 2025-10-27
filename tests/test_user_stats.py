@@ -11,9 +11,67 @@ import os
 import subprocess
 import time
 import threading
+import signal
+import uuid
+from pathlib import Path
+
+# Repository root and helper paths
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Add the current directory to path for importing helper functions
 sys.path.append(os.path.dirname(__file__))
+
+
+def load_remembrances_command() -> list[str]:
+    """Load the remembrances server command from .vscode/mcp.json."""
+
+    config_path = REPO_ROOT / ".vscode" / "mcp.json"
+    fallback_paths = [
+        REPO_ROOT / "dist" / "remembrances-mcp",
+        REPO_ROOT / "remembrances-mcp",
+    ]
+
+    try:
+        with config_path.open("r", encoding="utf-8") as config_file:
+            config = json.load(config_file)
+
+        server_cfg = config.get("servers", {}).get("remembrances")
+        if server_cfg:
+            command = server_cfg.get("command")
+            args = server_cfg.get("args", [])
+            if command:
+                command_path = Path(command)
+                if not command_path.is_absolute():
+                    command_path = (REPO_ROOT / command_path).resolve()
+
+                dist_candidate = (REPO_ROOT / "dist" / command_path.name).resolve()
+                if dist_candidate.exists():
+                    command_path = dist_candidate
+                elif not command_path.exists():
+                    for candidate in fallback_paths:
+                        if candidate.exists():
+                            command_path = candidate.resolve()
+                            break
+
+                resolved_args = []
+                for arg in args:
+                    if isinstance(arg, str) and arg.startswith("./"):
+                        resolved_args.append(str((REPO_ROOT / arg).resolve()))
+                    else:
+                        resolved_args.append(str(arg))
+
+                return [str(command_path), *resolved_args]
+    except Exception:
+        # Fall through to fallback resolution
+        pass
+
+    for candidate in fallback_paths:
+        if candidate.exists():
+            return [str(candidate.resolve())]
+
+    raise FileNotFoundError(
+        "Could not locate the remembrances-mcp binary. Build the project before running tests."
+    )
 
 
 DELIM = "\n"
@@ -72,25 +130,39 @@ def wait_for_response(reader, timeout=15):
 
 class UserStatsTest:
     def __init__(self):
+        self.repo_root = REPO_ROOT
+        self.server_command = load_remembrances_command()
         self.proc = None
         self.reader = None
         self.request_id = 1
-        self.test_user = "test_user_stats"
+        self.test_user = f"test_user_stats_{uuid.uuid4().hex}"
+        self.created_fact_keys: list[str] = []
 
     def setup(self):
         """Set up the test environment"""
         print("Setting up test environment...")
 
-        # Find the binary
-        bin_path = os.path.abspath("./dist/remembrances-mcp")
-        if not os.path.exists(bin_path):
-            print(f"✗ Binary not found: {bin_path}")
+        binary_path = Path(self.server_command[0]).resolve()
+        if not binary_path.exists():
+            print(f"✗ Binary not found: {binary_path}")
             return False
+
+        self.server_command[0] = str(binary_path)
+
+        print(
+            "Using MCP server command:",
+            " ".join(self.server_command),
+        )
 
         # Start the MCP server with stdio transport
         try:
-            self.proc = subprocess.Popen([bin_path], stdin=subprocess.PIPE,
-                                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self.proc = subprocess.Popen(
+                self.server_command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                cwd=str(self.repo_root),
+            )
             self.reader = ReaderThread(self.proc.stdout)
             self.reader.start()
 
@@ -122,23 +194,38 @@ class UserStatsTest:
     def cleanup(self):
         """Clean up test data"""
         print("Cleaning up test data...")
-        try:
-            # Delete test facts
-            for i in range(3):
-                self.call_tool("remembrance_delete_fact", {
-                    "user_id": self.test_user,
-                    "key": f"test_key_{i}"
-                })
+        if self.proc and self.proc.poll() is None:
+            for key in self.created_fact_keys:
+                try:
+                    self.call_tool(
+                        "remembrance_delete_fact",
+                        {"user_id": self.test_user, "key": key},
+                    )
+                except Exception as exc:
+                    print(f"Warning: cleanup error for key {key}: {exc}")
 
-        except Exception as e:
-            print(f"Warning: cleanup error: {e}")
+        if self.reader:
+            self.reader.running = False
 
         if self.proc:
             try:
-                self.proc.send_signal(subprocess.signal.SIGINT)
+                self.proc.send_signal(signal.SIGINT)
             except Exception:
-                pass
-            self.proc.wait(timeout=5)
+                try:
+                    self.proc.terminate()
+                except Exception:
+                    pass
+
+            try:
+                self.proc.wait(timeout=5)
+            except Exception:
+                try:
+                    self.proc.kill()
+                except Exception:
+                    pass
+
+        if self.reader:
+            self.reader.join(timeout=2)
 
     def call_tool(self, tool_name: str, arguments: dict):
         """Call an MCP tool"""
@@ -219,9 +306,12 @@ class UserStatsTest:
 
         # Save some facts
         for i in range(3):
+            key = f"test_key_{i}"
+            if key not in self.created_fact_keys:
+                self.created_fact_keys.append(key)
             result = self.call_tool("remembrance_save_fact", {
                 "user_id": self.test_user,
-                "key": f"test_key_{i}",
+                "key": key,
                 "value": f"test_value_{i}"
             })
             print(f"Saved fact {i}: {result}")
@@ -242,6 +332,18 @@ class UserStatsTest:
             "key": "test_key_1"
         })
         print(f"Deleted fact: {result}")
+
+        list_result = self.call_tool("remembrance_list_facts", {
+            "user_id": self.test_user
+        })
+        facts_text = list_result.get("content", [{}])[0].get("text", "")
+        facts_after_delete = {}
+        if "\n" in facts_text:
+            try:
+                facts_after_delete = json.loads(facts_text.split("\n", 1)[1])
+            except json.JSONDecodeError:
+                pass
+        print(f"Facts after deletion: {facts_after_delete}")
 
         # Check stats after deleting
         stats = self.get_stats()

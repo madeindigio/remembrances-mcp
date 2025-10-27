@@ -30,23 +30,29 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 		emb64[i] = float64(v)
 	}
 
-	query := `
-		INSERT INTO vector_memories {
-			user_id: $user_id,
-			content: $content,
-			embedding: $embedding,
-			metadata: $metadata,
-			created_at: time::now(),
-			updated_at: time::now()
-		} RETURN id
-	`
-
-	params := map[string]interface{}{
-		"user_id":   userID,
-		"content":   content,
-		"embedding": emb64,
-		"metadata":  metadata,
-	}
+       // Si userID es vacío, no incluir el campo en el insert
+       query := `
+	       INSERT INTO vector_memories {
+		       content: $content,
+		       embedding: $embedding,
+		       metadata: $metadata,
+		       created_at: time::now(),
+		       updated_at: time::now()` + func() string {
+	       if userID != "" {
+		       return ",\n\t\tuser_id: $user_id"
+	       }
+	       return ""
+       }() + `
+	       } RETURN id
+       `
+       params := map[string]interface{}{
+	       "content":   content,
+	       "embedding": emb64,
+	       "metadata":  metadata,
+       }
+       if userID != "" {
+	       params["user_id"] = userID
+       }
 
 	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {

@@ -174,6 +174,50 @@ def main():
                 print(
                     f"Stats after save response: {content[0].get('text', '')}")
 
+        # List facts for debugging
+        print("\n=== Listing facts for debug_user ===")
+        call_req = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": "tools/call",
+            "params": {
+                "name": "remembrance_list_facts",
+                "arguments": {"user_id": "debug_user"}
+            }
+        }
+        request_id += 1
+        send_json(proc.stdin, call_req)
+        resp = wait_for_response(reader)
+
+        if resp.get("error"):
+            print(f"List facts failed: {resp['error']}")
+        else:
+            content = resp.get("result", {}).get("content", [])
+            if content:
+                print(f"List facts response: {content[0].get('text', '')}")
+
+        # Get fact directly by key
+        print("\n=== Getting fact debug_key ===")
+        call_req = {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "method": "tools/call",
+            "params": {
+                "name": "remembrance_get_fact",
+                "arguments": {"user_id": "debug_user", "key": "debug_key"}
+            }
+        }
+        request_id += 1
+        send_json(proc.stdin, call_req)
+        resp = wait_for_response(reader)
+
+        if resp.get("error"):
+            print(f"Get fact failed: {resp['error']}")
+        else:
+            content = resp.get("result", {}).get("content", [])
+            if content:
+                print(f"Get fact response: {content[0].get('text', '')}")
+
     finally:
         try:
             proc.send_signal(subprocess.signal.SIGINT)

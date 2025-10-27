@@ -4,27 +4,41 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/surrealdb/surrealdb.go"
 )
 
 // SaveFact saves a key-value fact for a user
 func (s *SurrealDBStorage) SaveFact(ctx context.Context, userID, key string, value interface{}) error {
-	data := map[string]interface{}{
-		"user_id": userID,
-		"key":     key,
-		"value":   value,
-	}
-
-	recordID := fmt.Sprintf("kv_memories:['%s:%s']", userID, key)
-	_, err := surrealdb.Create[map[string]interface{}](s.db, recordID, data)
+	existingID, err := s.findFactRecordID(ctx, userID, key)
 	if err != nil {
-		return fmt.Errorf("failed to save fact: %w", err)
+		return fmt.Errorf("failed to check existing fact: %w", err)
 	}
 
-	// Update user statistics
+	if existingID != "" {
+		// Fact exists, update value and timestamp
+		updateQuery := "UPDATE " + existingID + " SET value = $value, updated_at = $updated_at"
+		params := map[string]interface{}{
+			"value":      value,
+			"updated_at": time.Now().UTC(),
+		}
+		if _, err := surrealdb.Query[[]map[string]interface{}](s.db, updateQuery, params); err != nil {
+			return fmt.Errorf("failed to update fact: %w", err)
+		}
+	} else {
+		data := map[string]interface{}{
+			"user_id": userID,
+			"key":     key,
+			"value":   value,
+		}
+		if _, err := surrealdb.Create[map[string]interface{}](s.db, "kv_memories", data); err != nil {
+			return fmt.Errorf("failed to save fact: %w", err)
+		}
+	}
+
+	// Recalculate statistics after mutation
 	if err := s.updateUserStat(ctx, userID, "key_value_count", 1); err != nil {
-		// Log the error but don't fail the operation
 		log.Printf("Warning: failed to update key_value_count stat for user %s: %v", userID, err)
 	}
 
@@ -33,9 +47,12 @@ func (s *SurrealDBStorage) SaveFact(ctx context.Context, userID, key string, val
 
 // GetFact retrieves a key-value fact for a user
 func (s *SurrealDBStorage) GetFact(ctx context.Context, userID, key string) (interface{}, error) {
-	recordID := fmt.Sprintf("kv_memories:['%s:%s']", userID, key)
-	query := "SELECT * FROM " + recordID
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
+	query := "SELECT * FROM kv_memories WHERE user_id = $user_id AND key = $key LIMIT 1"
+	params := map[string]interface{}{
+		"user_id": userID,
+		"key":     key,
+	}
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fact: %w", err)
 	}
@@ -59,13 +76,20 @@ func (s *SurrealDBStorage) GetFact(ctx context.Context, userID, key string) (int
 
 // UpdateFact updates a key-value fact for a user
 func (s *SurrealDBStorage) UpdateFact(ctx context.Context, userID, key string, value interface{}) error {
-	data := map[string]interface{}{
-		"value": value,
+	recordID, err := s.findFactRecordID(ctx, userID, key)
+	if err != nil {
+		return fmt.Errorf("failed to check existing fact: %w", err)
+	}
+	if recordID == "" {
+		return fmt.Errorf("fact not found for user %s and key %s", userID, key)
 	}
 
-	recordID := fmt.Sprintf("kv_memories:['%s:%s']", userID, key)
-	_, err := surrealdb.Update[map[string]interface{}](s.db, recordID, data)
-	if err != nil {
+	query := "UPDATE " + recordID + " SET value = $value, updated_at = $updated_at"
+	params := map[string]interface{}{
+		"value":      value,
+		"updated_at": time.Now().UTC(),
+	}
+	if _, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params); err != nil {
 		return fmt.Errorf("failed to update fact: %w", err)
 	}
 
@@ -74,15 +98,30 @@ func (s *SurrealDBStorage) UpdateFact(ctx context.Context, userID, key string, v
 
 // DeleteFact deletes a key-value fact for a user
 func (s *SurrealDBStorage) DeleteFact(ctx context.Context, userID, key string) error {
-	recordID := fmt.Sprintf("kv_memories:['%s:%s']", userID, key)
-	_, err := surrealdb.Delete[interface{}](s.db, recordID)
+	params := map[string]interface{}{
+		"user_id": userID,
+		"key":     key,
+	}
+
+	deleteQuery := "DELETE FROM kv_memories WHERE user_id = $user_id AND key = $key RETURN BEFORE"
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, deleteQuery, params)
 	if err != nil {
 		return fmt.Errorf("failed to delete fact: %w", err)
 	}
 
-	// Update user statistics
+	deletedCount := 0
+	if result != nil && len(*result) > 0 {
+		qr := (*result)[0]
+		if qr.Status == "OK" {
+			deletedCount = len(qr.Result)
+		}
+	}
+
+	if deletedCount == 0 {
+		return nil
+	}
+
 	if err := s.updateUserStat(ctx, userID, "key_value_count", -1); err != nil {
-		// Log the error but don't fail the operation
 		log.Printf("Warning: failed to update key_value_count stat for user %s: %v", userID, err)
 	}
 
@@ -122,4 +161,28 @@ func (s *SurrealDBStorage) ListFacts(ctx context.Context, userID string) (map[st
 	}
 
 	return facts, nil
+}
+
+// findFactRecordID returns the SurrealDB record ID for a fact or an empty string if it does not exist.
+func (s *SurrealDBStorage) findFactRecordID(ctx context.Context, userID, key string) (string, error) {
+	query := "SELECT id FROM kv_memories WHERE user_id = $user_id AND key = $key LIMIT 1"
+	params := map[string]interface{}{
+		"user_id": userID,
+		"key":     key,
+	}
+
+	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	if err != nil {
+		return "", err
+	}
+	if result == nil || len(*result) == 0 {
+		return "", nil
+	}
+
+	queryResult := (*result)[0]
+	if queryResult.Status != "OK" || queryResult.Result == nil || len(queryResult.Result) == 0 {
+		return "", nil
+	}
+
+	return extractRecordID(queryResult.Result[0]["id"]), nil
 }
