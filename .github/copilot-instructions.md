@@ -43,11 +43,18 @@ The system has undergone major refactoring (September 2025) and is fully operati
 
 ### 🗄️ Storage Layer (Refactored into Specialized Files)
 
-- `internal/storage/storage.go` — Interface definitions (`Storage`/`StorageWithStats`)
-- `internal/storage/surrealdb.go` (630 lines) — Core implementation, connection management, entity/graph ops
-- `internal/storage/surrealdb_schema.go` (444 lines) — Schema management, migrations, table/field/index management
-- `internal/storage/surrealdb_facts.go` (112 lines) — Key-value fact operations
-- `internal/storage/surrealdb_vectors.go` (127 lines) — Vector/embedding operations
+- `internal/storage/storage.go` — Interface definitions for storage capabilities, including stats extensions
+- `internal/storage/surrealdb.go` — SurrealDB-backed implementation, connection lifecycle, and orchestration of concrete operations
+- `internal/storage/surrealdb_helpers.go` — Shared query helpers, result decoding, and utility functions used across storage modules
+- `internal/storage/surrealdb_schema.go` — Schema initialization, migrations, and index management
+- `internal/storage/surrealdb_documents.go` — Knowledge base document storage, retrieval, and search helpers
+- `internal/storage/surrealdb_entities.go` — Entity and relationship CRUD plus traversal utilities
+- `internal/storage/surrealdb_facts.go` — Key-value fact persistence with user scoping
+- `internal/storage/surrealdb_vectors.go` — Vector embedding persistence and similarity queries
+- `internal/storage/surrealdb_hybrid.go` — Hybrid search operations that blend facts, vectors, and graph data
+- `internal/storage/surrealdb_stats.go` — Aggregation routines for user and system statistics
+- `internal/storage/migrations/` — Versioned migration definitions coordinating schema evolution
+- `internal/storage/embedding_test.go`, `internal/storage/surrealdb_test.go` — Storage-focused regression and integration tests
 
 ### 🔧 MCP Tools Layer (Organized by Function)
 
