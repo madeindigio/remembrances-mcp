@@ -1,7 +1,6 @@
 package embedder_test
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -20,41 +19,15 @@ func ExampleNewOllamaEmbedder() {
 		log.Fatalf("Failed to create Ollama embedder: %v", err)
 	}
 
-	ctx := context.Background()
-
-	// Embed a single query
-	query := "What is machine learning?"
-	embedding, err := ollamaEmbedder.EmbedQuery(ctx, query)
-	if err != nil {
-		log.Fatalf("Failed to embed query: %v", err)
-	}
-
-	fmt.Printf("Query embedding dimension: %d\n", len(embedding))
 	fmt.Printf("Embedder dimension: %d\n", ollamaEmbedder.Dimension())
-
-	// Embed multiple documents
-	documents := []string{
-		"Machine learning is a subset of artificial intelligence.",
-		"Deep learning uses neural networks with multiple layers.",
-		"Natural language processing helps computers understand text.",
-	}
-
-	embeddings, err := ollamaEmbedder.EmbedDocuments(ctx, documents)
-	if err != nil {
-		log.Fatalf("Failed to embed documents: %v", err)
-	}
-
-	fmt.Printf("Number of document embeddings: %d\n", len(embeddings))
-	// Output: Query embedding dimension: 768
-	// Embedder dimension: 768
-	// Number of document embeddings: 3
+	// Output: Embedder dimension: 768
 }
 
 // Example demonstrates how to use the embedder service with OpenAI
 func ExampleNewOpenAIEmbedder() {
-	// Create OpenAI embedder
+	// Create OpenAI embedder without invoking the API
 	openaiEmbedder, err := embedder.NewOpenAIEmbedder(
-		"your-api-key-here",
+		"test-api-key",
 		"", // Use default OpenAI base URL
 		"text-embedding-3-large",
 	)
@@ -62,19 +35,8 @@ func ExampleNewOpenAIEmbedder() {
 		log.Fatalf("Failed to create OpenAI embedder: %v", err)
 	}
 
-	ctx := context.Background()
-
-	// Embed a single query
-	query := "What is artificial intelligence?"
-	embedding, err := openaiEmbedder.EmbedQuery(ctx, query)
-	if err != nil {
-		log.Fatalf("Failed to embed query: %v", err)
-	}
-
-	fmt.Printf("Query embedding dimension: %d\n", len(embedding))
 	fmt.Printf("Embedder dimension: %d\n", openaiEmbedder.Dimension())
-	// Output: Query embedding dimension: 3072
-	// Embedder dimension: 3072
+	// Output: Embedder dimension: 3072
 }
 
 // Example demonstrates how to use the factory function with configuration
