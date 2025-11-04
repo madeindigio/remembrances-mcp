@@ -1,9 +1,17 @@
 # GoReleaser configuration for remembrances-mcp
-# Adapted from: https://raw.githubusercontent.com/sevir/essh/refs/heads/master/.goreleaser.yml
+# Supports two build modes:
+# 1. Standard build (CGO_ENABLED=0) - Remote SurrealDB only
+# 2. Embedded build (CGO_ENABLED=1) - With embedded SurrealDB support
 version: 2
 
+before:
+  hooks:
+    # Build Rust library for embedded support before building Go binaries
+    - bash -c 'if [ -d "surrealdb_embedded_rs" ]; then cd surrealdb_embedded_rs && cargo build --release; fi'
+
 builds:
-  - id: remembrances-mcp
+  # Standard build without CGO - Remote SurrealDB only
+  - id: remembrances-mcp-remote
     main: ./cmd/remembrances-mcp
     binary: remembrances-mcp
     goos:
@@ -11,12 +19,8 @@ builds:
       - linux
       - windows
     goarch:
-      - "386"
       - "amd64"
-      - "arm"
       - "arm64"
-    goarm:
-      - "7"
     ldflags:
       - "-s"
       - "-w"
@@ -25,23 +29,64 @@ builds:
     env:
       - CGO_ENABLED=0
     ignore:
-      - goos: darwin
-        goarch: "386"
-      - goos: windows
-        goarch: "386"
-      - goos: windows
-        goarch: "arm"
       - goos: windows
         goarch: "arm64"
+
+  # Embedded build with CGO - Requires native toolchain or Docker
+  - id: remembrances-mcp-embedded
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp-embedded
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - "amd64"
+      - "arm64"
+    tags:
+      - embedded
+    ldflags:
+      - "-s"
+      - "-w"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-linkmode external"
+      - "-extldflags=-static"
+    env:
+      - CGO_ENABLED=1
+    # Cross-compilation setup for CGO
+    # For Linux x64
+    overrides:
+      - goos: linux
+        goarch: amd64
+        env:
+          - CC=x86_64-linux-gnu-gcc
+          - CXX=x86_64-linux-gnu-g++
+      # For Linux ARM64
+      - goos: linux
+        goarch: arm64
+        env:
+          - CC=aarch64-linux-gnu-gcc
+          - CXX=aarch64-linux-gnu-g++
+      # For macOS x64
+      - goos: darwin
+        goarch: amd64
+        env:
+          - CC=o64-clang
+          - CXX=o64-clang++
+      # For macOS ARM64
+      - goos: darwin
+        goarch: arm64
+        env:
+          - CC=oa64-clang
+          - CXX=oa64-clang++
 
 dist: ./dist/outputs/dist
 
 upx:
   - enabled: true
-    # Filter by build ID(s) to compress. Leave empty to allow all builds.
+    # Compress remote builds only (embedded builds are already large due to static linking)
     ids:
-      - remembrances-mcp
-    # Only compress linux amd64/arm64 by default
+      - remembrances-mcp-remote
     goos:
       - linux
     goarch:
@@ -52,10 +97,28 @@ upx:
     brute: false
 
 archives:
-  - id: xc
+  # Remote builds
+  - id: remote-binary
+    builds:
+      - remembrances-mcp-remote
     formats: ['binary']
-  - id: tar
+  - id: remote-tar
+    builds:
+      - remembrances-mcp-remote
     formats: ['tar.gz']
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+  # Embedded builds
+  - id: embedded-binary
+    builds:
+      - remembrances-mcp-embedded
+    formats: ['binary']
+  - id: embedded-tar
+    builds:
+      - remembrances-mcp-embedded
+    formats: ['tar.gz']
+    name_template: >-
+      {{ .ProjectName }}_embedded_{{ .Version }}_{{ .Os }}_{{ .Arch }}
 
 checksum:
   name_template: 'checksums.txt'

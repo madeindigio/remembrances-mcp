@@ -9,6 +9,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/surrealdb/surrealdb.go v0.5.0
 	github.com/tmc/langchaingo v0.1.13
+	github.com/yourusername/surrealdb-embedded v0.0.0-20251101150203-6bc13919c7e5
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -37,3 +38,5 @@ require (
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 )
+
+replace github.com/yourusername/surrealdb-embedded => github.com/madeindigio/surrealdb-embedded-golang v0.0.0-20251101150203-6bc13919c7e5

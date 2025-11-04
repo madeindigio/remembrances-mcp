@@ -5,10 +5,28 @@ Remembrances-MCP is a Go-based MCP server that provides long-term memory capabil
 ## Features
 
 - MCP server for AI agent memory
-- SurrealDB support (embedded or external)
+- **SurrealDB support:**
+  - **Embedded mode**: True embedded database using Rust FFI (no external server needed)
+  - **Remote mode**: Connect to external SurrealDB server
 - Knowledge base management with Markdown files
 - Embedding generation via Ollama (local) or OpenAI API
 - Multiple transport options: stdio (default), SSE, and HTTP JSON API
+
+## Build Modes
+
+remembrances-mcp can be built in two modes:
+
+1. **Remote Build** (Default): Lightweight binary that connects to external SurrealDB
+   - No CGO required, easy cross-compilation
+   - Smaller binary size (~15-25 MB)
+
+2. **Embedded Build**: Includes embedded SurrealDB database
+   - No external dependencies at runtime
+   - Single portable binary with embedded database
+   - Requires CGO and Rust toolchain to build
+   - Larger binary size (~50-80 MB)
+
+See [BUILD.md](BUILD.md) for detailed build instructions.
 
 ## Usage
 
@@ -28,6 +46,7 @@ go run ./cmd/remembrances-mcp/main.go [flags]
 - `--knowledge-base`: Path to knowledge base directory
 - `--db-path`: Path to embedded SurrealDB database (default: ./remembrances.db)
 - `--surrealdb-url`: URL for remote SurrealDB instance
+- `--use-embedded-db`: Use embedded SurrealDB library instead of remote (requires CGO build)
 - `--surrealdb-user`: SurrealDB username (default: root)
 - `--surrealdb-pass`: SurrealDB password (default: root)
 - `--surrealdb-namespace`: SurrealDB namespace (default: test)

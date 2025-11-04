@@ -136,8 +136,21 @@ Choose the right tool for your data:
 
 	// Initialize storage
 	var storageInstance storage.StorageWithStats
-	if cfg.SurrealDBURL != "" {
+
+	// Determine which storage implementation to use
+	if cfg.UseEmbeddedDB {
+		// Use embedded SurrealDB (requires CGO and embedded build tag)
+		slog.Info("Using embedded SurrealDB storage")
+		storageConfig := &storage.ConnectionConfig{
+			DBPath:    cfg.DbPath,
+			Namespace: cfg.GetSurrealDBNamespace(),
+			Database:  cfg.GetSurrealDBDatabase(),
+			Timeout:   30 * time.Second,
+		}
+		storageInstance = storage.NewEmbeddedSurrealDBStorage(storageConfig)
+	} else if cfg.SurrealDBURL != "" {
 		// Use remote SurrealDB
+		slog.Info("Using remote SurrealDB storage", "url", cfg.SurrealDBURL)
 		storageConfig := &storage.ConnectionConfig{
 			URL:       cfg.SurrealDBURL,
 			Username:  cfg.SurrealDBUser,
@@ -148,7 +161,9 @@ Choose the right tool for your data:
 		}
 		storageInstance = storage.NewSurrealDBStorage(storageConfig)
 	} else {
-		// Use embedded SurrealDB
+		// Default: Use remote SDK with embedded path (old behavior)
+		// Note: This doesn't actually work with the official SDK, but kept for compatibility
+		slog.Warn("Using remote SDK with embedded path - this may not work. Consider using --use-embedded-db flag")
 		storageConfig := &storage.ConnectionConfig{
 			DBPath:    cfg.DbPath,
 			Namespace: cfg.GetSurrealDBNamespace(),

@@ -1,0 +1,90 @@
+# Multi-platform cross-compilation environment for remembrances-mcp with embedded SurrealDB
+# This Dockerfile provides a complete environment for building binaries with CGO support
+# for multiple platforms: Linux (amd64, arm64), macOS (amd64, arm64)
+
+FROM golang:1.23-bullseye
+
+# Install basic build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    clang \
+    llvm \
+    libclang-dev \
+    pkg-config \
+    libssl-dev \
+    git \
+    curl \
+    wget \
+    xz-utils \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust toolchain
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Add Rust targets for cross-compilation
+RUN rustup target add x86_64-unknown-linux-gnu \
+    && rustup target add aarch64-unknown-linux-gnu \
+    && rustup target add x86_64-apple-darwin \
+    && rustup target add aarch64-apple-darwin
+
+# Install cross-compilation toolchains for Linux ARM64
+RUN apt-get update && apt-get install -y \
+    gcc-aarch64-linux-gnu \
+    g++-aarch64-linux-gnu \
+    libc6-dev-arm64-cross \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install OSXCross for macOS cross-compilation
+WORKDIR /opt
+RUN git clone https://github.com/tpoechtrager/osxcross.git
+WORKDIR /opt/osxcross
+
+# Download and prepare macOS SDK
+# Note: You need to place the SDK in the osxcross/tarballs directory
+# or download it manually. For CI/CD, you can host it privately.
+RUN wget -O tarballs/MacOSX12.3.sdk.tar.xz \
+    https://github.com/joseluisq/macosx-sdks/releases/download/12.3/MacOSX12.3.sdk.tar.xz || \
+    echo "Warning: macOS SDK not downloaded. Build will fail for macOS targets."
+
+# Build OSXCross if SDK is available
+RUN if [ -f tarballs/MacOSX12.3.sdk.tar.xz ]; then \
+    UNATTENDED=1 ./build.sh; \
+    fi
+
+ENV PATH="/opt/osxcross/target/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/opt/osxcross/target/lib:${LD_LIBRARY_PATH}"
+
+# Install goreleaser
+RUN go install github.com/goreleaser/goreleaser@latest
+
+# Set up working directory
+WORKDIR /workspace
+
+# Environment variables for cross-compilation
+ENV CGO_ENABLED=1
+ENV GO111MODULE=on
+
+# Set up cargo config for cross-compilation
+RUN mkdir -p /root/.cargo && cat > /root/.cargo/config.toml <<EOF
+[target.x86_64-unknown-linux-gnu]
+linker = "x86_64-linux-gnu-gcc"
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+
+[target.x86_64-apple-darwin]
+linker = "o64-clang"
+ar = "x86_64-apple-darwin-ar"
+
+[target.aarch64-apple-darwin]
+linker = "oa64-clang"
+ar = "aarch64-apple-darwin-ar"
+EOF
+
+# Build script for embedded library
+COPY build-embedded.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/build-embedded.sh || true
+
+CMD ["/bin/bash"]
