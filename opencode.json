@@ -1,0 +1,64 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "hyper-mcp": {
+      "type": "local",
+      "command": [
+        "hyper-mcp",
+        "--config-file",
+        "/home/sevir/.config/hyper-mcp/assistant.yaml"
+      ],
+      "enabled": true,
+      "environment": {}
+    },
+    "mycommandmcp": {
+      "type": "local",
+      "command": [
+        "mycommandmcp",
+        "--config",
+        "/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"
+      ],
+      "enabled": true,
+      "environment": {}
+    },
+    "serena": {
+      "type": "local",
+      "command": [
+        "pkgx",
+        "uvx",
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "/www/MCP/remembrances-mcp"
+      ],
+      "enabled": true,
+      "environment": {}
+    },
+    "remembrances": {
+      "type": "local",
+      "command": [
+        "/www/MCP/remembrances-mcp/remembrances-mcp",
+        "--config",
+        "/www/MCP/remembrances-mcp/config.sample.yaml"
+      ],
+      "enabled": true,
+      "environment": {}
+    },
+    "mc": {
+      "type": "local",
+      "command": [
+        "/home/sevir/bin/mycommandmcp",
+        "--log-file",
+        "/home/sevir/Descargas/mcmcp.log",
+        "--config",
+        "/home/sevir/.config/mc-mcp/all-tools.yaml"
+      ],
+      "enabled": true,
+      "environment": {}
+    }
+  }
+}

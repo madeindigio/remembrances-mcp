@@ -21,7 +21,7 @@
 #rest-api-serve: false
 
 # Path to the knowledge base directory (default: "")
-knowledge-base: ""
+knowledge-base: "/www/MCP/remembrances-mcp/.serena/memories"
 
 # ========== SurrealDB Configuration ==========
 # Path to the embedded SurrealDB database (default: "./remembrances.db")
