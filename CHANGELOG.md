@@ -1,8 +1,21 @@
 # Changelog
 
-## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.40.0...7eb20461949830c943049a9475ba6b4a5ffdcb9f) (2025-10-27)
+## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.40.0...HEAD) (2025-11-12)
 
 ### Features
+
+* **GGUF Embeddings Support** - Add support for local GGUF embedding models via go-llama.cpp
+  - Load GGUF models directly (nomic-embed, qwen, and other BERT-based models)
+  - GPU acceleration support (Metal for macOS, CUDA for NVIDIA, ROCm for AMD)
+  - Configurable via CLI flags, environment variables, and YAML config
+  - New CLI flags: `--gguf-model-path`, `--gguf-threads`, `--gguf-gpu-layers`
+  - Priority: GGUF > Ollama > OpenAI
+  - Full documentation in `docs/GGUF_EMBEDDINGS.md`
+  - Build system with Makefile for easy compilation
+  - Comprehensive tests and examples
+  - Privacy-first: All embeddings generated locally
+  - Cost-effective: No API costs
+  - Support for quantized models (Q4_K_M, Q8_0, etc.)
 
 * refactor surrealdb storage code
 ([a1af4cb](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a1af4cb419c858243b712656ad8fe7d245ea4411))

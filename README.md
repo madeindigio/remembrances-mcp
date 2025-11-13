@@ -7,8 +7,47 @@ Remembrances-MCP is a Go-based MCP server that provides long-term memory capabil
 - MCP server for AI agent memory
 - SurrealDB support (embedded or external)
 - Knowledge base management with Markdown files
-- Embedding generation via Ollama (local) or OpenAI API
+- **Embedding generation via:**
+  - **GGUF models (local, privacy-first, GPU accelerated)** ⭐ NEW
+  - Ollama (local server)
+  - OpenAI API (remote)
 - Multiple transport options: stdio (default), SSE, and HTTP JSON API
+
+## 🚀 GGUF Embeddings (NEW)
+
+Remembrances-MCP now supports loading local GGUF embedding models directly! This provides:
+
+- **🔒 Privacy**: All embeddings generated locally, no data sent externally
+- **⚡ Performance**: Direct model inference without network latency
+- **💰 Cost**: No API costs for embedding generation
+- **🎯 Flexibility**: Support for quantized models (Q4_K_M, Q8_0, etc.)
+- **🖥️ GPU Acceleration**: Metal (macOS), CUDA (NVIDIA), ROCm (AMD)
+
+### Quick Start with GGUF
+
+```bash
+# 1. Build the project (compiles llama.cpp automatically)
+make build
+
+# 2. Download a GGUF model
+# Example: nomic-embed-text-v1.5 (768 dimensions)
+wget https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf
+
+# 3. Run with GGUF model (using wrapper script)
+./run-remembrances.sh \
+  --gguf-model-path ./nomic-embed-text-v1.5.Q4_K_M.gguf \
+  --gguf-threads 8 \
+  --gguf-gpu-layers 32
+  
+# Alternative: Set LD_LIBRARY_PATH manually
+export LD_LIBRARY_PATH=/www/MCP/Remembrances/go-llama.cpp/build/bin:$LD_LIBRARY_PATH
+./build/remembrances-mcp \
+  --gguf-model-path ./nomic-embed-text-v1.5.Q4_K_M.gguf \
+  --gguf-threads 8 \
+  --gguf-gpu-layers 32
+```
+
+**📖 Full Documentation**: See [docs/GGUF_EMBEDDINGS.md](docs/GGUF_EMBEDDINGS.md) for detailed instructions, performance tips, and troubleshooting.
 
 ## Usage
 
@@ -33,6 +72,9 @@ go run ./cmd/remembrances-mcp/main.go [flags]
 - `--surrealdb-pass`: SurrealDB password (default: root)
 - `--surrealdb-namespace`: SurrealDB namespace (default: test)
 - `--surrealdb-database`: SurrealDB database (default: test)
+- `--gguf-model-path`: Path to GGUF model file for local embeddings (NEW)
+- `--gguf-threads`: Number of threads for GGUF model (0 = auto-detect) (NEW)
+- `--gguf-gpu-layers`: Number of GPU layers for GGUF model (0 = CPU only) (NEW)
 - `--ollama-url`: Ollama server URL (default: http://localhost:11434)
 - `--ollama-model`: Ollama model for embeddings
 - `--openai-key`: OpenAI API key
@@ -57,6 +99,9 @@ All flags can be set via environment variables prefixed with `GOMEM_` and dashes
 - `GOMEM_SURREALDB_PASS`
 - `GOMEM_SURREALDB_NAMESPACE`
 - `GOMEM_SURREALDB_DATABASE`
+- `GOMEM_GGUF_MODEL_PATH`
+- `GOMEM_GGUF_THREADS`
+- `GOMEM_GGUF_GPU_LAYERS`
 - `GOMEM_OLLAMA_URL`
 - `GOMEM_OLLAMA_MODEL`
 - `GOMEM_OPENAI_KEY`
