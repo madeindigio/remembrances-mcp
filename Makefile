@@ -5,6 +5,7 @@ all: build
 
 # Variables
 GO_LLAMA_DIR := /www/MCP/Remembrances/go-llama.cpp
+SURREALDB_EMBEDDED_DIR := /www/MCP/Remembrances/surrealdb-embedded
 BUILD_DIR := build
 BINARY_NAME := remembrances-mcp
 
@@ -27,10 +28,10 @@ else
 	$(error Unsupported platform: $(UNAME_S))
 endif
 
-# CGO flags for linking with llama.cpp
+# CGO flags for linking with llama.cpp and surrealdb-embedded
 export CGO_ENABLED := 1
-export CGO_CFLAGS := -I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include
-export CGO_LDFLAGS := -L$(GO_LLAMA_DIR) -L$(GO_LLAMA_DIR)/build/bin -L$(GO_LLAMA_DIR)/build/common -lllama -lcommon -lggml -lggml-base $(LLAMA_LDFLAGS)
+export CGO_CFLAGS := -I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include -I$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/include
+export CGO_LDFLAGS := -L$(GO_LLAMA_DIR) -L$(GO_LLAMA_DIR)/build/bin -L$(GO_LLAMA_DIR)/build/common -L$(SURREALDB_EMBEDDED_DIR) -lllama -lcommon -lggml -lggml-base -lsurrealdb_embedded_rs $(LLAMA_LDFLAGS)
 
 # Go linker flags to set RPATH
 GO_LDFLAGS := -ldflags="-r \$$ORIGIN"
@@ -39,12 +40,13 @@ help:
 	@echo "Remembrances-MCP Build System"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  make build          - Build the project with GGUF support"
-	@echo "  make llama-cpp      - Build llama.cpp library"
-	@echo "  make llama-cpp-clean- Clean llama.cpp build artifacts"
-	@echo "  make clean          - Clean all build artifacts"
-	@echo "  make test           - Run tests"
-	@echo "  make run            - Build and run the application"
+	@echo "  make build              - Build the project with GGUF and embedded SurrealDB support"
+	@echo "  make llama-cpp          - Build llama.cpp library"
+	@echo "  make llama-cpp-clean    - Clean llama.cpp build artifacts"
+	@echo "  make surrealdb-embedded - Build surrealdb-embedded library"
+	@echo "  make clean              - Clean all build artifacts"
+	@echo "  make test               - Run tests"
+	@echo "  make run                - Build and run the application"
 	@echo ""
 	@echo "Build options:"
 	@echo "  BUILD_TYPE=metal    - Build with Metal GPU support (macOS)"
@@ -81,11 +83,28 @@ llama-cpp-clean:
 	@cd $(GO_LLAMA_DIR) && $(MAKE) clean || true
 	@echo "llama.cpp cleaned"
 
+# Build surrealdb-embedded library
+surrealdb-embedded:
+	@echo "Checking surrealdb-embedded library..."
+	@if [ ! -d "$(SURREALDB_EMBEDDED_DIR)" ]; then \
+		echo "Error: surrealdb-embedded not found at $(SURREALDB_EMBEDDED_DIR)"; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(SURREALDB_EMBEDDED_DIR)/libsurrealdb_embedded_rs.so" ]; then \
+		echo "surrealdb-embedded not built. Building now..."; \
+		cd $(SURREALDB_EMBEDDED_DIR) && make; \
+	else \
+		echo "surrealdb-embedded library already built"; \
+	fi
+	@echo "surrealdb-embedded library ready"
+
 # Build the main project
-build: llama-cpp
-	@echo "Building $(BINARY_NAME) with GGUF support..."
+build: llama-cpp surrealdb-embedded
+	@echo "Building $(BINARY_NAME) with GGUF and embedded SurrealDB support..."
 	@mkdir -p $(BUILD_DIR)
 	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
+	@echo "Copying shared libraries to build directory..."
+	@cp $(SURREALDB_EMBEDDED_DIR)/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || true
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Run the application

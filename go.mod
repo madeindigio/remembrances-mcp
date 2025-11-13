@@ -10,6 +10,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/surrealdb/surrealdb.go v0.5.0
 	github.com/tmc/langchaingo v0.1.13
+	github.com/yourusername/surrealdb-embedded v0.0.0-00010101000000-000000000000
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -42,3 +43,5 @@ require (
 replace github.com/madeindigio/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
 
 replace github.com/go-skynet/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
+
+replace github.com/yourusername/surrealdb-embedded => /www/MCP/Remembrances/surrealdb-embedded

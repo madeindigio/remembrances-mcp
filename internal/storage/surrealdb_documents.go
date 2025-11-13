@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/surrealdb/surrealdb.go"
 )
 
 // SaveDocument saves a knowledge base document
@@ -28,7 +27,7 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
 	}
 
 	existsQuery := "SELECT id FROM knowledge_base WHERE file_path = $file_path"
-	existsResult, err := surrealdb.Query[[]map[string]interface{}](s.db, existsQuery, map[string]interface{}{
+	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{
 		"file_path": filePath,
 	})
 
@@ -60,7 +59,7 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
                 metadata: $metadata
             }
         `
-		if _, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params); err != nil {
+		if _, err := s.query(ctx, query, params); err != nil {
 			return fmt.Errorf("failed to create document: %w", err)
 		}
 	} else {
@@ -72,7 +71,7 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
                 updated_at = time::now()
             WHERE file_path = $file_path
         `
-		if _, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params); err != nil {
+		if _, err := s.query(ctx, query, params); err != nil {
 			return fmt.Errorf("failed to update document: %w", err)
 		}
 	}
@@ -100,7 +99,7 @@ func (s *SurrealDBStorage) SearchDocuments(ctx context.Context, queryEmbedding [
 		"query_embedding": queryEmbedding,
 	}
 
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := s.query(ctx, query, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search documents: %w", err)
 	}
@@ -115,7 +114,7 @@ func (s *SurrealDBStorage) DeleteDocument(ctx context.Context, filePath string) 
 		"file_path": filePath,
 	}
 
-	_, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	_, err := s.query(ctx, query, params)
 	if err != nil {
 		return fmt.Errorf("failed to delete document: %w", err)
 	}
@@ -134,7 +133,7 @@ func (s *SurrealDBStorage) GetDocument(ctx context.Context, filePath string) (*D
 		"file_path": filePath,
 	}
 
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := s.query(ctx, query, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get document: %w", err)
 	}
@@ -173,7 +172,7 @@ func (s *SurrealDBStorage) GetDocument(ctx context.Context, filePath string) (*D
 	return document, nil
 }
 
-func (s *SurrealDBStorage) parseDocumentResults(result *[]surrealdb.QueryResult[[]map[string]interface{}]) ([]DocumentResult, error) {
+func (s *SurrealDBStorage) parseDocumentResults(result *[]QueryResult) ([]DocumentResult, error) {
 	var results []DocumentResult
 
 	if result != nil && len(*result) > 0 {
