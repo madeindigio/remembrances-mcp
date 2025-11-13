@@ -5,6 +5,7 @@ go 1.23.4
 require (
 	github.com/ThinkInAIXYZ/go-mcp v0.2.21
 	github.com/fsnotify/fsnotify v1.9.0
+	github.com/madeindigio/go-llama.cpp v0.0.0-00010101000000-000000000000
 	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.20.1
 	github.com/surrealdb/surrealdb.go v0.5.0
@@ -37,3 +38,7 @@ require (
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 )
+
+replace github.com/madeindigio/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
+
+replace github.com/go-skynet/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
