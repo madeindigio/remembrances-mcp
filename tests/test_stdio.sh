@@ -15,9 +15,14 @@ LOG="$SCRIPT_DIR/stdio_test.log"
 export GOMEM_OPENAI_KEY="testkey"
 export GOMEM_DB_PATH="$REPO_ROOT/surreal_data"
 export GOMEM_LOG="$SCRIPT_DIR/stdio_test.log"
-export GOMEM_SURREALDB_URL="ws://localhost:8000"
+#export GOMEM_SURREALDB_URL="ws://localhost:8000"
+# Unset GOMEM_SURREALDB_URL to ensure embedded mode
+unset GOMEM_SURREALDB_URL 2>/dev/null || true
+
 export GOMEM_SURREALDB_USER="root"
 export GOMEM_SURREALDB_PASS="root"
+export GOMEM_SURREALDB_NAMESPACE="test"
+export GOMEM_SURREALDB_DATABASE="test"
 # For ollama
 #export GOMEM_OLLAMA_URL="http://localhost:11434"
 #export GOMEM_OLLAMA_MODEL="nomic-embed-text:latest"
@@ -25,7 +30,7 @@ export GOMEM_SURREALDB_PASS="root"
 export GGUF_MODEL_PATH="/www/Remembrances/nomic-embed-text-v1.5.Q4_K_M.gguf"
 
 export GOMEM_KNOWLEDGE_BASE="/www/MCP/remembrances-mcp/.serena/memories"
-export GOMEM_SURREALDB_START_CMD="surreal start --user root --pass root surrealkv://$REPO_ROOT/surreal_data"
+#export GOMEM_SURREALDB_START_CMD="surreal start --user root --pass root surrealkv://$REPO_ROOT/surreal_data"
 
 if [[ ! -x "$BINARY" ]]; then
   echo "Binary not found or not executable at $BINARY. Run tests/build.sh first." >&2

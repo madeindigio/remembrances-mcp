@@ -6,7 +6,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/surrealdb/surrealdb.go"
 )
 
 // SaveFact saves a key-value fact for a user
@@ -23,7 +22,7 @@ func (s *SurrealDBStorage) SaveFact(ctx context.Context, userID, key string, val
 			"value":      value,
 			"updated_at": time.Now().UTC(),
 		}
-		if _, err := surrealdb.Query[[]map[string]interface{}](s.db, updateQuery, params); err != nil {
+		if _, err := s.query(ctx, updateQuery, params); err != nil {
 			return fmt.Errorf("failed to update fact: %w", err)
 		}
 	} else {
@@ -32,7 +31,7 @@ func (s *SurrealDBStorage) SaveFact(ctx context.Context, userID, key string, val
 			"key":     key,
 			"value":   value,
 		}
-		if _, err := surrealdb.Create[map[string]interface{}](s.db, "kv_memories", data); err != nil {
+		if _, err := s.create(ctx, "kv_memories", data); err != nil {
 			return fmt.Errorf("failed to save fact: %w", err)
 		}
 	}
@@ -52,7 +51,7 @@ func (s *SurrealDBStorage) GetFact(ctx context.Context, userID, key string) (int
 		"user_id": userID,
 		"key":     key,
 	}
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := s.query(ctx, query, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get fact: %w", err)
 	}
@@ -89,7 +88,7 @@ func (s *SurrealDBStorage) UpdateFact(ctx context.Context, userID, key string, v
 		"value":      value,
 		"updated_at": time.Now().UTC(),
 	}
-	if _, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params); err != nil {
+	if _, err := s.query(ctx, query, params); err != nil {
 		return fmt.Errorf("failed to update fact: %w", err)
 	}
 
@@ -104,7 +103,7 @@ func (s *SurrealDBStorage) DeleteFact(ctx context.Context, userID, key string) e
 	}
 
 	deleteQuery := "DELETE FROM kv_memories WHERE user_id = $user_id AND key = $key RETURN BEFORE"
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, deleteQuery, params)
+	result, err := s.query(ctx, deleteQuery, params)
 	if err != nil {
 		return fmt.Errorf("failed to delete fact: %w", err)
 	}
@@ -131,7 +130,7 @@ func (s *SurrealDBStorage) DeleteFact(ctx context.Context, userID, key string) e
 // ListFacts retrieves all key-value facts for a user
 func (s *SurrealDBStorage) ListFacts(ctx context.Context, userID string) (map[string]interface{}, error) {
 	query := "SELECT * FROM kv_memories WHERE user_id = $user_id"
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, map[string]interface{}{
+	result, err := s.query(ctx, query, map[string]interface{}{
 		"user_id": userID,
 	})
 	if err != nil {
@@ -171,7 +170,7 @@ func (s *SurrealDBStorage) findFactRecordID(ctx context.Context, userID, key str
 		"key":     key,
 	}
 
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := s.query(ctx, query, params)
 	if err != nil {
 		return "", err
 	}

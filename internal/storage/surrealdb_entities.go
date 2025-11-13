@@ -6,7 +6,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/surrealdb/surrealdb.go"
 )
 
 // CreateEntity creates a new entity in the graph
@@ -29,7 +28,7 @@ func (s *SurrealDBStorage) CreateEntity(ctx context.Context, entityType, name st
 		"properties": properties,
 	}
 
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := s.query(ctx, query, params)
 	if err != nil {
 		return fmt.Errorf("failed to create entity: %w", err)
 	}
@@ -51,7 +50,7 @@ func (s *SurrealDBStorage) CreateEntity(ctx context.Context, entityType, name st
 func (s *SurrealDBStorage) resolveEntityID(ctx context.Context, entityNameOrID string) (string, error) {
 	if strings.Contains(entityNameOrID, ":") {
 		query := "SELECT * FROM " + entityNameOrID
-		result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
+		result, err := s.query(ctx, query, nil)
 		if err == nil && result != nil && len(*result) > 0 {
 			queryResult := (*result)[0]
 			if queryResult.Status == "OK" && queryResult.Result != nil && len(queryResult.Result) > 0 {
@@ -61,7 +60,7 @@ func (s *SurrealDBStorage) resolveEntityID(ctx context.Context, entityNameOrID s
 	}
 
 	query := "SELECT * FROM entities WHERE name = $name"
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, map[string]interface{}{"name": entityNameOrID})
+	result, err := s.query(ctx, query, map[string]interface{}{"name": entityNameOrID})
 	if err != nil {
 		return "", fmt.Errorf("failed to query entity by name: %w", err)
 	}
@@ -99,7 +98,7 @@ func (s *SurrealDBStorage) CreateRelationship(ctx context.Context, fromEntity, t
 	tableName := relationshipType
 
 	createTableQuery := fmt.Sprintf("DEFINE TABLE %s SCHEMALESS", tableName)
-	_, err = surrealdb.Query[[]map[string]interface{}](s.db, createTableQuery, nil)
+	_, err = s.query(ctx, createTableQuery, nil)
 	if err != nil {
 		// Table might already exist; SurrealDB returns an error we can ignore here.
 	}
@@ -120,7 +119,7 @@ func (s *SurrealDBStorage) CreateRelationship(ctx context.Context, fromEntity, t
 		"properties":       properties,
 	}
 
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := s.query(ctx, query, params)
 	if err != nil {
 		return fmt.Errorf("failed to create relationship: %w", err)
 	}
@@ -147,7 +146,7 @@ func (s *SurrealDBStorage) TraverseGraph(ctx context.Context, startEntity, relat
 		"depth":        depth,
 	}
 
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := s.query(ctx, query, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to traverse graph: %w", err)
 	}
@@ -158,10 +157,10 @@ func (s *SurrealDBStorage) TraverseGraph(ctx context.Context, startEntity, relat
 // GetEntity retrieves an entity by ID or name
 func (s *SurrealDBStorage) GetEntity(ctx context.Context, entityID string) (*Entity, error) {
 	query := "SELECT * FROM " + entityID
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, nil)
+	result, err := s.query(ctx, query, nil)
 	if err != nil {
 		query = "SELECT * FROM entities WHERE name = $name"
-		result, err = surrealdb.Query[[]map[string]interface{}](s.db, query, map[string]interface{}{"name": entityID})
+		result, err = s.query(ctx, query, map[string]interface{}{"name": entityID})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get entity: %w", err)
 		}
@@ -190,7 +189,7 @@ func (s *SurrealDBStorage) GetEntity(ctx context.Context, entityID string) (*Ent
 
 // DeleteEntity deletes an entity and its relationships
 func (s *SurrealDBStorage) DeleteEntity(ctx context.Context, entityID string) error {
-	_, err := surrealdb.Delete[map[string]interface{}](s.db, entityID)
+	_, err := s.delete(ctx, entityID)
 	if err != nil {
 		return fmt.Errorf("failed to delete entity: %w", err)
 	}
@@ -202,7 +201,7 @@ func (s *SurrealDBStorage) DeleteEntity(ctx context.Context, entityID string) er
 	return nil
 }
 
-func (s *SurrealDBStorage) parseGraphResults(result *[]surrealdb.QueryResult[[]map[string]interface{}]) ([]GraphResult, error) {
+func (s *SurrealDBStorage) parseGraphResults(result *[]QueryResult) ([]GraphResult, error) {
 	var results []GraphResult
 
 	if result != nil && len(*result) > 0 {

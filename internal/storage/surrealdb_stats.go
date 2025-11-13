@@ -6,7 +6,6 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/surrealdb/surrealdb.go"
 )
 
 // GetStats returns statistics about stored memories by counting current records.
@@ -46,7 +45,7 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 	var totalSize int64
 	if scoped {
 		q := "SELECT content FROM vector_memories WHERE user_id = $user_id"
-		res, _ := surrealdb.Query[[]map[string]interface{}](s.db, q, params)
+		res, _ := s.query(ctx, q, params)
 		if res != nil && len(*res) > 0 {
 			qr := (*res)[0]
 			if qr.Status == "OK" && len(qr.Result) > 0 {
@@ -59,7 +58,7 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 		}
 
 		q = "SELECT value FROM kv_memories WHERE user_id = $user_id"
-		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, params)
+		res, _ = s.query(ctx, q, params)
 		if res != nil && len(*res) > 0 {
 			qr := (*res)[0]
 			if qr.Status == "OK" && len(qr.Result) > 0 {
@@ -72,7 +71,7 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 		}
 
 		q = "SELECT content FROM knowledge_base WHERE user_id = $user_id"
-		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, params)
+		res, _ = s.query(ctx, q, params)
 		if res != nil && len(*res) > 0 {
 			qr := (*res)[0]
 			if qr.Status == "OK" && len(qr.Result) > 0 {
@@ -85,7 +84,7 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 		}
 	} else {
 		q := "SELECT name FROM entities"
-		res, _ := surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
+		res, _ := s.query(ctx, q, nil)
 		if res != nil && len(*res) > 0 {
 			qr := (*res)[0]
 			if qr.Status == "OK" && len(qr.Result) > 0 {
@@ -99,7 +98,7 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 
 		for _, tbl := range relTables {
 			q = "SELECT relationship_type FROM " + tbl
-			res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
+			res, _ = s.query(ctx, q, nil)
 			if res != nil && len(*res) > 0 {
 				qr := (*res)[0]
 				if qr.Status == "OK" && len(qr.Result) > 0 {
@@ -113,7 +112,7 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 		}
 
 		q = "SELECT content FROM knowledge_base"
-		res, _ = surrealdb.Query[[]map[string]interface{}](s.db, q, nil)
+		res, _ = s.query(ctx, q, nil)
 		if res != nil && len(*res) > 0 {
 			qr := (*res)[0]
 			if qr.Status == "OK" && len(qr.Result) > 0 {
@@ -169,7 +168,7 @@ func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField
 		"user_id":   userID,
 		"new_value": newValue,
 	}
-	if _, err := surrealdb.Query[[]map[string]interface{}](s.db, upsertQuery, upsertParams); err != nil {
+	if _, err := s.query(ctx, upsertQuery, upsertParams); err != nil {
 		createData := map[string]interface{}{
 			"user_id":            userID,
 			"key_value_count":    0,
@@ -179,7 +178,7 @@ func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField
 			"document_count":     0,
 		}
 		createData[statField] = newValue
-		if _, err := surrealdb.Create[map[string]interface{}](s.db, "user_stats", createData); err != nil {
+		if _, err := s.create(ctx, "user_stats", createData); err != nil {
 			return fmt.Errorf("failed to create user stat %s for user %s: %w", statField, userID, err)
 		}
 	}
@@ -189,7 +188,7 @@ func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField
 
 // getCount is a helper to run a count query and extract the count
 func (s *SurrealDBStorage) getCount(ctx context.Context, query string, params map[string]interface{}) int {
-	countResult, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	countResult, err := s.query(ctx, query, params)
 	if err != nil || countResult == nil || len(*countResult) == 0 {
 		return 0
 	}
@@ -230,7 +229,7 @@ func (s *SurrealDBStorage) getCount(ctx context.Context, query string, params ma
 // getRelationshipTables returns all relationship tables (excluding system tables)
 func (s *SurrealDBStorage) getRelationshipTables(ctx context.Context) ([]string, error) {
 	tables := []string{}
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, "SHOW TABLES", nil)
+	result, err := s.query(ctx, "SHOW TABLES", nil)
 	if err != nil || result == nil || len(*result) == 0 {
 		return tables, nil
 	}
