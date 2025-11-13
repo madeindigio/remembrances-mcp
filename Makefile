@@ -32,6 +32,9 @@ export CGO_ENABLED := 1
 export CGO_CFLAGS := -I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include
 export CGO_LDFLAGS := -L$(GO_LLAMA_DIR) -L$(GO_LLAMA_DIR)/build/bin -L$(GO_LLAMA_DIR)/build/common -lllama -lcommon -lggml -lggml-base $(LLAMA_LDFLAGS)
 
+# Go linker flags to set RPATH
+GO_LDFLAGS := -ldflags="-r \$$ORIGIN"
+
 help:
 	@echo "Remembrances-MCP Build System"
 	@echo ""
@@ -82,7 +85,7 @@ llama-cpp-clean:
 build: llama-cpp
 	@echo "Building $(BINARY_NAME) with GGUF support..."
 	@mkdir -p $(BUILD_DIR)
-	go build -mod=mod -v -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
+	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Run the application
@@ -139,7 +142,7 @@ build-release:
 build-dev: llama-cpp
 	@echo "Building $(BINARY_NAME) with race detector..."
 	@mkdir -p $(BUILD_DIR)
-	go build -race -v -o $(BUILD_DIR)/$(BINARY_NAME)-dev ./cmd/remembrances-mcp
+	go build -race -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-dev ./cmd/remembrances-mcp
 	@echo "Development build complete: $(BUILD_DIR)/$(BINARY_NAME)-dev"
 
 # Check build environment

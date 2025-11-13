@@ -6,7 +6,7 @@ This document summarizes the implementation of GGUF embedding support in Remembr
 
 ## Implementation Date
 
-November 12, 2025
+November 12, 2025 
 
 ## What Was Implemented
 

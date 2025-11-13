@@ -6,7 +6,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-BINARY="$REPO_ROOT/dist/remembrances-mcp"
+#BINARY="$REPO_ROOT/dist/remembrances-mcp"
+BINARY="$REPO_ROOT/build/remembrances-mcp"
 LOG="$SCRIPT_DIR/stdio_test.log"
 
 # Minimal env to satisfy config validation (no external network calls are made
@@ -17,8 +18,12 @@ export GOMEM_LOG="$SCRIPT_DIR/stdio_test.log"
 export GOMEM_SURREALDB_URL="ws://localhost:8000"
 export GOMEM_SURREALDB_USER="root"
 export GOMEM_SURREALDB_PASS="root"
-export GOMEM_OLLAMA_URL="http://localhost:11434"
-export GOMEM_OLLAMA_MODEL="nomic-embed-text:latest"
+# For ollama
+#export GOMEM_OLLAMA_URL="http://localhost:11434"
+#export GOMEM_OLLAMA_MODEL="nomic-embed-text:latest"
+# For local embeddings
+export GGUF_MODEL_PATH="/www/Remembrances/nomic-embed-text-v1.5.Q4_K_M.gguf"
+
 export GOMEM_KNOWLEDGE_BASE="/www/MCP/remembrances-mcp/.serena/memories"
 export GOMEM_SURREALDB_START_CMD="surreal start --user root --pass root surrealkv://$REPO_ROOT/surreal_data"
 
@@ -66,7 +71,7 @@ fi
 
 
 echo "Running python client"
-python3 tests/clients/mcp_stdio_client.py --binary ./dist/remembrances-mcp
+python3 tests/clients/mcp_stdio_client.py --binary $BINARY
 
 # Gracefully stop the server
 if kill -0 "$PID" 2>/dev/null; then
