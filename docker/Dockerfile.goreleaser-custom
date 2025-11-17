@@ -1,0 +1,61 @@
+# Custom GoReleaser Cross-Compilation Image
+# Based on goreleaser-cross with added Rust and build tools for llama.cpp and surrealdb-embedded
+#
+# This Dockerfile extends goreleaser-cross to add:
+# - Rust toolchain with multiple targets (Linux, macOS, Windows)
+# - CMake and build tools for llama.cpp
+# - Cross-compilation toolchains for C/C++
+
+FROM ghcr.io/goreleaser/goreleaser-cross:v1.23
+
+# Metadata
+LABEL maintainer="remembrances-mcp"
+LABEL description="Custom goreleaser-cross image with Rust and llama.cpp build support"
+
+# Set environment variables
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH \
+    RUST_VERSION=1.83.0
+
+# Install additional dependencies for llama.cpp and Rust
+RUN apt-get update && apt-get install -y \
+    # Build essentials
+    build-essential \
+    cmake \
+    ninja-build \
+    pkg-config \
+    # Libraries for llama.cpp
+    libcurl4-openssl-dev \
+    # Rust dependencies
+    curl \
+    ca-certificates \
+    # Cleanup
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust using rustup
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
+    -y \
+    --default-toolchain ${RUST_VERSION} \
+    --profile minimal \
+    --no-modify-path && \
+    # Add Rust cross-compilation targets in the same layer to save space
+    /usr/local/cargo/bin/rustup target add \
+        x86_64-unknown-linux-gnu \
+        aarch64-unknown-linux-gnu \
+        x86_64-apple-darwin \
+        aarch64-apple-darwin \
+        x86_64-pc-windows-gnu
+    # Note: aarch64-pc-windows-gnu is not available in stable Rust
+
+# Verify installations
+RUN rustc --version && \
+    cargo --version && \
+    cmake --version && \
+    go version
+
+# Set working directory
+WORKDIR /workspace
+
+# Default command
+CMD ["/bin/bash"]

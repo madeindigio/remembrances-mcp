@@ -17,6 +17,7 @@ require (
 require (
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/go-skynet/go-llama.cpp v0.0.0-20240314183750-6a8041ef6b46 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -41,7 +42,5 @@ require (
 )
 
 replace github.com/madeindigio/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
-
-replace github.com/go-skynet/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
 
 replace github.com/yourusername/surrealdb-embedded => /www/MCP/Remembrances/surrealdb-embedded
