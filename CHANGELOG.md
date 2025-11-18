@@ -1,27 +1,26 @@
 # Changelog
 
-## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.40.0...HEAD) (2025-11-12)
+## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.40.0...5b6675fb4bcb1ad8f47277fe07797129e3676d16) (2025-11-18)
 
 ### Features
 
-* **GGUF Embeddings Support** - Add support for local GGUF embedding models via go-llama.cpp
-  - Load GGUF models directly (nomic-embed, qwen, and other BERT-based models)
-  - GPU acceleration support (Metal for macOS, CUDA for NVIDIA, ROCm for AMD)
-  - Configurable via CLI flags, environment variables, and YAML config
-  - New CLI flags: `--gguf-model-path`, `--gguf-threads`, `--gguf-gpu-layers`
-  - Priority: GGUF > Ollama > OpenAI
-  - Full documentation in `docs/GGUF_EMBEDDINGS.md`
-  - Build system with Makefile for easy compilation
-  - Comprehensive tests and examples
-  - Privacy-first: All embeddings generated locally
-  - Cost-effective: No API costs
-  - Support for quantized models (Q4_K_M, Q8_0, etc.)
-
+* add osx scripts
+([cfd7e1a](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/cfd7e1a72b8651ad49762f73384f23f8b51452ff))
+* working compilation in osx with shared libraries
+([852a786](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/852a786a1dc53092e3bc0c5e40d7ecf042d31860))
+* enable cross compilation for linux
+([f7b8fbf](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/f7b8fbfd098afee785604e08616f421d592a3389))
+* add surrealdb-embedded library
+([9251916](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/92519163f45069390a2eed7874facc094c7d1036))
+* Add more agents configuration and fix config
+([c4740d8](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/c4740d8e1f4303e93e87713a43690be902a79e7a))
 * refactor surrealdb storage code
 ([a1af4cb](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a1af4cb419c858243b712656ad8fe7d245ea4411))
 
 ### Fixes
 
+* Error nbatch gguf embedded error
+([0573904](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/057390427cb7ceb2618c2fab5688771404a8f328))
 * update stats and user stats
 ([f581744](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/f581744b5ef43a0246c5cd552aa2403064e81ec7))
 * upgrade stats
