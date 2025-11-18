@@ -205,7 +205,6 @@ prompts:
 
       Perform thorough security analysis using file operations and search tools.
 
-
 tools:
   - name: "get_date"
     description: "Displays the current system date and time in various formats. Can show UTC time, format output, or display specific timezones, the tool accepts the same arguments of the `date` linux command"
@@ -228,7 +227,9 @@ tools:
     accepts_args: true
     accept_input: true
 
-
+  - name: "osx-shell"
+    description: "Execute commands in an OSX shell environment"
+    command: "./ai/scripts/osx-connection.sh"
 # resources:
 #   - name: "mcp_server_prompts"
 #     description: "Specification of Prompts for MCP Servers"
@@ -241,4 +242,3 @@ tools:
 #   - name: "mcp_server_resources"
 #     description: "Specification of Resources for MCP Servers"
 #     path: "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/refs/heads/main/docs/specification/2024-11-05/server/resources.mdx"
-
