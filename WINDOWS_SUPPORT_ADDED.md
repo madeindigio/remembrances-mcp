@@ -1,40 +1,40 @@
-# Resumen de Trabajo: Sistema de Compilación Cruzada
+# Work Summary: Cross-Compilation System
 
-**Fecha:** 2025-11-17  
-**Tarea:** Configurar compilación cruzada para remembrances-mcp  
-**Estado:** ✅ Completado con éxito
+**Date:** 2025-11-17  
+**Task:** Configure cross-compilation for remembrances-mcp  
+**Status:** ✅ Successfully completed
 
-## 🎯 Objetivo
+## 🎯 Objective
 
-Habilitar la compilación cruzada del proyecto `remembrances-mcp` para múltiples plataformas (Linux, macOS, Windows) con soporte para:
-- Binarios Go con CGO
-- Librerías compartidas de llama.cpp (C++)
-- Librerías compartidas de surrealdb-embedded (Rust)
+Enable cross-compilation of the `remembrances-mcp` project for multiple platforms (Linux, macOS, Windows) with support for:
+- Go binaries with CGO
+- Shared libraries from llama.cpp (C++)
+- Shared libraries from surrealdb-embedded (Rust)
 
-## ✅ Logros Principales
+## ✅ Main Achievements
 
-### 1. Imagen Docker Personalizada
-Se creó exitosamente una imagen Docker personalizada basada en `goreleaser-cross:v1.23` con:
+### 1. Custom Docker Image
+A custom Docker image was successfully created based on `goreleaser-cross:v1.23` with:
 
-**Herramientas Instaladas:**
-- ✅ Rust 1.75.0 con rustup
-- ✅ Cargo para compilación de paquetes Rust
-- ✅ CMake 3.18.4 para compilación de llama.cpp
-- ✅ Go 1.23.6 (incluido en imagen base)
-- ✅ Compiladores cross-compilation (gcc, g++, clang)
+**Installed Tools:**
+- ✅ Rust 1.75.0 with rustup
+- ✅ Cargo for Rust package compilation
+- ✅ CMake 3.18.4 for compiling llama.cpp
+- ✅ Go 1.23.6 (included in base image)
+- ✅ Cross-compilation compilers (gcc, g++, clang)
 
-**Targets de Rust Instalados:**
+**Installed Rust Targets:**
 - ✅ `x86_64-unknown-linux-gnu`
 - ✅ `aarch64-unknown-linux-gnu`
 - ✅ `x86_64-apple-darwin`
 - ✅ `aarch64-apple-darwin`
 - ✅ `x86_64-pc-windows-gnu`
 
-**Tamaño de Imagen:** 9.58GB
+**Image Size:** 9.58GB
 
-### 2. Compilación de Librerías Verificada
+### 2. Library Compilation Verified
 
-**llama.cpp para Linux AMD64:** ✅ Compilado exitosamente
+**llama.cpp for Linux AMD64:** ✅ Successfully compiled
 ```bash
 $ ls -lh dist/libs/linux-amd64/
 -rwxr-xr-x libggml-base.so   (706K)
@@ -44,60 +44,60 @@ $ ls -lh dist/libs/linux-amd64/
 -rwxr-xr-x libmtmd.so        (757K)
 ```
 
-## 🔧 Problemas Resueltos
+## 🔧 Issues Resolved
 
-### Problema 1: Script de Construcción Fallaba
+### Issue 1: Build Script Failed
 **Error:** `unknown command "bash" for "goreleaser release"`
 
-**Causa:** El contenedor Docker ejecutaba el comando bash incorrectamente
+**Cause:** The Docker container was executing the bash command incorrectly
 
-**Solución:** Añadido `--entrypoint /bin/bash` en `build_shared_libraries()` del script `release-cross.sh`
+**Solution:** Added `--entrypoint /bin/bash` in `build_shared_libraries()` in the `release-cross.sh` script
 
 ---
 
-### Problema 2: Directivas Replace Duplicadas en go.mod
+### Issue 2: Duplicate Replace Directives in go.mod
 **Error:** `used for two different module paths`
 
-**Causa:** Dos directivas `replace` apuntaban al mismo directorio:
+**Cause:** Two `replace` directives pointed to the same directory:
 ```go
 replace github.com/madeindigio/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
 replace github.com/go-skynet/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
 ```
 
-**Solución:** Eliminada la directiva duplicada de `go-skynet/go-llama.cpp` del archivo `go.mod`
+**Solution:** Removed the duplicate `go-skynet/go-llama.cpp` directive from the `go.mod` file
 
 ---
 
-### Problema 3: Volúmenes Docker No Montados
-**Error:** GoReleaser no podía acceder a módulos locales
+### Issue 3: Docker Volumes Not Mounted
+**Error:** GoReleaser could not access local modules
 
-**Causa:** Falta montaje del directorio `/www/MCP/Remembrances/` en el contenedor
+**Cause:** The `/www/MCP/Remembrances/` directory was not mounted in the container
 
-**Solución:** Añadido montaje en `run_goreleaser()`:
+**Solution:** Added mount in `run_goreleaser()`:
 ```bash
 -v "/www/MCP/Remembrances:/www/MCP/Remembrances"
 ```
 
 ---
 
-### Problema 4: Dependencia CURL en llama.cpp
+### Issue 4: CURL Dependency in llama.cpp
 **Error:** `Could NOT find CURL. Hint: to disable this feature, set -DLLAMA_CURL=OFF`
 
-**Causa:** CMake requería CURL no disponible en contenedor
+**Cause:** CMake required CURL, which was not available in the container
 
-**Solución:** Deshabilitado CURL en `build-libs-cross.sh`:
+**Solution:** Disabled CURL in `build-libs-cross.sh`:
 ```bash
 local cmake_flags="-DLLAMA_STATIC=OFF -DBUILD_SHARED_LIBS=ON -DLLAMA_CURL=OFF"
 ```
 
 ---
 
-### Problema 5: Vendor Directory Desactualizado
+### Issue 5: Outdated Vendor Directory
 **Error:** `inconsistent vendoring in /go/src/github.com/madeindigio/remembrances-mcp`
 
-**Causa:** Directorio vendor no sincronizado con go.mod
+**Cause:** Vendor directory not synchronized with go.mod
 
-**Solución:** Añadido a `.goreleaser.yml`:
+**Solution:** Added to `.goreleaser.yml`:
 ```yaml
 before:
   hooks:
@@ -108,104 +108,104 @@ before:
 
 ---
 
-### Problema 6: Rust No Disponible
+### Issue 6: Rust Not Available
 **Error:** `cargo: command not found`
 
-**Causa:** Contenedor goreleaser-cross no incluye Rust
+**Cause:** goreleaser-cross container does not include Rust
 
-**Solución:** Creada imagen Docker personalizada con Rust instalado
+**Solution:** Created a custom Docker image with Rust installed
 
 ---
 
-### Problema 7: Target Windows ARM64 No Soportado
+### Issue 7: Windows ARM64 Target Not Supported
 **Error:** `toolchain '1.75.0-x86_64-unknown-linux-gnu' does not support target 'aarch64-pc-windows-gnu'`
 
-**Causa:** Target experimental no disponible en Rust stable
+**Cause:** Experimental target not available in Rust stable
 
-**Solución:** Removido `aarch64-pc-windows-gnu` de la lista de targets
+**Solution:** Removed `aarch64-pc-windows-gnu` from the list of targets
 
 ---
 
-## 📁 Archivos Creados
+## 📁 Files Created
 
-1. **`docker/Dockerfile.goreleaser-custom`** - Dockerfile personalizado con Rust y herramientas
-2. **`scripts/build-docker-image.sh`** - Script para construir imagen Docker personalizada
-3. **`docs/CROSS_COMPILE.md`** - Documentación completa de compilación cruzada
-4. **`CROSS_COMPILE_SETUP.md`** - Resumen de cambios y setup
+1. **`docker/Dockerfile.goreleaser-custom`** - Custom Dockerfile with Rust and tools
+2. **`scripts/build-docker-image.sh`** - Script to build the custom Docker image
+3. **`docs/CROSS_COMPILE.md`** - Complete cross-compilation documentation
+4. **`CROSS_COMPILE_SETUP.md`** - Summary of changes and setup
 
-## 📝 Archivos Modificados
+## 📝 Files Modified
 
 1. **`scripts/release-cross.sh`**
-   - Añadida variable `GORELEASER_CROSS_IMAGE`
-   - Actualizado `build_shared_libraries()` con entrypoint correcto
-   - Actualizado `run_goreleaser()` para montar volúmenes necesarios
-   - Añadida tolerancia a fallos en compilación de librerías
+   - Added `GORELEASER_CROSS_IMAGE` variable
+   - Updated `build_shared_libraries()` with correct entrypoint
+   - Updated `run_goreleaser()` to mount necessary volumes
+   - Added fault tolerance in library compilation
 
 2. **`scripts/build-libs-cross.sh`**
-   - Añadido flag `-DLLAMA_CURL=OFF` para todas las plataformas
+   - Added `-DLLAMA_CURL=OFF` flag for all platforms
 
 3. **`go.mod`**
-   - Eliminada directiva `replace` duplicada
+   - Removed duplicate `replace` directive
 
 4. **`.goreleaser.yml`**
-   - Añadido `go mod vendor` a before hooks
+   - Added `go mod vendor` to before hooks
 
-## 🚀 Uso
+## 🚀 Usage
 
-### Construcción de Imagen Docker
+### Build Docker Image
 
 ```bash
-# Construir imagen personalizada
+# Build custom image
 ./scripts/build-docker-image.sh
 
-# Verificar que se creó correctamente
+# Verify it was created correctly
 docker images | grep remembrances-mcp-builder
 ```
 
-### Compilación Cruzada Completa
+### Full Cross-Compilation
 
 ```bash
-# Usar imagen personalizada para compilar todo
+# Use custom image to build everything
 export GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:latest
 ./scripts/release-cross.sh --clean snapshot
 ```
 
-### Compilación Rápida (Sin Librerías)
+### Fast Compilation (Without Libraries)
 
 ```bash
-# Solo compilar binarios Go (más rápido)
+# Only build Go binaries (faster)
 export GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:latest
 ./scripts/release-cross.sh --skip-libs --clean snapshot
 ```
 
-### Solo Compilar Librerías
+### Only Build Libraries
 
 ```bash
-# Solo compilar librerías compartidas
+# Only build shared libraries
 export GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:latest
 ./scripts/release-cross.sh --libs-only
 ```
 
-## 📊 Estado de Plataformas
+## 📊 Platform Status
 
-| Plataforma | llama.cpp | surrealdb-embedded | Binario Go | Estado |
-|------------|-----------|-------------------|------------|---------|
-| Linux AMD64 | ✅ | ⏳ | ⏳ | Librerías C++ OK |
-| Linux ARM64 | ⚠️ | ⏳ | ⏳ | Por probar |
-| macOS AMD64 | ⚠️ | ⏳ | ⏳ | Requiere osxcross |
-| macOS ARM64 | ⚠️ | ⏳ | ⏳ | Requiere osxcross |
-| Windows AMD64 | ⚠️ | ⏳ | ⏳ | Por probar |
-| Windows ARM64 | ❌ | ❌ | ⏳ | Target Rust no disponible |
+| Platform      | llama.cpp | surrealdb-embedded | Go Binary | Status                |
+|---------------|-----------|--------------------|-----------|-----------------------|
+| Linux AMD64   | ✅        | ⏳                 | ⏳        | C++ libraries OK      |
+| Linux ARM64   | ⚠️        | ⏳                 | ⏳        | To be tested          |
+| macOS AMD64   | ⚠️        | ⏳                 | ⏳        | Requires osxcross     |
+| macOS ARM64   | ⚠️        | ⏳                 | ⏳        | Requires osxcross     |
+| Windows AMD64 | ⚠️        | ⏳                 | ⏳        | To be tested          |
+| Windows ARM64 | ❌        | ❌                 | ⏳        | Rust target not avail.|
 
-**Leyenda:**
-- ✅ Verificado y funcionando
-- ⏳ Pendiente de prueba completa
-- ⚠️ Requiere configuración adicional
-- ❌ No soportado
+**Legend:**
+- ✅ Verified and working
+- ⏳ Pending full test
+- ⚠️ Requires additional configuration
+- ❌ Not supported
 
-## 🔍 Pruebas Realizadas
+## 🔍 Tests Performed
 
-### Verificación de Herramientas en Docker
+### Tool Verification in Docker
 
 ```bash
 $ docker run --rm --entrypoint /bin/bash remembrances-mcp-builder:latest \
@@ -217,7 +217,7 @@ cmake version 3.18.4
 go version go1.23.6 linux/amd64
 ```
 
-### Verificación de Targets de Rust
+### Rust Targets Verification
 
 ```bash
 $ docker run --rm --entrypoint /bin/bash remembrances-mcp-builder:latest \
@@ -230,7 +230,7 @@ x86_64-pc-windows-gnu
 x86_64-unknown-linux-gnu
 ```
 
-### Compilación de llama.cpp
+### llama.cpp Compilation
 
 ```bash
 $ ls -lh dist/libs/linux-amd64/
@@ -242,28 +242,28 @@ total 4.6M
 -rwxr-xr-x libmtmd.so        757K
 ```
 
-## 📚 Variables de Entorno
+## 📚 Environment Variables
 
 ```bash
-# Especificar imagen Docker personalizada
+# Specify custom Docker image
 export GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:latest
 
-# O versión específica
+# Or specific version
 export GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:v1.23-rust
 
-# Para releases a GitHub
+# For GitHub releases
 export GITHUB_TOKEN=your_token_here
 
-# Paths personalizados (opcional)
+# Custom paths (optional)
 export LLAMA_CPP_DIR=/www/MCP/Remembrances/go-llama.cpp
 export SURREALDB_DIR=/www/MCP/Remembrances/surrealdb-embedded
 ```
 
-## 📦 Estructura de Salida
+## 📦 Output Structure
 
 ```
 dist/
-├── libs/                           # Librerías compartidas
+├── libs/                           # Shared libraries
 │   ├── linux-amd64/
 │   │   ├── libggml-base.so
 │   │   ├── libggml-cpu.so
@@ -276,7 +276,7 @@ dist/
 │   ├── windows-amd64/
 │   └── windows-arm64/
 └── outputs/
-    └── dist/                       # Archivos release
+    └── dist/                       # Release files
         ├── remembrances-mcp_*_linux_amd64.tar.gz
         ├── remembrances-mcp_*_linux_arm64.tar.gz
         ├── remembrances-mcp_*_darwin_amd64.tar.gz
@@ -286,40 +286,40 @@ dist/
         └── checksums.txt
 ```
 
-## 🎯 Próximos Pasos Recomendados
+## 🎯 Recommended Next Steps
 
-1. **Completar compilación de surrealdb-embedded**
-   - Ajustar script para compilar con Rust en todas las plataformas
-   - Verificar que las librerías se generan correctamente
+1. **Complete compilation of surrealdb-embedded**
+   - Adjust script to compile with Rust on all platforms
+   - Verify that libraries are generated correctly
 
-2. **Probar compilación completa end-to-end**
-   - Ejecutar sin flag `--skip-libs`
-   - Verificar que todos los binarios se generan
-   - Probar binarios en cada plataforma
+2. **Test full end-to-end compilation**
+   - Run without the `--skip-libs` flag
+   - Verify that all binaries are generated
+   - Test binaries on each platform
 
-3. **Optimizar tiempo de build**
-   - Implementar cache de dependencias
-   - Paralelizar compilación cuando sea posible
+3. **Optimize build time**
+   - Implement dependency cache
+   - Parallelize compilation where possible
 
-4. **Integración CI/CD**
-   - Añadir GitHub Actions workflow
-   - Automatizar builds en cada push/tag
-   - Publicar releases automáticamente
+4. **CI/CD Integration**
+   - Add GitHub Actions workflow
+   - Automate builds on each push/tag
+   - Publish releases automatically
 
-5. **Documentación adicional**
-   - Crear guía de troubleshooting detallada
-   - Documentar proceso de release completo
-   - Añadir ejemplos de uso de binarios cross-compilados
+5. **Additional Documentation**
+   - Create detailed troubleshooting guide
+   - Document the complete release process
+   - Add examples of using cross-compiled binaries
 
-## 💡 Notas Importantes
+## 💡 Important Notes
 
-- La imagen Docker personalizada ocupa **9.58GB** - considerar si es necesario optimizar
-- El proceso de compilación puede tomar **varios minutos** dependiendo del hardware
-- Windows ARM64 no está soportado por Rust stable (requiere nightly)
-- Las compilaciones para macOS requieren osxcross correctamente configurado
-- Asegurarse de tener suficiente espacio en disco para builds (~15-20GB)
+- The custom Docker image takes up **9.58GB** - consider optimizing if necessary
+- The build process may take **several minutes** depending on hardware
+- Windows ARM64 is not supported by Rust stable (requires nightly)
+- Builds for macOS require osxcross properly configured
+- Make sure you have enough disk space for builds (~15-20GB)
 
-## 📖 Referencias
+## 📖 References
 
 - [GoReleaser Documentation](https://goreleaser.com/)
 - [goreleaser-cross GitHub](https://github.com/goreleaser/goreleaser-cross)
@@ -329,4 +329,4 @@ dist/
 
 ---
 
-**Conclusión:** El sistema de compilación cruzada ha sido configurado exitosamente. La imagen Docker personalizada incluye todas las herramientas necesarias y se ha verificado que llama.cpp se compila correctamente para Linux AMD64. El siguiente paso es completar las pruebas para todas las plataformas y automatizar el proceso en CI/CD.
+**Conclusion:** The cross-compilation system has been successfully configured. The custom Docker image includes all necessary tools and it has been verified that llama.cpp compiles correctly for Linux AMD64. The next step is to complete testing for all platforms and automate the process in CI/CD.

@@ -1,26 +1,26 @@
-# Quick Start: Estado de Compilación Cruzada
+# Quick Start: Cross-Compilation Status
 
-**Última actualización:** 2025-11-17
+**Last update:** 2025-11-17
 
-## 📊 Estado Actual de Plataformas
+## 📊 Current Platform Status
 
-| Plataforma | llama.cpp | surrealdb | Binario Go | Estado | Notas |
-|------------|-----------|-----------|------------|---------|-------|
-| **Linux AMD64** | ✅ Completado | ❌ Pendiente | ⚠️ Bloqueado | **Funcional** | 5 libs compiladas |
-| **Linux ARM64** | ✅ Completado | ❌ Pendiente | ⚠️ Bloqueado | **Funcional** | 5 libs compiladas |
-| macOS AMD64 | ❌ Error | ❌ Error | ❌ No intentado | **Bloqueado** | install_name_tool missing |
-| macOS ARM64 | ❌ Error | ❌ Error | ❌ No intentado | **Bloqueado** | install_name_tool missing |
-| Windows AMD64 | ❌ Error | ❌ Error | ❌ No intentado | **Bloqueado** | CMake error |
-| Windows ARM64 | ⚠️ Parcial | ❌ Error | ❌ No intentado | **Bloqueado** | Solo 1 DLL compilada |
+| Platform        | llama.cpp      | surrealdb      | Go Binary      | Status        | Notes                  |
+|-----------------|---------------|----------------|----------------|---------------|------------------------|
+| **Linux AMD64** | ✅ Completed   | ❌ Pending     | ⚠️ Blocked      | **Functional**| 5 compiled libs        |
+| **Linux ARM64** | ✅ Completed   | ❌ Pending     | ⚠️ Blocked      | **Functional**| 5 compiled libs        |
+| macOS AMD64     | ❌ Error       | ❌ Error       | ❌ Not attempted| **Blocked**   | install_name_tool missing |
+| macOS ARM64     | ❌ Error       | ❌ Error       | ❌ Not attempted| **Blocked**   | install_name_tool missing |
+| Windows AMD64   | ❌ Error       | ❌ Error       | ❌ Not attempted| **Blocked**   | CMake error            |
+| Windows ARM64   | ⚠️ Partial    | ❌ Error       | ❌ Not attempted| **Blocked**   | Only 1 DLL compiled    |
 
-### Leyenda
-- ✅ **Completado** - Librería compilada y verificada
-- ⚠️ **Parcial/Bloqueado** - Compilación iniciada pero incompleta o bloqueada por dependencias
-- ❌ **Error** - Falló la compilación
+### Legend
+- ✅ **Completed** - Library compiled and verified
+- ⚠️ **Partial/Blocked** - Compilation started but incomplete or blocked by dependencies
+- ❌ **Error** - Compilation failed
 
-## ✅ Éxitos Logrados
+## ✅ Achievements
 
-### Linux AMD64 - COMPLETADO
+### Linux AMD64 - COMPLETED
 ```bash
 $ ls -lh dist/libs/linux-amd64/
 total 4.6M
@@ -31,7 +31,7 @@ total 4.6M
 -rwxr-xr-x libmtmd.so        757K
 ```
 
-### Linux ARM64 - COMPLETADO
+### Linux ARM64 - COMPLETED
 ```bash
 $ ls -lh dist/libs/linux-arm64/
 total 4.4M
@@ -42,7 +42,7 @@ total 4.4M
 -rwxr-xr-x libmtmd.so        724K
 ```
 
-## ❌ Problemas Identificados
+## ❌ Identified Issues
 
 ### 1. macOS (Darwin) - install_name_tool Missing
 
@@ -52,14 +52,14 @@ CMake Error at /usr/share/cmake-3.18/Modules/CMakeFindBinUtils.cmake:143 (messag
   Could not find install_name_tool, please check your installation.
 ```
 
-**Causa:** La herramienta `install_name_tool` es específica de macOS y no está disponible en osxcross del contenedor goreleaser-cross.
+**Cause:** The `install_name_tool` utility is specific to macOS and is not available in osxcross within the goreleaser-cross container.
 
-**Solución Propuesta:**
-1. Actualizar el Dockerfile para incluir osxcross completo con SDK de macOS
-2. O, alternativamente, compilar librerías de macOS en una máquina macOS nativa
-3. Deshabilitar temporalmente builds de macOS en `.goreleaser.yml`
+**Proposed Solution:**
+1. Update the Dockerfile to include a full osxcross with macOS SDK
+2. Alternatively, build macOS libraries on a native macOS machine
+3. Temporarily disable macOS builds in `.goreleaser.yml`
 
-### 2. Cargo.lock Versión 4 - Rust Desactualizado
+### 2. Cargo.lock Version 4 - Outdated Rust
 
 **Error:**
 ```
@@ -69,154 +69,154 @@ Caused by:
   lock file version `4` was found, but this version of Cargo does not understand this lock file, perhaps Cargo needs to be updated?
 ```
 
-**Causa:** Rust 1.75.0 en el contenedor no soporta Cargo.lock versión 4 (introducida en Rust 1.82+)
+**Cause:** Rust 1.75.0 in the container does not support Cargo.lock version 4 (introduced in Rust 1.82+)
 
-**Solución:**
-1. Actualizar RUST_VERSION en Dockerfile a 1.82.0 o superior
-2. Reconstruir imagen Docker personalizada
+**Solution:**
+1. Update RUST_VERSION in Dockerfile to 1.82.0 or higher
+2. Rebuild the custom Docker image
 
 ### 3. Windows - CMake Configuration Failed
 
-**Error:** CMake falló durante la configuración para Windows, no se generaron librerías
+**Error:** CMake failed during configuration for Windows, no libraries generated
 
-**Solución Pendiente:** Revisar logs completos de Windows para identificar el error específico
+**Pending Solution:** Review full Windows logs to identify the specific error
 
 ### 4. Git Ownership Warnings
 
-**Warning (no crítico):**
+**Warning (non-critical):**
 ```
 fatal: detected dubious ownership in repository at '/www/MCP/Remembrances/go-llama.cpp/llama.cpp'
 ```
 
-**Solución:** Añadir configuración de git en el Dockerfile o en el script de build
+**Solution:** Add git configuration in the Dockerfile or build script
 
-## 🔧 Soluciones Inmediatas
+## 🔧 Immediate Solutions
 
-### Opción 1: Compilar Solo para Linux (Funcional Ahora)
+### Option 1: Build Only for Linux (Functional Now)
 
-Modificar temporalmente `.goreleaser.yml` para compilar solo Linux:
+Temporarily modify `.goreleaser.yml` to build only for Linux:
 
 ```yaml
 builds:
   - id: remembrances-mcp-linux-amd64
-    # ... configuración existente ...
+    # ... existing config ...
     
   - id: remembrances-mcp-linux-arm64
-    # ... configuración existente ...
+    # ... existing config ...
     
-  # Comentar o remover builds de darwin y windows temporalmente
+  # Comment out or remove darwin and windows builds temporarily
 ```
 
-### Opción 2: Actualizar Rust en Dockerfile
+### Option 2: Update Rust in Dockerfile
 
-Editar `docker/Dockerfile.goreleaser-custom`:
+Edit `docker/Dockerfile.goreleaser-custom`:
 
 ```dockerfile
-ENV RUST_VERSION=1.82.0  # Cambiar de 1.75.0
+ENV RUST_VERSION=1.82.0  # Change from 1.75.0
 ```
 
-Luego reconstruir:
+Then rebuild:
 ```bash
 ./scripts/build-docker-image.sh --no-cache
 ```
 
-### Opción 3: Compilar en Plataformas Nativas
+### Option 3: Build on Native Platforms
 
-Para macOS y Windows, considerar compilar en máquinas nativas o usar runners específicos en CI/CD.
+For macOS and Windows, consider building on native machines or using specific runners in CI/CD.
 
-## 🚀 Pasos Siguientes Recomendados
+## 🚀 Recommended Next Steps
 
-### Corto Plazo (1-2 horas)
+### Short Term (1-2 hours)
 
-1. **Actualizar Rust a 1.82+**
+1. **Update Rust to 1.82+**
    ```bash
-   # Editar docker/Dockerfile.goreleaser-custom
-   # Cambiar RUST_VERSION=1.82.0
+   # Edit docker/Dockerfile.goreleaser-custom
+   # Change RUST_VERSION=1.82.0
    ./scripts/build-docker-image.sh --no-cache
    ```
 
-2. **Reintentar compilación de librerías**
+2. **Retry library compilation**
    ```bash
    export GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:latest
    ./scripts/release-cross.sh --libs-only
    ```
 
-3. **Compilar binarios solo para Linux**
+3. **Build binaries for Linux only**
    ```bash
-   # Modificar .goreleaser.yml para incluir solo linux-*
+   # Modify .goreleaser.yml to include only linux-*
    export GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:latest
    ./scripts/release-cross.sh --clean snapshot
    ```
 
-### Medio Plazo (1-2 días)
+### Medium Term (1-2 days)
 
-1. **Solucionar problema de osxcross**
-   - Investigar si goreleaser-cross tiene osxcross completo
-   - O añadir osxcross con SDK al Dockerfile
-   - O deshabilitar macOS y compilar nativamente
+1. **Solve osxcross issue**
+   - Investigate if goreleaser-cross has full osxcross
+   - Or add osxcross with SDK to Dockerfile
+   - Or disable macOS and build natively
 
-2. **Investigar error de Windows**
-   - Revisar logs completos de CMake para Windows
-   - Verificar que mingw está configurado correctamente
+2. **Investigate Windows error**
+   - Review full CMake logs for Windows
+   - Verify mingw is properly configured
 
-3. **Compilar surrealdb-embedded**
-   - Con Rust 1.82+, reintentar compilación Rust
-   - Verificar que todos los targets Rust compilan
+3. **Build surrealdb-embedded**
+   - With Rust 1.82+, retry Rust compilation
+   - Verify all Rust targets build
 
-### Largo Plazo (1 semana)
+### Long Term (1 week)
 
-1. **CI/CD Completo**
-   - GitHub Actions con matrix builds
-   - Compilación nativa para macOS en runner macOS
-   - Compilación nativa para Windows en runner Windows
-   - Usar imagen Docker solo para Linux
+1. **Full CI/CD**
+   - GitHub Actions with matrix builds
+   - Native build for macOS on macOS runner
+   - Native build for Windows on Windows runner
+   - Use Docker image only for Linux
 
-2. **Optimización**
-   - Cache de dependencias
-   - Builds paralelos
-   - Reducir tamaño de imagen Docker
+2. **Optimization**
+   - Dependency cache
+   - Parallel builds
+   - Reduce Docker image size
 
-## 💻 Comandos Útiles
+## 💻 Useful Commands
 
-### Ver librerías compiladas
+### List compiled libraries
 ```bash
 find dist/libs/ -name "*.so" -o -name "*.dll" -o -name "*.dylib"
 ```
 
-### Limpiar build anterior
+### Clean previous build
 ```bash
 sudo rm -rf dist/
 ```
 
-### Compilar solo librerías
+### Build only libraries
 ```bash
 export GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:latest
 ./scripts/release-cross.sh --libs-only
 ```
 
-### Compilar sin librerías (Go puro)
+### Build without libraries (pure Go)
 ```bash
 export GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:latest
 ./scripts/release-cross.sh --skip-libs --clean snapshot
 ```
 
-### Verificar herramientas en imagen
+### Verify tools in image
 ```bash
 docker run --rm --entrypoint /bin/bash remembrances-mcp-builder:latest \
   -c "rustc --version && cargo --version && cmake --version"
 ```
 
-## 📝 Notas Adicionales
+## 📝 Additional Notes
 
-- **Tamaño de imagen:** 9.58GB - considerar optimización
-- **Tiempo de compilación:** ~3-5 minutos por plataforma para llama.cpp
-- **Espacio en disco:** Requiere ~20GB libres para builds completos
-- **Binarios Go bloqueados:** Necesitan librerías compartidas compiladas primero debido a CGO
+- **Image size:** 9.58GB - consider optimization
+- **Build time:** ~3-5 minutes per platform for llama.cpp
+- **Disk space:** Requires ~20GB free for full builds
+- **Go binaries blocked:** Need shared libraries compiled first due to CGO
 
-## 🎯 Estado Final
+## 🎯 Final Status
 
-**Plataformas funcionales:** Linux (AMD64 + ARM64)  
-**Plataformas pendientes:** macOS, Windows  
-**Próximo paso crítico:** Actualizar Rust a 1.82+ y solucionar osxcross
+**Functional platforms:** Linux (AMD64 + ARM64)  
+**Pending platforms:** macOS, Windows  
+**Next critical step:** Update Rust to 1.82+ and solve osxcross
 
-Para proceder con compilación de solo Linux, ver "Opción 1" en sección de Soluciones.
+To proceed with Linux-only compilation, see "Option 1" in Solutions section.
