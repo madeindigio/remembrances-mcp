@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.40.0...5b6675fb4bcb1ad8f47277fe07797129e3676d16) (2025-11-18)
+## [v1.0.0](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.50.3...v1.0.0) (2025-11-18)
 
 ### Features
 
@@ -14,13 +14,21 @@
 ([9251916](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/92519163f45069390a2eed7874facc094c7d1036))
 * Add more agents configuration and fix config
 ([c4740d8](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/c4740d8e1f4303e93e87713a43690be902a79e7a))
-* refactor surrealdb storage code
-([a1af4cb](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a1af4cb419c858243b712656ad8fe7d245ea4411))
 
 ### Fixes
 
 * Error nbatch gguf embedded error
 ([0573904](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/057390427cb7ceb2618c2fab5688771404a8f328))
+
+### [v0.50.3](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.40.0...v0.50.3) (2025-10-27)
+
+#### Features
+
+* refactor surrealdb storage code
+([a1af4cb](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a1af4cb419c858243b712656ad8fe7d245ea4411))
+
+#### Fixes
+
 * update stats and user stats
 ([f581744](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/f581744b5ef43a0246c5cd552aa2403064e81ec7))
 * upgrade stats
