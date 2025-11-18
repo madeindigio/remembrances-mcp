@@ -48,6 +48,11 @@ help:
 	@echo "  make test               - Run tests"
 	@echo "  make run                - Build and run the application"
 	@echo ""
+	@echo "Cross-compilation targets:"
+	@echo "  make build-cross        - Cross-compile for all platforms using Docker"
+	@echo "  make build-libs-cross   - Build only shared libraries for cross-compilation"
+	@echo "  make release-cross      - Create a cross-platform release"
+	@echo ""
 	@echo "Build options:"
 	@echo "  BUILD_TYPE=metal    - Build with Metal GPU support (macOS)"
 	@echo "  BUILD_TYPE=cublas   - Build with CUDA support (Linux)"
@@ -58,6 +63,8 @@ help:
 	@echo "  make build                    # Build with default settings"
 	@echo "  make BUILD_TYPE=cublas build  # Build with CUDA support"
 	@echo "  make run                      # Build and run"
+	@echo "  make build-cross              # Cross-compile for all platforms"
+	@echo "  make release-cross            # Create GitHub release"
 
 # Build llama.cpp library
 llama-cpp:
@@ -156,6 +163,21 @@ build-release:
 	@echo "Building release binaries..."
 	@echo "Note: This requires llama.cpp to be built for each target platform"
 	goreleaser build --snapshot --rm-dist
+
+# Cross-compile for multiple platforms using Docker (recommended)
+build-cross:
+	@echo "Cross-compiling for multiple platforms using goreleaser-cross..."
+	@./scripts/release-cross.sh snapshot
+
+# Build only shared libraries for cross-compilation
+build-libs-cross:
+	@echo "Building shared libraries for cross-compilation..."
+	@./scripts/release-cross.sh --libs-only
+
+# Create a release with cross-compilation
+release-cross:
+	@echo "Creating cross-platform release..."
+	@./scripts/release-cross.sh release
 
 # Development build with race detector
 build-dev: llama-cpp
