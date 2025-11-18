@@ -1,5 +1,49 @@
 package mcp_tools
 
+import (
+	"bytes"
+	"encoding/json"
+)
+
+// FlexibleObject captures dynamic metadata/properties with JSON marshalling helpers.
+type FlexibleObject map[string]interface{}
+
+// UnmarshalJSON decodes arbitrary JSON objects while preserving number precision.
+func (f *FlexibleObject) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
+		*f = nil
+		return nil
+	}
+
+	decoder := json.NewDecoder(bytes.NewReader(trimmed))
+	decoder.UseNumber()
+
+	raw := make(map[string]interface{})
+	if err := decoder.Decode(&raw); err != nil {
+		return err
+	}
+
+	*f = FlexibleObject(raw)
+	return nil
+}
+
+// MarshalJSON re-encodes the dynamic object.
+func (f FlexibleObject) MarshalJSON() ([]byte, error) {
+	if f == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(map[string]interface{}(f))
+}
+
+// AsMap returns the underlying map for storage operations.
+func (f FlexibleObject) AsMap() map[string]interface{} {
+	if f == nil {
+		return nil
+	}
+	return map[string]interface{}(f)
+}
+
 // Tool input structs
 type SaveFactInput struct {
 	UserID string `json:"user_id"`
@@ -22,9 +66,9 @@ type DeleteFactInput struct {
 }
 
 type AddVectorInput struct {
-	UserID   string            `json:"user_id"`
-	Content  string            `json:"content"`
-	Metadata map[string]string `json:"metadata,omitempty"`
+	UserID   string         `json:"user_id"`
+	Content  string         `json:"content"`
+	Metadata FlexibleObject `json:"metadata,omitempty"`
 }
 
 type SearchVectorsInput struct {
@@ -34,10 +78,10 @@ type SearchVectorsInput struct {
 }
 
 type UpdateVectorInput struct {
-	ID       string            `json:"id"`
-	UserID   string            `json:"user_id"`
-	Content  string            `json:"content"`
-	Metadata map[string]string `json:"metadata,omitempty"`
+	ID       string         `json:"id"`
+	UserID   string         `json:"user_id"`
+	Content  string         `json:"content"`
+	Metadata FlexibleObject `json:"metadata,omitempty"`
 }
 
 type DeleteVectorInput struct {
@@ -46,16 +90,16 @@ type DeleteVectorInput struct {
 }
 
 type CreateEntityInput struct {
-	EntityType string            `json:"entity_type"`
-	Name       string            `json:"name"`
-	Properties map[string]string `json:"properties,omitempty"`
+	EntityType string         `json:"entity_type"`
+	Name       string         `json:"name"`
+	Properties FlexibleObject `json:"properties,omitempty"`
 }
 
 type CreateRelationshipInput struct {
-	FromEntity       string            `json:"from_entity"`
-	ToEntity         string            `json:"to_entity"`
-	RelationshipType string            `json:"relationship_type"`
-	Properties       map[string]string `json:"properties,omitempty"`
+	FromEntity       string         `json:"from_entity"`
+	ToEntity         string         `json:"to_entity"`
+	RelationshipType string         `json:"relationship_type"`
+	Properties       FlexibleObject `json:"properties,omitempty"`
 }
 
 type TraverseGraphInput struct {
@@ -69,9 +113,9 @@ type GetEntityInput struct {
 }
 
 type AddDocumentInput struct {
-	FilePath string            `json:"file_path"`
-	Content  string            `json:"content"`
-	Metadata map[string]string `json:"metadata,omitempty"`
+	FilePath string         `json:"file_path"`
+	Content  string         `json:"content"`
+	Metadata FlexibleObject `json:"metadata,omitempty"`
 }
 
 type SearchDocumentsInput struct {
@@ -103,15 +147,3 @@ const (
 	errGenEmbedding      = "failed to generate embedding: %w"
 	errGenQueryEmbedding = "failed to generate query embedding: %w"
 )
-
-// Helper function to convert map[string]string to map[string]interface{}
-func stringMapToInterfaceMap(m map[string]string) map[string]interface{} {
-	if m == nil {
-		return nil
-	}
-	result := make(map[string]interface{}, len(m))
-	for k, v := range m {
-		result[k] = v
-	}
-	return result
-}

@@ -1,0 +1,70 @@
+# GoReleaser configuration for remembrances-mcp
+# Adapted from: https://raw.githubusercontent.com/sevir/essh/refs/heads/master/.goreleaser.yml
+version: 2
+
+builds:
+  - id: remembrances-mcp
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - "386"
+      - "amd64"
+      - "arm"
+      - "arm64"
+    goarm:
+      - "7"
+    ldflags:
+      - "-s"
+      - "-w"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+    env:
+      - CGO_ENABLED=0
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: windows
+        goarch: "386"
+      - goos: windows
+        goarch: "arm"
+      - goos: windows
+        goarch: "arm64"
+
+dist: ./dist/outputs/dist
+
+upx:
+  - enabled: true
+    # Filter by build ID(s) to compress. Leave empty to allow all builds.
+    ids:
+      - remembrances-mcp
+    # Only compress linux amd64/arm64 by default
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    compress: '1'
+    lzma: true
+    brute: false
+
+archives:
+  - id: xc
+    formats: ['binary']
+  - id: tar
+    formats: ['tar.gz']
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^build:'

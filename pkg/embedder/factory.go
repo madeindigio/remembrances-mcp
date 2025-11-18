@@ -16,17 +16,27 @@ type Config struct {
 	OpenAIKey     string
 	OpenAIBaseURL string
 	OpenAIModel   string
+
+	// GGUF configuration
+	GGUFModelPath string
+	GGUFThreads   int
+	GGUFGPULayers int
 }
 
 // NewEmbedderFromConfig crea una instancia de Embedder basada en la configuración disponible.
-// Prioridad: si OLLAMA_URL está configurado, usa Ollama; si OPENAI_API_KEY está configurado, usa OpenAI.
+// Prioridad: GGUF (local) > Ollama > OpenAI
 // Retorna error si no se encuentra ninguna configuración válida.
 func NewEmbedderFromConfig(cfg *Config) (Embedder, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("configuration is required")
 	}
 
-	// Prioridad 1: Ollama (si URL está disponible)
+	// Prioridad 1: GGUF (modelo local - más eficiente)
+	if cfg.GGUFModelPath != "" {
+		return NewGGUFEmbedder(cfg.GGUFModelPath, cfg.GGUFThreads, cfg.GGUFGPULayers)
+	}
+
+	// Prioridad 2: Ollama (si URL está disponible)
 	if cfg.OllamaURL != "" {
 		if cfg.OllamaModel == "" {
 			return nil, fmt.Errorf("ollama URL provided but model is missing")
@@ -34,7 +44,7 @@ func NewEmbedderFromConfig(cfg *Config) (Embedder, error) {
 		return NewOllamaEmbedder(cfg.OllamaURL, cfg.OllamaModel)
 	}
 
-	// Prioridad 2: OpenAI (si API key está disponible)
+	// Prioridad 3: OpenAI (si API key está disponible)
 	if cfg.OpenAIKey != "" {
 		if cfg.OpenAIModel == "" {
 			// Usar modelo por defecto si no se especifica
@@ -43,11 +53,14 @@ func NewEmbedderFromConfig(cfg *Config) (Embedder, error) {
 		return NewOpenAIEmbedder(cfg.OpenAIKey, cfg.OpenAIBaseURL, cfg.OpenAIModel)
 	}
 
-	return nil, fmt.Errorf("no valid embedder configuration found: either OLLAMA_URL or OPENAI_API_KEY must be provided")
+	return nil, fmt.Errorf("no valid embedder configuration found: either GGUF_MODEL_PATH, OLLAMA_URL, or OPENAI_API_KEY must be provided")
 }
 
 // NewEmbedderFromEnv crea una instancia de Embedder leyendo la configuración desde variables de entorno.
 // Variables de entorno soportadas:
+// - GGUF_MODEL_PATH: Ruta al archivo GGUF del modelo
+// - GGUF_THREADS: Número de threads a usar (opcional)
+// - GGUF_GPU_LAYERS: Número de capas GPU (opcional)
 // - OLLAMA_URL: URL del servidor Ollama
 // - OLLAMA_EMBEDDING_MODEL: Modelo de embedding de Ollama
 // - OPENAI_API_KEY: Clave API de OpenAI
@@ -55,6 +68,9 @@ func NewEmbedderFromConfig(cfg *Config) (Embedder, error) {
 // - OPENAI_EMBEDDING_MODEL: Modelo de embedding de OpenAI
 func NewEmbedderFromEnv() (Embedder, error) {
 	cfg := &Config{
+		GGUFModelPath: getEnv("GGUF_MODEL_PATH", ""),
+		GGUFThreads:   getEnvInt("GGUF_THREADS", 0),
+		GGUFGPULayers: getEnvInt("GGUF_GPU_LAYERS", 0),
 		OllamaURL:     getEnv("OLLAMA_URL", ""),
 		OllamaModel:   getEnv("OLLAMA_EMBEDDING_MODEL", ""),
 		OpenAIKey:     getEnv("OPENAI_API_KEY", ""),
@@ -71,11 +87,19 @@ func ValidateConfig(cfg *Config) error {
 		return fmt.Errorf("configuration cannot be nil")
 	}
 
+	hasGGUF := cfg.GGUFModelPath != ""
 	hasOllama := cfg.OllamaURL != ""
 	hasOpenAI := cfg.OpenAIKey != ""
 
-	if !hasOllama && !hasOpenAI {
-		return fmt.Errorf("at least one embedder must be configured (Ollama or OpenAI)")
+	if !hasGGUF && !hasOllama && !hasOpenAI {
+		return fmt.Errorf("at least one embedder must be configured (GGUF, Ollama or OpenAI)")
+	}
+
+	// Validar configuración de GGUF
+	if hasGGUF {
+		if _, err := os.Stat(cfg.GGUFModelPath); err != nil {
+			return fmt.Errorf("GGUF model file not found: %s", cfg.GGUFModelPath)
+		}
 	}
 
 	// Validar configuración de Ollama
@@ -107,6 +131,10 @@ func GetEmbedderType(cfg *Config) string {
 		return "none"
 	}
 
+	if cfg.GGUFModelPath != "" {
+		return "gguf"
+	}
+
 	if cfg.OllamaURL != "" {
 		return "ollama"
 	}
@@ -126,6 +154,17 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
+// getEnvInt lee una variable de entorno como entero o devuelve un valor por defecto.
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		var intValue int
+		if _, err := fmt.Sscanf(value, "%d", &intValue); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
+}
+
 // isValidURL realiza una validación básica de URL.
 func isValidURL(url string) bool {
 	if url == "" {
@@ -137,6 +176,9 @@ func isValidURL(url string) bool {
 // MainConfig representa la configuración principal de la aplicación.
 // Esto es para integración con el sistema de configuración existente.
 type MainConfig interface {
+	GetGGUFModelPath() string
+	GetGGUFThreads() int
+	GetGGUFGPULayers() int
 	GetOllamaURL() string
 	GetOllamaModel() string
 	GetOpenAIKey() string
@@ -151,6 +193,9 @@ func NewEmbedderFromMainConfig(mainCfg MainConfig) (Embedder, error) {
 	}
 
 	cfg := &Config{
+		GGUFModelPath: mainCfg.GetGGUFModelPath(),
+		GGUFThreads:   mainCfg.GetGGUFThreads(),
+		GGUFGPULayers: mainCfg.GetGGUFGPULayers(),
 		OllamaURL:     mainCfg.GetOllamaURL(),
 		OllamaModel:   mainCfg.GetOllamaModel(),
 		OpenAIKey:     mainCfg.GetOpenAIKey(),

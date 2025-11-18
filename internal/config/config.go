@@ -34,12 +34,18 @@ type Config struct {
 	// established. Can be set via CLI flag --surrealdb-start-cmd or
 	// environment variable GOMEM_SURREALDB_START_CMD.
 	SurrealDBStartCmd string `mapstructure:"surrealdb-start-cmd"`
-	OllamaURL         string `mapstructure:"ollama-url"`
-	OllamaModel       string `mapstructure:"ollama-model"`
-	OpenAIKey         string `mapstructure:"openai-key"`
-	OpenAIURL         string `mapstructure:"openai-url"`
-	OpenAIModel       string `mapstructure:"openai-model"`
-	LogFile           string `mapstructure:"log"`
+	// GGUF local model configuration
+	GGUFModelPath string `mapstructure:"gguf-model-path"`
+	GGUFThreads   int    `mapstructure:"gguf-threads"`
+	GGUFGPULayers int    `mapstructure:"gguf-gpu-layers"`
+	// Ollama configuration
+	OllamaURL   string `mapstructure:"ollama-url"`
+	OllamaModel string `mapstructure:"ollama-model"`
+	// OpenAI configuration
+	OpenAIKey   string `mapstructure:"openai-key"`
+	OpenAIURL   string `mapstructure:"openai-url"`
+	OpenAIModel string `mapstructure:"openai-model"`
+	LogFile     string `mapstructure:"log"`
 }
 
 // Load loads the configuration from CLI flags and environment variables.
@@ -68,6 +74,9 @@ func Load() (*Config, error) {
 	pflag.String("surrealdb-namespace", "test", "Namespace for SurrealDB")
 	pflag.String("surrealdb-database", "test", "Database for SurrealDB")
 	pflag.String("surrealdb-start-cmd", "", "External command to start SurrealDB when connection fails")
+	pflag.String("gguf-model-path", "", "Path to GGUF model file for local embeddings")
+	pflag.Int("gguf-threads", 0, "Number of threads for GGUF model (0 = auto-detect)")
+	pflag.Int("gguf-gpu-layers", 0, "Number of GPU layers for GGUF model (0 = CPU only)")
 	pflag.String("ollama-url", "http://localhost:11434", "URL for the Ollama server")
 	pflag.String("ollama-model", "", "Ollama model to use for embeddings")
 	pflag.String("openai-key", "", "OpenAI API key")
@@ -138,8 +147,8 @@ func Load() (*Config, error) {
 // Validate checks if the configuration is valid.
 func (c *Config) Validate() error {
 	// Validate that at least one embedder is configured
-	if c.OllamaModel == "" && c.OpenAIKey == "" {
-		return errors.New("at least one embedder (Ollama or OpenAI) must be configured")
+	if c.GGUFModelPath == "" && c.OllamaModel == "" && c.OpenAIKey == "" {
+		return errors.New("at least one embedder (GGUF, Ollama or OpenAI) must be configured")
 	}
 
 	// Validate database configuration
@@ -148,6 +157,21 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// GetGGUFModelPath returns the GGUF model file path.
+func (c *Config) GetGGUFModelPath() string {
+	return c.GGUFModelPath
+}
+
+// GetGGUFThreads returns the number of threads for GGUF model.
+func (c *Config) GetGGUFThreads() int {
+	return c.GGUFThreads
+}
+
+// GetGGUFGPULayers returns the number of GPU layers for GGUF model.
+func (c *Config) GetGGUFGPULayers() int {
+	return c.GGUFGPULayers
 }
 
 // GetOllamaURL returns the Ollama server URL.

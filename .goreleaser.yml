@@ -1,70 +1,248 @@
-# GoReleaser configuration for remembrances-mcp
-# Adapted from: https://raw.githubusercontent.com/sevir/essh/refs/heads/master/.goreleaser.yml
+# GoReleaser configuration for remembrances-mcp with CGO and shared libraries
+# Cross-compilation for Linux (amd64, arm64) and macOS (amd64, arm64)
+# Requires goreleaser-cross Docker image for CGO support
 version: 2
 
+# Before hooks - run before the release starts
+before:
+  hooks:
+    # Clean any previous builds
+    - go mod tidy
+    - go mod download
+    - go mod vendor
+
+# Build configuration
 builds:
-  - id: remembrances-mcp
+  - id: remembrances-mcp-linux-amd64
     main: ./cmd/remembrances-mcp
     binary: remembrances-mcp
     goos:
-      - darwin
       - linux
-      - windows
     goarch:
-      - "386"
-      - "amd64"
-      - "arm"
-      - "arm64"
-    goarm:
-      - "7"
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
     ldflags:
       - "-s"
       - "-w"
       - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
       - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
-    env:
-      - CGO_ENABLED=0
-    ignore:
-      - goos: darwin
-        goarch: "386"
-      - goos: windows
-        goarch: "386"
-      - goos: windows
-        goarch: "arm"
-      - goos: windows
-        goarch: "arm64"
+      - "-r $ORIGIN"
+    hooks:
+      # Pre-build: compile llama.cpp and surrealdb-embedded for this platform
+      pre:
+        - cmd: bash -c 'mkdir -p dist/libs/linux-amd64'
+        - cmd: bash -c 'echo "Building shared libraries for Linux amd64..."'
+        # Note: These commands should be replaced with actual cross-compilation
+        # of llama.cpp and surrealdb-embedded for the target platform
+      # Post-build: copy shared libraries next to the binary
+      post:
+        - cmd: bash -c 'cp dist/libs/linux-amd64/*.so {{ dir .Path }}/ 2>/dev/null || true'
 
-dist: ./dist/outputs/dist
-
-upx:
-  - enabled: true
-    # Filter by build ID(s) to compress. Leave empty to allow all builds.
-    ids:
-      - remembrances-mcp
-    # Only compress linux amd64/arm64 by default
+  - id: remembrances-mcp-linux-arm64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
     goos:
       - linux
     goarch:
-      - amd64
       - arm64
-    compress: '1'
-    lzma: true
-    brute: false
+    env:
+      - CGO_ENABLED=1
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    ldflags:
+      - "-s"
+      - "-w"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-r $ORIGIN"
+    hooks:
+      pre:
+        - cmd: bash -c 'mkdir -p dist/libs/linux-arm64'
+        - cmd: bash -c 'echo "Building shared libraries for Linux arm64..."'
+      post:
+        - cmd: bash -c 'cp dist/libs/linux-arm64/*.so {{ dir .Path }}/ 2>/dev/null || true'
 
+  - id: remembrances-mcp-darwin-amd64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - darwin
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=o64-clang
+      - CXX=o64-clang++
+    ldflags:
+      - "-s"
+      - "-w"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-r @executable_path"
+    hooks:
+      pre:
+        - cmd: bash -c 'mkdir -p dist/libs/darwin-amd64'
+        - cmd: bash -c 'echo "Building shared libraries for macOS amd64..."'
+      post:
+        - cmd: bash -c 'cp dist/libs/darwin-amd64/*.dylib {{ dir .Path }}/ 2>/dev/null || true'
+
+  - id: remembrances-mcp-darwin-arm64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    env:
+      - CGO_ENABLED=1
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    ldflags:
+      - "-s"
+      - "-w"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-r @executable_path"
+    hooks:
+      pre:
+        - cmd: bash -c 'mkdir -p dist/libs/darwin-arm64'
+        - cmd: bash -c 'echo "Building shared libraries for macOS arm64..."'
+      post:
+        - cmd: bash -c 'cp dist/libs/darwin-arm64/*.dylib {{ dir .Path }}/ 2>/dev/null || true'
+
+  - id: remembrances-mcp-windows-amd64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - windows
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=1
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+    ldflags:
+      - "-s"
+      - "-w"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-buildmode=exe"
+    hooks:
+      pre:
+        - cmd: bash -c 'mkdir -p dist/libs/windows-amd64'
+        - cmd: bash -c 'echo "Building shared libraries for Windows amd64..."'
+      post:
+        - cmd: bash -c 'cp dist/libs/windows-amd64/*.dll {{ dir .Path }}/ 2>/dev/null || true'
+
+  - id: remembrances-mcp-windows-arm64
+    main: ./cmd/remembrances-mcp
+    binary: remembrances-mcp
+    goos:
+      - windows
+    goarch:
+      - arm64
+    env:
+      - CGO_ENABLED=1
+      - CC=/llvm-mingw/bin/aarch64-w64-mingw32-gcc
+      - CXX=/llvm-mingw/bin/aarch64-w64-mingw32-g++
+    ldflags:
+      - "-s"
+      - "-w"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-buildmode=exe"
+    hooks:
+      pre:
+        - cmd: bash -c 'mkdir -p dist/libs/windows-arm64'
+        - cmd: bash -c 'echo "Building shared libraries for Windows arm64..."'
+      post:
+        - cmd: bash -c 'cp dist/libs/windows-arm64/*.dll {{ dir .Path }}/ 2>/dev/null || true'
+
+dist: ./dist/outputs/dist
+
+# Archives configuration - include shared libraries
 archives:
-  - id: xc
-    formats: ['binary']
-  - id: tar
-    formats: ['tar.gz']
+  - id: default
+    # Include all builds
+    builds:
+      - remembrances-mcp-linux-amd64
+      - remembrances-mcp-linux-arm64
+      - remembrances-mcp-darwin-amd64
+      - remembrances-mcp-darwin-arm64
+      - remembrances-mcp-windows-amd64
+      - remembrances-mcp-windows-arm64
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      # Include shared libraries from the same directory as the binary
+      - src: "{{ .Binary }}*"
+        dst: "."
+      # Include any .so files (Linux)
+      - src: "*.so*"
+        dst: "."
+        strip_parent: true
+      # Include any .dylib files (macOS)
+      - src: "*.dylib"
+        dst: "."
+        strip_parent: true
+      # Include any .dll files (Windows)
+      - src: "*.dll"
+        dst: "."
+        strip_parent: true
+      # Include README and LICENSE
+      - README.md
+      - LICENSE.txt
+      # Include sample configs
+      - config.sample.yaml
+      - config.sample.gguf.yaml
+      # Include run script (for Unix-like systems)
+      - src: run-remembrances.sh
+        dst: .
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
-      - '^build:'
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^build:"
+
+# Release configuration
+release:
+  github:
+    owner: madeindigio
+    name: remembrances-mcp
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+# Note: To use this configuration with CGO cross-compilation:
+#
+# 1. Use the goreleaser-cross Docker image:
+#    docker run --rm --privileged \
+#      -v $PWD:/go/src/github.com/madeindigio/remembrances-mcp \
+#      -v /var/run/docker.sock:/var/run/docker.sock \
+#      -w /go/src/github.com/madeindigio/remembrances-mcp \
+#      ghcr.io/goreleaser/goreleaser-cross:v1.23 \
+#      release --clean
+#
+# 2. Or for building without releasing:
+#    docker run --rm --privileged \
+#      -v $PWD:/go/src/github.com/madeindigio/remembrances-mcp \
+#      -w /go/src/github.com/madeindigio/remembrances-mcp \
+#      ghcr.io/goreleaser/goreleaser-cross:v1.23 \
+#      build --snapshot --clean
+#
+# 3. Build shared libraries separately for each platform:
+#    - llama.cpp: libllama.so, libggml.so, libggml-base.so, libcommon.so
+#    - surrealdb-embedded: libsurrealdb_embedded_rs.so
+#    Place them in dist/libs/{platform}-{arch}/ before running goreleaser

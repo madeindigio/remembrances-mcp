@@ -1,9 +1,48 @@
 # Changelog
 
-## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.3...d0a25a38e890c856447e09f655db822752b4469b) (2025-10-14)
+## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.40.0...5b6675fb4bcb1ad8f47277fe07797129e3676d16) (2025-11-18)
 
 ### Features
 
+* add osx scripts
+([cfd7e1a](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/cfd7e1a72b8651ad49762f73384f23f8b51452ff))
+* working compilation in osx with shared libraries
+([852a786](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/852a786a1dc53092e3bc0c5e40d7ecf042d31860))
+* enable cross compilation for linux
+([f7b8fbf](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/f7b8fbfd098afee785604e08616f421d592a3389))
+* add surrealdb-embedded library
+([9251916](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/92519163f45069390a2eed7874facc094c7d1036))
+* Add more agents configuration and fix config
+([c4740d8](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/c4740d8e1f4303e93e87713a43690be902a79e7a))
+* refactor surrealdb storage code
+([a1af4cb](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a1af4cb419c858243b712656ad8fe7d245ea4411))
+
+### Fixes
+
+* Error nbatch gguf embedded error
+([0573904](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/057390427cb7ceb2618c2fab5688771404a8f328))
+* update stats and user stats
+([f581744](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/f581744b5ef43a0246c5cd552aa2403064e81ec7))
+* upgrade stats
+([c65d9c0](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/c65d9c04a5b05f6413c5f4adefbd839bc9e16b74))
+* error working with dates when inserts information
+([9339687](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/9339687a491fd06a7f989920280f9212bfce0d89))
+
+## [v0.40.0](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.35.3...v0.40.0) (2025-10-26)
+
+### Features
+
+* Add configuration file and sample
+([7e38ac6](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/7e38ac64df073948eea8b7cb5d250b1c7d6167f0))
+
+### [v0.35.3](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.4...v0.35.3) (2025-10-14)
+
+### [v0.30.4](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.30.3...v0.30.4) (2025-10-26)
+
+#### Features
+
+* Add configuration file and sample
+([7e38ac6](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/7e38ac64df073948eea8b7cb5d250b1c7d6167f0))
 * Update tools descriptions for using user_id as the project name, know the
 knowledge base embeddings is update then files in knowledge base path are
 created or modified
@@ -16,7 +55,7 @@ base response
 * try to add docker image (not working by now
 ([0d59abf](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/0d59abf7978fa3c3ccb2fd26fb4a13ae87e3cea7))
 
-### Fixes
+#### Fixes
 
 * fix timestamps of documents in knowledge base
 ([28b729e](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/28b729eed15e936fdb4571f115b0d9ff0034719d))

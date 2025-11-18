@@ -182,7 +182,7 @@ func (tm *ToolManager) addDocumentHandler(ctx context.Context, request *protocol
 	}
 
 	// Save to database
-	err = tm.storage.SaveDocument(ctx, input.FilePath, input.Content, embedding, stringMapToInterfaceMap(input.Metadata))
+	err = tm.storage.SaveDocument(ctx, input.FilePath, input.Content, embedding, input.Metadata.AsMap())
 	if err != nil {
 		return nil, fmt.Errorf("failed to add document to database: %w", err)
 	}

@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-
-	"github.com/surrealdb/surrealdb.go"
 )
 
 // IndexVector stores a vector embedding with content and metadata
@@ -54,7 +52,7 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 		params["user_id"] = userID
 	}
 
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := s.query(ctx, query, params)
 	if err != nil {
 		return fmt.Errorf("failed to index vector: %w", err)
 	}
@@ -79,7 +77,7 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 func (s *SurrealDBStorage) SearchSimilar(ctx context.Context, userID string, queryEmbedding []float32, limit int) ([]VectorResult, error) {
 	query := fmt.Sprintf(`
 		SELECT id, content, vector::similarity::cosine(embedding, $query_embedding) AS similarity, metadata, created_at, updated_at
-		FROM vector_memories 
+		FROM vector_memories
 		WHERE user_id = $user_id AND embedding <|%d|> $query_embedding
 		ORDER BY similarity DESC
 	`, limit)
@@ -89,7 +87,7 @@ func (s *SurrealDBStorage) SearchSimilar(ctx context.Context, userID string, que
 		"query_embedding": queryEmbedding,
 	}
 
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := s.query(ctx, query, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search similar vectors: %w", err)
 	}
@@ -122,7 +120,7 @@ func (s *SurrealDBStorage) UpdateVector(ctx context.Context, id, userID, content
 		"metadata":  metadata,
 	}
 
-	_, err := surrealdb.Update[map[string]interface{}](s.db, id, data)
+	_, err := s.update(ctx, id, data)
 	if err != nil {
 		return fmt.Errorf("failed to update vector: %w", err)
 	}
@@ -132,7 +130,7 @@ func (s *SurrealDBStorage) UpdateVector(ctx context.Context, id, userID, content
 
 // DeleteVector deletes a vector memory
 func (s *SurrealDBStorage) DeleteVector(ctx context.Context, id, userID string) error {
-	_, err := surrealdb.Delete[map[string]interface{}](s.db, id)
+	_, err := s.delete(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete vector: %w", err)
 	}
@@ -146,7 +144,7 @@ func (s *SurrealDBStorage) DeleteVector(ctx context.Context, id, userID string) 
 	return nil
 }
 
-func (s *SurrealDBStorage) parseVectorResults(result *[]surrealdb.QueryResult[[]map[string]interface{}]) ([]VectorResult, error) {
+func (s *SurrealDBStorage) parseVectorResults(result *[]QueryResult) ([]VectorResult, error) {
 	var results []VectorResult
 
 	if result != nil && len(*result) > 0 {

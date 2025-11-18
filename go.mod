@@ -5,16 +5,19 @@ go 1.23.4
 require (
 	github.com/ThinkInAIXYZ/go-mcp v0.2.21
 	github.com/fsnotify/fsnotify v1.9.0
+	github.com/madeindigio/go-llama.cpp v0.0.0-00010101000000-000000000000
 	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.20.1
 	github.com/surrealdb/surrealdb.go v0.5.0
 	github.com/tmc/langchaingo v0.1.13
+	github.com/yourusername/surrealdb-embedded v0.0.0-00010101000000-000000000000
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
+	github.com/go-skynet/go-llama.cpp v0.0.0-20240314183750-6a8041ef6b46 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -37,3 +40,7 @@ require (
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 )
+
+replace github.com/madeindigio/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
+
+replace github.com/yourusername/surrealdb-embedded => /www/MCP/Remembrances/surrealdb-embedded

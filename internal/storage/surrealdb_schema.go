@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
-	"github.com/surrealdb/surrealdb.go"
 )
 
 // Default MTREE embedding dimension used in schema. Keep in sync with schema statements.
@@ -30,7 +30,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 4 // v4: user_id everywhere, dynamic metadata
+	targetVersion := 5 // v5: flexible metadata/properties across tables
 	if currentVersion < targetVersion {
 		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -56,7 +56,7 @@ func (s *SurrealDBStorage) ensureSchemaVersionTable(ctx context.Context) error {
 
 	if !exists {
 		// Create the schema version table
-		_, err := surrealdb.Query[[]map[string]interface{}](s.db, `
+		_, err := s.query(ctx, `
 			DEFINE TABLE schema_version SCHEMAFULL;
 			DEFINE FIELD version ON schema_version TYPE int;
 			DEFINE FIELD applied_at ON schema_version TYPE datetime VALUE time::now();
@@ -80,7 +80,7 @@ func (s *SurrealDBStorage) ensureSchemaVersionTable(ctx context.Context) error {
 
 // getCurrentSchemaVersion returns the current schema version, 0 if no version is set
 func (s *SurrealDBStorage) getCurrentSchemaVersion(ctx context.Context) (int, error) {
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, `
+	result, err := s.query(ctx, `
 		SELECT * FROM schema_version ORDER BY version DESC LIMIT 1;
 	`, nil)
 	if err != nil {
@@ -122,7 +122,7 @@ func (s *SurrealDBStorage) getCurrentSchemaVersion(ctx context.Context) (int, er
 // setSchemaVersion updates the schema version
 func (s *SurrealDBStorage) setSchemaVersion(ctx context.Context, version int) error {
 	// The CREATE statement returns an array-like result; request the matching type to avoid CBOR unmarshal errors.
-	_, err := surrealdb.Query[[]map[string]interface{}](s.db, `
+	_, err := s.query(ctx, `
 		CREATE schema_version SET version = $version;
 	`, map[string]interface{}{
 		"version": version,
@@ -151,6 +151,13 @@ func (s *SurrealDBStorage) runMigrations(ctx context.Context, currentVersion, ta
 
 // applyMigration applies a specific migration version using the new migration structure
 func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) error {
+	// For embedded mode, we need to use a different approach
+	// Migrations need to be executed through our query helper
+	if s.useEmbedded {
+		return s.applyMigrationEmbedded(ctx, version)
+	}
+
+	// Remote mode: use traditional migrations with s.db
 	var migration migrations.Migration
 
 	switch version {
@@ -162,6 +169,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewMigrationV3(s.db)
 	case 4:
 		migration = migrations.NewMigrationV4(s.db)
+	case 5:
+		migration = migrations.NewMigrationV5(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}
@@ -169,14 +178,129 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 	return migration.Apply(ctx, s.db)
 }
 
+// applyMigrationEmbedded applies migrations for embedded mode using direct SurrealQL
+func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version int) error {
+	log.Printf("Applying embedded migration version %d", version)
+
+	var statements []string
+
+	switch version {
+	case 1:
+		// V1: Initial schema with all tables
+		statements = []string{
+			// KV Memories table
+			`DEFINE TABLE kv_memories SCHEMAFULL;`,
+			`DEFINE FIELD user_id ON kv_memories TYPE string;`,
+			`DEFINE FIELD key ON kv_memories TYPE string;`,
+			`DEFINE FIELD value ON kv_memories TYPE option<string | int | float | bool | object | array>;`,
+			`DEFINE FIELD created_at ON kv_memories TYPE datetime DEFAULT time::now();`,
+			`DEFINE FIELD updated_at ON kv_memories TYPE datetime DEFAULT time::now();`,
+			`DEFINE INDEX idx_kv_user_key ON kv_memories FIELDS user_id, key UNIQUE;`,
+
+			// Vector Memories table
+			fmt.Sprintf(`DEFINE TABLE vector_memories SCHEMAFULL;`),
+			`DEFINE FIELD user_id ON vector_memories TYPE option<string>;`,
+			`DEFINE FIELD content ON vector_memories TYPE string;`,
+			fmt.Sprintf(`DEFINE FIELD embedding ON vector_memories TYPE array<float, %d>;`, defaultMtreeDim),
+			`DEFINE FIELD metadata ON vector_memories TYPE object DEFAULT {};`,
+			`DEFINE FIELD created_at ON vector_memories TYPE datetime DEFAULT time::now();`,
+			`DEFINE FIELD updated_at ON vector_memories TYPE datetime DEFAULT time::now();`,
+			fmt.Sprintf(`DEFINE INDEX idx_vector_embedding ON vector_memories FIELDS embedding MTREE DIMENSION %d;`, defaultMtreeDim),
+
+			// Knowledge Base table
+			`DEFINE TABLE knowledge_base SCHEMAFULL;`,
+			`DEFINE FIELD file_path ON knowledge_base TYPE string;`,
+			`DEFINE FIELD content ON knowledge_base TYPE string;`,
+			fmt.Sprintf(`DEFINE FIELD embedding ON knowledge_base TYPE array<float, %d>;`, defaultMtreeDim),
+			`DEFINE FIELD metadata ON knowledge_base TYPE object DEFAULT {};`,
+			`DEFINE FIELD created_at ON knowledge_base TYPE datetime DEFAULT time::now();`,
+			`DEFINE FIELD updated_at ON knowledge_base TYPE datetime DEFAULT time::now();`,
+			`DEFINE INDEX idx_kb_file_path ON knowledge_base FIELDS file_path UNIQUE;`,
+			fmt.Sprintf(`DEFINE INDEX idx_kb_embedding ON knowledge_base FIELDS embedding MTREE DIMENSION %d;`, defaultMtreeDim),
+
+			// Entities table
+			`DEFINE TABLE entities SCHEMAFULL;`,
+			`DEFINE FIELD entity_type ON entities TYPE string;`,
+			`DEFINE FIELD name ON entities TYPE string;`,
+			`DEFINE FIELD properties ON entities TYPE object DEFAULT {};`,
+			`DEFINE FIELD created_at ON entities TYPE datetime DEFAULT time::now();`,
+			`DEFINE INDEX idx_entity_name ON entities FIELDS name;`,
+		}
+	case 2:
+		// V2: Add user_stats table
+		statements = []string{
+			`DEFINE TABLE user_stats SCHEMAFULL;`,
+			`DEFINE FIELD user_id ON user_stats TYPE string;`,
+			`DEFINE FIELD fact_count ON user_stats TYPE int DEFAULT 0;`,
+			`DEFINE FIELD vector_count ON user_stats TYPE int DEFAULT 0;`,
+			`DEFINE FIELD document_count ON user_stats TYPE int DEFAULT 0;`,
+			`DEFINE FIELD entity_count ON user_stats TYPE int DEFAULT 0;`,
+			`DEFINE FIELD relationship_count ON user_stats TYPE int DEFAULT 0;`,
+			`DEFINE FIELD last_updated ON user_stats TYPE datetime DEFAULT time::now();`,
+			`DEFINE INDEX idx_user_stats_user_id ON user_stats FIELDS user_id UNIQUE;`,
+		}
+	case 3:
+		// V3: Fix user_stats field types
+		log.Println("Migration V3: Fixing user_stats schema (embedded mode uses direct field updates)")
+	case 4:
+		// V4: Add user_id everywhere (already in V1 for embedded)
+		log.Println("Migration V4: user_id fields already present in embedded schema")
+	case 5:
+		// V5: Flexible metadata/properties (already in V1 for embedded)
+		log.Println("Migration V5: flexible metadata already present in embedded schema")
+	default:
+		return fmt.Errorf("unknown migration version: %d", version)
+	}
+
+	// Execute each statement
+	for _, stmt := range statements {
+		_, err := s.query(ctx, stmt, nil)
+		if err != nil {
+			// Check if it's an "already exists" error and continue
+			if s.isAlreadyExistsError(err) {
+				log.Printf("Schema element already exists, continuing: %v", err)
+				continue
+			}
+			return fmt.Errorf("failed to execute migration statement: %w\nStatement: %s", err, stmt)
+		}
+	}
+
+	log.Printf("Successfully applied embedded migration version %d", version)
+	return nil
+}
+
 // checkTableExists checks if a table exists
 func (s *SurrealDBStorage) checkTableExists(ctx context.Context, tableName string) (bool, error) {
+	if s.useEmbedded {
+		// For embedded mode, try a simple query on the table
+		result, err := s.query(ctx, fmt.Sprintf("SELECT * FROM %s LIMIT 1", tableName), nil)
+		if err != nil {
+			// If error contains "table" and "not found" or similar, table doesn't exist
+			errStr := err.Error()
+			if strings.Contains(errStr, "does not exist") || strings.Contains(errStr, "not found") {
+				return false, nil
+			}
+			// Other error
+			return false, err
+		}
+		// If query succeeded, table exists
+		return result != nil, nil
+	}
+
+	// Remote mode: use migration base
 	migrationBase := migrations.NewMigrationBase(s.db)
 	return migrationBase.CheckTableExists(ctx, tableName)
 }
 
 // isAlreadyExistsError checks if an error is due to an element already existing
 func (s *SurrealDBStorage) isAlreadyExistsError(err error) bool {
-	migrationBase := migrations.NewMigrationBase(s.db)
-	return migrationBase.IsAlreadyExistsError(err)
+	if err == nil {
+		return false
+	}
+
+	errStr := err.Error()
+	// Check for common "already exists" error messages
+	return strings.Contains(errStr, "already exists") ||
+		strings.Contains(errStr, "already defined") ||
+		strings.Contains(errStr, "duplicate")
 }
