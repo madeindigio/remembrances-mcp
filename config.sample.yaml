@@ -74,6 +74,17 @@ ollama-model: "nomic-embed-text:latest"
 # OpenAI model to use for embeddings (default: "text-embedding-3-large")
 #openai-model: "text-embedding-3-large"
 
+# ========== Text Chunking Configuration ==========
+# Maximum chunk size in characters for text splitting (default: 1500)
+# This applies to all embedding providers (GGUF, Ollama, OpenAI)
+# Larger values mean fewer chunks but may exceed model context limits
+#chunk-size: 1500
+
+# Overlap between chunks in characters (default: 200)
+# Overlap helps preserve context across chunk boundaries
+# Typical values are 10-20% of chunk-size
+#chunk-overlap: 200
+
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
 #log: ""

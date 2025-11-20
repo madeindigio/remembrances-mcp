@@ -5,21 +5,18 @@
 {
   "context_servers": {
     "hyper-mcp": {
-      "source": "custom",
       "enabled": true,
       "command": "hyper-mcp",
       "args": ["--config-file", "/home/sevir/.config/hyper-mcp/assistant.yaml"]
     },
     "mycommandmcp": {
       "env": {},
-      "source": "custom",
       "enabled": true,
       "command": "mycommandmcp",
       "args": ["--config", "/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"]
     },
     "serena": {
       "env": {},
-      "source": "custom",
       "enabled": true,
       "command": "pkgx",
       "args": [
@@ -36,22 +33,9 @@
     },
     "remembrances": {
       "env": {},
-      "source": "custom",
       "enabled": true,
-      "command": "/www/MCP/remembrances-mcp/remembrances-mcp",
-      "args": ["--config", "/www/MCP/remembrances-mcp/config.sample.yaml"]
-    },
-    "mc": {
-      "source": "custom",
-      "enabled": true,
-      "command": "/home/sevir/bin/mycommandmcp",
-      "args": [
-        "--log-file",
-        "/home/sevir/Descargas/mcmcp.log",
-        "--config",
-        "/home/sevir/.config/mc-mcp/all-tools.yaml"
-      ],
-      "env": {}
+      "command": "remembrances-mcp",
+      "args": ["--config", "/www/MCP/remembrances-mcp/config.sample.gguf.yaml"]
     }
   }
 }

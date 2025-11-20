@@ -111,7 +111,17 @@ build: llama-cpp surrealdb-embedded
 	@mkdir -p $(BUILD_DIR)
 	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Copying shared libraries to build directory..."
+	@# Copy SurrealDB library
 	@cp $(SURREALDB_EMBEDDED_DIR)/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || true
+	@# Copy ALL llama.cpp shared libraries (.so and .dylib)
+	@# This includes libraries for CUDA, Metal, ROCm, Vulkan, etc.
+	@echo "Copying all llama.cpp shared libraries..."
+	@find $(GO_LLAMA_DIR)/build/bin -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
+	@# Also check other common locations in the build directory
+	@find $(GO_LLAMA_DIR)/build/src -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
+	@find $(GO_LLAMA_DIR)/build/common -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
+	@find $(GO_LLAMA_DIR)/build/ggml -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
+	@echo "Shared libraries copied successfully"
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Run the application

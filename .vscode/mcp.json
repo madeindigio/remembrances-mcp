@@ -33,10 +33,10 @@
 		},
 		"remembrances": {
 			"type": "stdio",
-			"command": "./remembrances-mcp",
+			"command": "remembrances-mcp",
 			"args": [
 				"--config",
-				"./config.sample.yaml"
+				"./config.sample.gguf.yaml"
 			]
 		}
 	},

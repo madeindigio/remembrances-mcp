@@ -20,16 +20,18 @@ import (
 
 // Watcher controls monitoring of the knowledge base directory.
 type Watcher struct {
-	path     string
-	storage  storage.Storage
-	embedder embedder.Embedder
-	watcher  *fsnotify.Watcher
-	cancel   context.CancelFunc
-	once     sync.Once
+	path         string
+	storage      storage.Storage
+	embedder     embedder.Embedder
+	watcher      *fsnotify.Watcher
+	cancel       context.CancelFunc
+	once         sync.Once
+	chunkSize    int
+	chunkOverlap int
 }
 
 // StartWatcher starts a watcher if path is non-empty and exists. Returns nil if path is empty.
-func StartWatcher(parentCtx context.Context, path string, st storage.Storage, emb embedder.Embedder) (*Watcher, error) {
+func StartWatcher(parentCtx context.Context, path string, st storage.Storage, emb embedder.Embedder, chunkSize, chunkOverlap int) (*Watcher, error) {
 	if path == "" {
 		return nil, nil
 	}
@@ -47,7 +49,15 @@ func StartWatcher(parentCtx context.Context, path string, st storage.Storage, em
 	}
 
 	ctx, cancel := context.WithCancel(parentCtx)
-	w := &Watcher{path: path, storage: st, embedder: emb, watcher: fw, cancel: cancel}
+	w := &Watcher{
+		path:         path,
+		storage:      st,
+		embedder:     emb,
+		watcher:      fw,
+		cancel:       cancel,
+		chunkSize:    chunkSize,
+		chunkOverlap: chunkOverlap,
+	}
 
 	// Add only the root directory (fsnotify is not recursive). We will dynamically add subdirectories
 	// when Create events for new directories are detected.
@@ -76,9 +86,12 @@ func (w *Watcher) Stop() {
 	})
 }
 
-// initialScan processes all existing .md files.
+// initialScan processes all existing .md files with concurrency control.
 func (w *Watcher) initialScan(ctx context.Context) {
-	// Walk entire tree to capture subdirectories and files.
+	slog.Info("starting initial knowledge base scan", "path", w.path)
+
+	// Collect all files first
+	var files []string
 	filepath.WalkDir(w.path, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			slog.Warn("initial scan error", "path", path, "error", err)
@@ -94,10 +107,28 @@ func (w *Watcher) initialScan(ctx context.Context) {
 			return nil
 		}
 		if strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
-			w.processFile(ctx, path)
+			files = append(files, path)
 		}
 		return nil
 	})
+
+	slog.Info("initial scan found files", "count", len(files))
+
+	// Process files SEQUENTIALLY to avoid memory exhaustion with GGUF models
+	// GGUF models can consume significant memory, especially with multiple concurrent operations
+	for i, file := range files {
+		select {
+		case <-ctx.Done():
+			slog.Info("initial scan cancelled", "processed", i, "total", len(files))
+			return
+		default:
+		}
+
+		slog.Debug("processing kb file during initial scan", "file", file, "progress", i+1, "total", len(files))
+		w.processFile(ctx, file)
+	}
+
+	slog.Info("initial knowledge base scan completed", "files_processed", len(files))
 }
 
 // run processes watcher events and debounces rapid successive writes.
@@ -160,21 +191,59 @@ func (w *Watcher) run(ctx context.Context) {
 // processFile reads the file, generates an embedding and upserts the document.
 func (w *Watcher) processFile(ctx context.Context, fullPath string) {
 	rel := w.relativePath(fullPath)
+
+	// Add timeout to prevent hanging on large files
+	processingCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	startTime := time.Now()
+	slog.Debug("processing kb file", "file", rel)
+
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		slog.Warn("failed reading kb file", "file", rel, "error", err)
 		return
 	}
-	embedding, err := w.embedder.EmbedQuery(ctx, string(content))
+
+	contentSize := len(content)
+	slog.Debug("file read", "file", rel, "bytes", contentSize)
+
+	// Skip very large files (>500KB) to avoid memory/processing issues
+	const maxFileSize = 500 * 1024 // 500KB limit
+	if contentSize > maxFileSize {
+		slog.Warn("skipping large file", "file", rel, "bytes", contentSize, "max", maxFileSize)
+		return
+	}
+
+	// Skip empty files
+	contentStr := string(content)
+	if len(strings.TrimSpace(contentStr)) == 0 {
+		slog.Debug("skipping empty file", "file", rel)
+		return
+	}
+
+	// Chunk the text and generate individual embeddings for each chunk
+	// This allows for more precise retrieval compared to averaged embeddings
+	chunks, embeddings, err := embedder.EmbedTextChunksWithOverlap(processingCtx, w.embedder, contentStr, w.chunkSize, w.chunkOverlap)
 	if err != nil {
-		slog.Warn("failed embedding kb file", "file", rel, "error", err)
+		slog.Warn("failed embedding kb file", "file", rel, "error", err, "duration", time.Since(startTime))
 		return
 	}
-	if err := w.storage.SaveDocument(ctx, rel, string(content), embedding, map[string]interface{}{"source": "watcher"}); err != nil {
-		slog.Warn("failed saving kb document", "file", rel, "error", err)
+
+	slog.Debug("chunks and embeddings generated", "file", rel, "chunks", len(chunks), "duration", time.Since(startTime))
+
+	// Save each chunk as a separate document with its own embedding
+	metadata := map[string]interface{}{
+		"source":     "watcher",
+		"total_size": contentSize,
+	}
+
+	if err := w.storage.SaveDocumentChunks(processingCtx, rel, chunks, embeddings, metadata); err != nil {
+		slog.Warn("failed saving kb document chunks", "file", rel, "error", err)
 		return
 	}
-	slog.Info("kb document synced", "file", rel, "bytes", len(content))
+
+	slog.Info("kb document synced", "file", rel, "bytes", contentSize, "chunks", len(chunks), "duration", time.Since(startTime))
 }
 
 func (w *Watcher) relativePath(full string) string {

@@ -267,7 +267,7 @@ Choose the right tool for your data:
 	// Knowledge base watcher
 	var kbWatcher *kb.Watcher
 	if cfg.KnowledgeBase != "" {
-		w, err := kb.StartWatcher(ctx, cfg.KnowledgeBase, storageInstance, embedderInstance)
+		w, err := kb.StartWatcher(ctx, cfg.KnowledgeBase, storageInstance, embedderInstance, cfg.GetChunkSize(), cfg.GetChunkOverlap())
 		if err != nil {
 			slog.Warn("failed to start knowledge base watcher", "error", err)
 		} else {

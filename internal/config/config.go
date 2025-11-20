@@ -45,7 +45,10 @@ type Config struct {
 	OpenAIKey   string `mapstructure:"openai-key"`
 	OpenAIURL   string `mapstructure:"openai-url"`
 	OpenAIModel string `mapstructure:"openai-model"`
-	LogFile     string `mapstructure:"log"`
+	// Chunking configuration for embeddings
+	ChunkSize    int    `mapstructure:"chunk-size"`
+	ChunkOverlap int    `mapstructure:"chunk-overlap"`
+	LogFile      string `mapstructure:"log"`
 }
 
 // Load loads the configuration from CLI flags and environment variables.
@@ -82,6 +85,8 @@ func Load() (*Config, error) {
 	pflag.String("openai-key", "", "OpenAI API key")
 	pflag.String("openai-url", "https://api.openai.com/v1", "OpenAI base URL")
 	pflag.String("openai-model", "text-embedding-3-large", "OpenAI model to use for embeddings")
+	pflag.Int("chunk-size", 1500, "Maximum chunk size in characters for text splitting (default: 1500)")
+	pflag.Int("chunk-overlap", 200, "Overlap between chunks in characters (default: 200)")
 	pflag.String("log", "", "Path to the log file (logs will be written to both stdout and file)")
 	// Version flag is handled here so config package can manage early-exit flags
 	// Also register a version flag with the standard library's flag set so
@@ -197,6 +202,22 @@ func (c *Config) GetOpenAIURL() string {
 // GetOpenAIModel returns the OpenAI model name.
 func (c *Config) GetOpenAIModel() string {
 	return c.OpenAIModel
+}
+
+// GetChunkSize returns the chunk size for text splitting.
+func (c *Config) GetChunkSize() int {
+	if c.ChunkSize <= 0 {
+		return 1500 // Default chunk size
+	}
+	return c.ChunkSize
+}
+
+// GetChunkOverlap returns the overlap between chunks.
+func (c *Config) GetChunkOverlap() int {
+	if c.ChunkOverlap < 0 {
+		return 200 // Default overlap
+	}
+	return c.ChunkOverlap
 }
 
 // GetSurrealDBNamespace returns the SurrealDB namespace.

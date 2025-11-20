@@ -17,6 +17,7 @@ Se ha implementado completamente el soporte para modelos GGUF de embeddings usan
 
 ## Paso 1: Compilar el Proyecto
 
+
 ```bash
 cd /www/MCP/remembrances-mcp
 make build

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-
 )
 
 // SaveDocument saves a knowledge base document
@@ -90,7 +89,7 @@ func (s *SurrealDBStorage) SearchDocuments(ctx context.Context, queryEmbedding [
 	query := fmt.Sprintf(`
         SELECT id, file_path, content, embedding, metadata, created_at, updated_at,
                vector::similarity::cosine(embedding, $query_embedding) AS similarity
-        FROM knowledge_base 
+        FROM knowledge_base
         WHERE embedding <|%d|> $query_embedding
         ORDER BY similarity DESC
     `, limit)
@@ -107,9 +106,10 @@ func (s *SurrealDBStorage) SearchDocuments(ctx context.Context, queryEmbedding [
 	return s.parseDocumentResults(result)
 }
 
-// DeleteDocument deletes a knowledge base document
+// DeleteDocument deletes a knowledge base document and all its chunks
 func (s *SurrealDBStorage) DeleteDocument(ctx context.Context, filePath string) error {
-	query := "DELETE FROM knowledge_base WHERE file_path = $file_path"
+	// Delete both the source file and all its chunks
+	query := "DELETE FROM knowledge_base WHERE source_file = $file_path OR file_path = $file_path"
 	params := map[string]interface{}{
 		"file_path": filePath,
 	}
@@ -215,4 +215,91 @@ func (s *SurrealDBStorage) parseDocumentResults(result *[]QueryResult) ([]Docume
 	}
 
 	return results, nil
+}
+
+// SaveDocumentChunks saves a document as individual chunks with embeddings
+func (s *SurrealDBStorage) SaveDocumentChunks(ctx context.Context, filePath string, chunks []string, embeddings [][]float32, metadata map[string]interface{}) error {
+	if len(chunks) == 0 {
+		return fmt.Errorf("no chunks provided")
+	}
+
+	if len(chunks) != len(embeddings) {
+		return fmt.Errorf("chunks and embeddings length mismatch: %d chunks vs %d embeddings", len(chunks), len(embeddings))
+	}
+
+	if metadata == nil {
+		metadata = map[string]interface{}{}
+	}
+
+	// First, delete any existing chunks for this file
+	deleteQuery := "DELETE FROM knowledge_base WHERE source_file = $file_path OR file_path = $file_path"
+	if _, err := s.query(ctx, deleteQuery, map[string]interface{}{
+		"file_path": filePath,
+	}); err != nil {
+		return fmt.Errorf("failed to delete existing chunks: %w", err)
+	}
+
+	chunkCount := len(chunks)
+
+	// Insert each chunk as a separate document
+	for i, chunk := range chunks {
+		embedding := embeddings[i]
+
+		// Normalize embedding to defaultMtreeDim
+		if len(embedding) != defaultMtreeDim {
+			norm := make([]float32, defaultMtreeDim)
+			copy(norm, embedding)
+			embedding = norm
+		}
+
+		// Convert to float64 for SurrealDB
+		emb64 := make([]float64, len(embedding))
+		for j, v := range embedding {
+			emb64[j] = float64(v)
+		}
+
+		// Create unique file_path for each chunk
+		chunkFilePath := fmt.Sprintf("%s#chunk%d", filePath, i)
+
+		// Prepare chunk metadata
+		chunkMetadata := make(map[string]interface{})
+		for k, v := range metadata {
+			chunkMetadata[k] = v
+		}
+		chunkMetadata["chunk_index"] = i
+		chunkMetadata["chunk_count"] = chunkCount
+
+		params := map[string]interface{}{
+			"file_path":   chunkFilePath,
+			"content":     chunk,
+			"embedding":   emb64,
+			"metadata":    chunkMetadata,
+			"chunk_index": i,
+			"chunk_count": chunkCount,
+			"source_file": filePath,
+		}
+
+		query := `
+			CREATE knowledge_base CONTENT {
+				file_path: $file_path,
+				content: $content,
+				embedding: $embedding,
+				metadata: $metadata,
+				chunk_index: $chunk_index,
+				chunk_count: $chunk_count,
+				source_file: $source_file
+			}
+		`
+
+		if _, err := s.query(ctx, query, params); err != nil {
+			return fmt.Errorf("failed to create chunk %d: %w", i, err)
+		}
+	}
+
+	// Update document count stat (count by source_file, not by chunks)
+	if err := s.updateUserStat(ctx, "global", "document_count", 1); err != nil {
+		log.Printf("Warning: failed to update document_count stat: %v", err)
+	}
+
+	return nil
 }

@@ -35,11 +35,14 @@ func NewGGUFEmbedder(modelPath string, threads, gpuLayers int) (*GGUFEmbedder, e
 		return nil, fmt.Errorf("model path is required")
 	}
 
-	// Configurar opciones del modelo
+	// Configurar opciones del modelo optimizadas para embeddings
+	// Context 2048 matches model training, batch sizes allow processing typical documents
 	opts := []llama.ModelOption{
 		llama.EnableEmbeddings,
 		llama.EnableF16Memory,
-		llama.SetContext(2048), // Contexto suficiente para embeddings
+		llama.SetContext(2048), // Match model's training context
+		llama.SetNBatch(2048),  // Allow processing complete documents
+		llama.SetNUBatch(2048), // Match batch size for efficiency
 	}
 
 	// Añadir capas GPU si se especifican
@@ -78,13 +81,32 @@ func (g *GGUFEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]
 		return [][]float32{}, nil
 	}
 
+	// Limit batch size to prevent memory exhaustion
+	const maxBatchSize = 10
+	if len(texts) > maxBatchSize {
+		return nil, fmt.Errorf("batch size %d exceeds maximum allowed %d", len(texts), maxBatchSize)
+	}
+
 	result := make([][]float32, len(texts))
 
 	// Procesar cada texto secuencialmente
 	// Nota: llama.cpp maneja el paralelismo internamente con threads
 	for i, text := range texts {
+		// Check context cancellation
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
 		if text == "" {
 			return nil, fmt.Errorf("text at index %d is empty", i)
+		}
+
+		// Limit text length to prevent memory issues
+		const maxTextLength = 8000 // ~2000 tokens with typical 4:1 char/token ratio
+		if len(text) > maxTextLength {
+			text = text[:maxTextLength]
 		}
 
 		embedding, err := g.embedSingle(ctx, text)
@@ -102,6 +124,12 @@ func (g *GGUFEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]
 func (g *GGUFEmbedder) EmbedQuery(ctx context.Context, text string) ([]float32, error) {
 	if text == "" {
 		return nil, fmt.Errorf("text cannot be empty")
+	}
+
+	// Limit text length to prevent memory issues
+	const maxTextLength = 8000 // ~2000 tokens with typical 4:1 char/token ratio
+	if len(text) > maxTextLength {
+		text = text[:maxTextLength]
 	}
 
 	return g.embedSingle(ctx, text)

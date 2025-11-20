@@ -30,7 +30,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 5 // v5: flexible metadata/properties across tables
+	targetVersion := 6 // v6: document chunking support
 	if currentVersion < targetVersion {
 		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -171,6 +171,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewMigrationV4(s.db)
 	case 5:
 		migration = migrations.NewMigrationV5(s.db)
+	case 6:
+		migration = migrations.NewV6DocumentChunks(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}
@@ -248,6 +250,13 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 	case 5:
 		// V5: Flexible metadata/properties (already in V1 for embedded)
 		log.Println("Migration V5: flexible metadata already present in embedded schema")
+	case 6:
+		// V6: Document chunking support
+		statements = []string{
+			`DEFINE FIELD chunk_index ON knowledge_base TYPE int DEFAULT 0;`,
+			`DEFINE FIELD chunk_count ON knowledge_base TYPE int DEFAULT 0;`,
+			`DEFINE FIELD source_file ON knowledge_base TYPE option<string>;`,
+		}
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}

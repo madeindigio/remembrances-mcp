@@ -37,6 +37,7 @@ type Storage interface {
 
 	// Knowledge base operations for markdown documents
 	SaveDocument(ctx context.Context, filePath, content string, embedding []float32, metadata map[string]interface{}) error
+	SaveDocumentChunks(ctx context.Context, filePath string, chunks []string, embeddings [][]float32, metadata map[string]interface{}) error
 	SearchDocuments(ctx context.Context, queryEmbedding []float32, limit int) ([]DocumentResult, error)
 	DeleteDocument(ctx context.Context, filePath string) error
 	GetDocument(ctx context.Context, filePath string) (*Document, error)
