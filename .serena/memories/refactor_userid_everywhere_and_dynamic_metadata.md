@@ -6,7 +6,7 @@
 - Se añadió el campo `user_id` como opcional a todas las tablas principales: `entities`, `knowledge_base`, y todas las tablas de relaciones (`wrote`, `mentioned_in`, `related_to`, etc.), además de los ya existentes en `vector_memories` y `kv_memories`.
 - El campo `user_id` permite distinguir entre memorias globales y memorias asociadas a un usuario concreto.
 - Todos los métodos de almacenamiento (crear entidad, relación, documento, vector, fact) aceptan y propagan `user_id` si se proporciona. Si no, el registro es global.
-
+   
 ### 2. Metadata dinámica en la KB y vectores
 - El campo `metadata` en `knowledge_base` y `vector_memories` se almacena y recupera como `map[string]interface{}` (Go) y `object` (SurrealDB), permitiendo cualquier estructura arbitraria.
 - Esto permite enriquecer los documentos y vectores con información adicional flexible (fuente, etiquetas, contexto, etc.).

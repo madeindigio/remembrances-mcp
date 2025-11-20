@@ -140,10 +140,17 @@ ifeq ($(BUILD_TYPE),blis)
 	CMAKE_ARGS+=-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=FLAME
 endif
 
+ifeq ($(BUILD_TYPE),cuda)
+	EXTRA_LIBS=
+	CMAKE_ARGS+=-DGGML_CUDA=ON
+	EXTRA_TARGETS+=llama.cpp/ggml-cuda.o
+endif
+
 ifeq ($(BUILD_TYPE),cublas)
 	EXTRA_LIBS=
-	CMAKE_ARGS+=-DLLAMA_CUBLAS=ON
+	CMAKE_ARGS+=-DGGML_CUDA=ON
 	EXTRA_TARGETS+=llama.cpp/ggml-cuda.o
+	$(warning BUILD_TYPE=cublas is deprecated. Please use BUILD_TYPE=cuda instead)
 endif
 
 ifeq ($(BUILD_TYPE),hipblas)

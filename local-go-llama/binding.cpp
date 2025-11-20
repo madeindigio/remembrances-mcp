@@ -251,6 +251,14 @@ void* load_model_custom(const char *fname, int n_ctx, int n_seed, bool memory_f1
 }
 
 void* load_binding_model_custom(const char *fname, int n_ctx, int n_seed, bool memory_f16, bool mlock, bool embeddings, bool mmap, bool low_vram, int n_gpu_layers, int n_batch, int n_ubatch, const char *maingpu, const char *tensorsplit, bool numa,  float rope_freq_base, float rope_freq_scale, bool mul_mat_q, const char *lora, const char *lora_base, bool perplexity) {
+    // Silence llama.cpp logs to reduce noise
+    llama_log_set([](enum ggml_log_level level, const char * text, void * user_data) {
+        // Only log errors and warnings, ignore info messages
+        if (level <= GGML_LOG_LEVEL_WARN) {
+            fprintf(stderr, "%s", text);
+        }
+    }, nullptr);
+    
     // load the model
     common_params * lparams;
     
