@@ -25,7 +25,7 @@ knowledge-base: "/www/MCP/remembrances-mcp/.serena/memories"
 
 # ========== SurrealDB Configuration ==========
 # Path to the embedded SurrealDB database (default: "./remembrances.db")
-#db-path: "/www/Remembrances/embedded"
+db-path: "/www/MCP/remembrances-mcp/remembrances.db"
 
 # URL for the remote SurrealDB instance (default: "")
 #surrealdb-url: "ws://localhost:8000"
