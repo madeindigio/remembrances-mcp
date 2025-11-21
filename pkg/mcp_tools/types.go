@@ -142,6 +142,15 @@ type GetStatsInput struct {
 	UserID string `json:"user_id"`
 }
 
+type ToRememberInput struct {
+	UserID  string `json:"user_id"`
+	Content string `json:"content"`
+}
+
+type LastToRememberInput struct {
+	UserID string `json:"user_id"`
+}
+
 const (
 	errParseArgs         = "failed to parse arguments: %w"
 	errGenEmbedding      = "failed to generate embedding: %w"

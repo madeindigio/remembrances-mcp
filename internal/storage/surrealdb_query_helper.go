@@ -15,6 +15,26 @@ type QueryResult struct {
 	Result []map[string]interface{} `json:"result"`
 }
 
+// Query is a public method to execute custom queries (used by tools that need direct database access)
+func (s *SurrealDBStorage) Query(ctx context.Context, query string, params map[string]interface{}) ([]map[string]interface{}, error) {
+	results, err := s.query(ctx, query, params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Flatten all results into a single slice
+	allResults := make([]map[string]interface{}, 0)
+	if results != nil {
+		for _, queryResult := range *results {
+			if queryResult.Status == "OK" {
+				allResults = append(allResults, queryResult.Result...)
+			}
+		}
+	}
+
+	return allResults, nil
+}
+
 // query executes a query on either embedded or remote backend
 func (s *SurrealDBStorage) query(ctx context.Context, query string, params map[string]interface{}) (*[]QueryResult, error) {
 	if s.useEmbedded {

@@ -53,6 +53,9 @@ func (tm *ToolManager) RegisterTools(srv *mcpserver.Server) error {
 	if err := tm.registerKBTools(reg); err != nil {
 		return err
 	}
+	if err := tm.registerRememberTools(reg); err != nil {
+		return err
+	}
 	if err := tm.registerMiscTools(reg); err != nil {
 		return err
 	}
@@ -121,6 +124,16 @@ func (tm *ToolManager) registerKBTools(reg func(string, *protocol.Tool, func(con
 		return err
 	}
 	if err := reg("kb_delete_document", tm.deleteDocumentTool(), tm.deleteDocumentHandler); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (tm *ToolManager) registerRememberTools(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	if err := reg("to_remember", tm.toRememberTool(), tm.toRememberHandler); err != nil {
+		return err
+	}
+	if err := reg("last_to_remember", tm.lastToRememberTool(), tm.lastToRememberHandler); err != nil {
 		return err
 	}
 	return nil
