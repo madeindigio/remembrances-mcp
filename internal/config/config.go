@@ -8,6 +8,8 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/spf13/pflag"
@@ -117,11 +119,42 @@ func Load() (*Config, error) {
 	// Initialize viper
 	v := viper.New()
 
-	// Read YAML config file if provided
-	if configPath := pflag.Lookup("config").Value.String(); configPath != "" {
+	// Read YAML config file if provided via --config flag
+	configPath := pflag.Lookup("config").Value.String()
+	if configPath != "" {
 		v.SetConfigFile(configPath)
 		if err := v.ReadInConfig(); err != nil {
 			return nil, fmt.Errorf("failed to read config file: %w", err)
+		}
+	} else {
+		// No --config flag provided, try to find config.yaml in standard locations
+		configFound := false
+
+		if homeDir, err := os.UserHomeDir(); err == nil {
+			var standardConfigPath string
+
+			// Use OS-specific standard location
+			if runtime.GOOS == "darwin" {
+				// macOS: ~/Library/Application Support/remembrances/config.yaml
+				standardConfigPath = filepath.Join(homeDir, "Library", "Application Support", "remembrances", "config.yaml")
+			} else {
+				// Linux/Unix: ~/.config/remembrances/config.yaml
+				standardConfigPath = filepath.Join(homeDir, ".config", "remembrances", "config.yaml")
+			}
+
+			if _, err := os.Stat(standardConfigPath); err == nil {
+				v.SetConfigFile(standardConfigPath)
+				if err := v.ReadInConfig(); err == nil {
+					configFound = true
+					slog.Info("Using configuration file from standard location", "path", standardConfigPath)
+				}
+			}
+		}
+
+		// If no config file found in standard locations, continue without it
+		// (environment variables and defaults will be used)
+		if !configFound {
+			slog.Info("No configuration file found, using environment variables and defaults")
 		}
 	}
 

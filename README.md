@@ -57,9 +57,18 @@ Run the server with CLI flags or environment variables:
 go run ./cmd/remembrances-mcp/main.go [flags]
 ```
 
+### Configuration File
+
+The server can be configured using a YAML configuration file. If `--config` is not specified, the server will automatically look for a configuration file in the following standard locations:
+
+- **Linux**: `~/.config/remembrances/config.yaml`
+- **macOS**: `~/Library/Application Support/remembrances/config.yaml`
+
+If no configuration file is found, the server will use environment variables and default values.
+
 ### CLI Flags
 
-- `--config`: Path to YAML configuration file
+- `--config`: Path to YAML configuration file (optional, see above for automatic location)
 - `--sse` (default: false): Enable SSE transport
 - `--sse-addr` (default: :3000): Address to bind SSE transport (host:port). Can also be set via `GOMEM_SSE_ADDR`.
 - `--http` (default: false): Enable HTTP JSON API transport
