@@ -199,6 +199,43 @@ func (w *Watcher) processFile(ctx context.Context, fullPath string) {
 	startTime := time.Now()
 	slog.Debug("processing kb file", "file", rel)
 
+	// Get file info to check modification time
+	fileInfo, err := os.Stat(fullPath)
+	if err != nil {
+		slog.Warn("failed to stat kb file", "file", rel, "error", err)
+		return
+	}
+	fileModTime := fileInfo.ModTime()
+
+	// Check if document already exists and compare modification times
+	existing, err := w.storage.GetDocument(processingCtx, rel)
+	if err != nil {
+		slog.Debug("error getting existing document (will process)", "file", rel, "error", err)
+	} else if existing == nil {
+		slog.Debug("document not found in database (will process)", "file", rel)
+	} else {
+		slog.Debug("document found in database", "file", rel, "has_metadata", existing.Metadata != nil)
+		// Document exists, check if file has been modified since last processing
+		if lastModStr, ok := existing.Metadata["last_modified"].(string); ok {
+			if lastModTime, err := time.Parse(time.RFC3339, lastModStr); err == nil {
+				// If file hasn't been modified since last processing, skip
+				if !fileModTime.After(lastModTime) {
+					slog.Info("kb file not modified since last processing, skipping", "file", rel,
+						"file_mtime", fileModTime.Format(time.RFC3339),
+						"db_mtime", lastModTime.Format(time.RFC3339))
+					return
+				}
+				slog.Info("kb file modified, reprocessing", "file", rel,
+					"file_mtime", fileModTime.Format(time.RFC3339),
+					"db_mtime", lastModTime.Format(time.RFC3339))
+			} else {
+				slog.Debug("failed to parse last_modified timestamp (will process)", "file", rel, "error", err)
+			}
+		} else {
+			slog.Debug("document has no last_modified in metadata (will process)", "file", rel)
+		}
+	}
+
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		slog.Warn("failed reading kb file", "file", rel, "error", err)
@@ -234,8 +271,9 @@ func (w *Watcher) processFile(ctx context.Context, fullPath string) {
 
 	// Save each chunk as a separate document with its own embedding
 	metadata := map[string]interface{}{
-		"source":     "watcher",
-		"total_size": contentSize,
+		"source":        "watcher",
+		"total_size":    contentSize,
+		"last_modified": fileModTime.Format(time.RFC3339),
 	}
 
 	if err := w.storage.SaveDocumentChunks(processingCtx, rel, chunks, embeddings, metadata); err != nil {

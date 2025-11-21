@@ -128,7 +128,9 @@ func (s *SurrealDBStorage) DeleteDocument(ctx context.Context, filePath string) 
 
 // GetDocument retrieves a knowledge base document by file path
 func (s *SurrealDBStorage) GetDocument(ctx context.Context, filePath string) (*Document, error) {
-	query := "SELECT * FROM knowledge_base WHERE file_path = $file_path"
+	// Try to find by source_file first (for chunked documents), then by file_path
+	// Order by chunk_index to get the first chunk
+	query := "SELECT * FROM knowledge_base WHERE source_file = $file_path OR file_path = $file_path ORDER BY chunk_index ASC LIMIT 1"
 	params := map[string]interface{}{
 		"file_path": filePath,
 	}
