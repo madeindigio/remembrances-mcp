@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
+	embedded "github.com/madeindigio/surrealdb-embedded-golang"
 	"github.com/surrealdb/surrealdb.go"
-	embedded "github.com/yourusername/surrealdb-embedded"
 )
 
 // SurrealDBStorage implements the Storage interface using SurrealDB
@@ -67,9 +67,9 @@ func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 
 	// Priority: if DBPath is set, use embedded; otherwise use remote URL
 	if s.config.DBPath != "" && s.config.URL == "" {
-		// Use embedded SurrealDB with RocksDB
-		log.Printf("Connecting to embedded SurrealDB at %s", s.config.DBPath)
-		s.embeddedDB, err = embedded.NewRocksDB(s.config.DBPath)
+		// Use embedded SurrealDB with configurable backend (memory, rocksdb, surrealkv)
+		log.Printf("Connecting to embedded SurrealDB with URL: %s", s.config.DBPath)
+		s.embeddedDB, err = embedded.NewFromURL(s.config.DBPath)
 		if err != nil {
 			return fmt.Errorf("failed to connect to embedded SurrealDB: %w", err)
 		}

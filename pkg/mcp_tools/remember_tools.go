@@ -143,7 +143,7 @@ func (tm *ToolManager) lastToRememberHandler(ctx context.Context, request *proto
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Recent memory context for user '%s':\n\n```yaml\n%s```", input.UserID, string(yamlBytes)),
+			Text: string(yamlBytes),
 		},
 	}, false), nil
 }

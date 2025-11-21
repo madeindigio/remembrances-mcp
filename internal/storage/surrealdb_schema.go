@@ -30,7 +30,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 6 // v6: document chunking support
+	targetVersion := 7 // v7: fix metadata to allow flexible fields
 	if currentVersion < targetVersion {
 		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -80,8 +80,9 @@ func (s *SurrealDBStorage) ensureSchemaVersionTable(ctx context.Context) error {
 
 // getCurrentSchemaVersion returns the current schema version, 0 if no version is set
 func (s *SurrealDBStorage) getCurrentSchemaVersion(ctx context.Context) (int, error) {
+	// Query the single version record with fixed ID
 	result, err := s.query(ctx, `
-		SELECT * FROM schema_version ORDER BY version DESC LIMIT 1;
+		SELECT * FROM schema_version:current;
 	`, nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to query schema version: %w", err)
@@ -121,9 +122,9 @@ func (s *SurrealDBStorage) getCurrentSchemaVersion(ctx context.Context) (int, er
 
 // setSchemaVersion updates the schema version
 func (s *SurrealDBStorage) setSchemaVersion(ctx context.Context, version int) error {
-	// The CREATE statement returns an array-like result; request the matching type to avoid CBOR unmarshal errors.
+	// Use UPSERT with a fixed ID to ensure only one version record exists
 	_, err := s.query(ctx, `
-		CREATE schema_version SET version = $version;
+		UPSERT schema_version:current SET version = $version;
 	`, map[string]interface{}{
 		"version": version,
 	})
@@ -173,6 +174,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewMigrationV5(s.db)
 	case 6:
 		migration = migrations.NewV6DocumentChunks(s.db)
+	case 7:
+		migration = migrations.NewV7FlexibleMetadataFix(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}
@@ -204,7 +207,7 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 			`DEFINE FIELD user_id ON vector_memories TYPE option<string>;`,
 			`DEFINE FIELD content ON vector_memories TYPE string;`,
 			fmt.Sprintf(`DEFINE FIELD embedding ON vector_memories TYPE array<float, %d>;`, defaultMtreeDim),
-			`DEFINE FIELD metadata ON vector_memories TYPE object DEFAULT {};`,
+			`DEFINE FIELD metadata ON vector_memories FLEXIBLE TYPE object DEFAULT {};`,
 			`DEFINE FIELD created_at ON vector_memories TYPE datetime DEFAULT time::now();`,
 			`DEFINE FIELD updated_at ON vector_memories TYPE datetime DEFAULT time::now();`,
 			fmt.Sprintf(`DEFINE INDEX idx_vector_embedding ON vector_memories FIELDS embedding MTREE DIMENSION %d;`, defaultMtreeDim),
@@ -214,7 +217,7 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 			`DEFINE FIELD file_path ON knowledge_base TYPE string;`,
 			`DEFINE FIELD content ON knowledge_base TYPE string;`,
 			fmt.Sprintf(`DEFINE FIELD embedding ON knowledge_base TYPE array<float, %d>;`, defaultMtreeDim),
-			`DEFINE FIELD metadata ON knowledge_base TYPE object DEFAULT {};`,
+			`DEFINE FIELD metadata ON knowledge_base FLEXIBLE TYPE object DEFAULT {};`,
 			`DEFINE FIELD created_at ON knowledge_base TYPE datetime DEFAULT time::now();`,
 			`DEFINE FIELD updated_at ON knowledge_base TYPE datetime DEFAULT time::now();`,
 			`DEFINE INDEX idx_kb_file_path ON knowledge_base FIELDS file_path UNIQUE;`,
@@ -224,7 +227,7 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 			`DEFINE TABLE entities SCHEMAFULL;`,
 			`DEFINE FIELD entity_type ON entities TYPE string;`,
 			`DEFINE FIELD name ON entities TYPE string;`,
-			`DEFINE FIELD properties ON entities TYPE object DEFAULT {};`,
+			`DEFINE FIELD properties ON entities FLEXIBLE TYPE object DEFAULT {};`,
 			`DEFINE FIELD created_at ON entities TYPE datetime DEFAULT time::now();`,
 			`DEFINE INDEX idx_entity_name ON entities FIELDS name;`,
 		}
@@ -257,6 +260,20 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 			`DEFINE FIELD chunk_count ON knowledge_base TYPE int DEFAULT 0;`,
 			`DEFINE FIELD source_file ON knowledge_base TYPE option<string>;`,
 		}
+	case 7:
+		// V7: Fix metadata/properties fields to be FLEXIBLE
+		// This allows dynamic nested fields in metadata objects
+		statements = []string{
+			// Remove old field definitions
+			`REMOVE FIELD metadata ON vector_memories;`,
+			`REMOVE FIELD metadata ON knowledge_base;`,
+			`REMOVE FIELD properties ON entities;`,
+			// Redefine with FLEXIBLE
+			`DEFINE FIELD metadata ON vector_memories FLEXIBLE TYPE object DEFAULT {};`,
+			`DEFINE FIELD metadata ON knowledge_base FLEXIBLE TYPE object DEFAULT {};`,
+			`DEFINE FIELD properties ON entities FLEXIBLE TYPE object DEFAULT {};`,
+		}
+		log.Println("Migration V7: Fixed metadata/properties fields to be FLEXIBLE (allows dynamic nested fields)")
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}

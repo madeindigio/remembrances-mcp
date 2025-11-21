@@ -31,7 +31,7 @@ endif
 # CGO flags for linking with llama.cpp and surrealdb-embedded
 export CGO_ENABLED := 1
 export CGO_CFLAGS := -I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include -I$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/include
-export CGO_LDFLAGS := -L$(GO_LLAMA_DIR) -L$(GO_LLAMA_DIR)/build/bin -L$(GO_LLAMA_DIR)/build/common -L$(SURREALDB_EMBEDDED_DIR) -lllama -lcommon -lggml -lggml-base -lsurrealdb_embedded_rs $(LLAMA_LDFLAGS)
+export CGO_LDFLAGS := -L$(GO_LLAMA_DIR) -L$(GO_LLAMA_DIR)/build/bin -L$(GO_LLAMA_DIR)/build/common -L$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release -lllama -lcommon -lggml -lggml-base -lsurrealdb_embedded_rs $(LLAMA_LDFLAGS)
 
 # Go linker flags to set RPATH
 GO_LDFLAGS := -ldflags="-r \$$ORIGIN"
@@ -116,9 +116,10 @@ surrealdb-embedded:
 		echo "Error: surrealdb-embedded not found at $(SURREALDB_EMBEDDED_DIR)"; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(SURREALDB_EMBEDDED_DIR)/libsurrealdb_embedded_rs.so" ]; then \
+	@if [ ! -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so" ] && \
+	   [ ! -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib" ]; then \
 		echo "surrealdb-embedded not built. Building now..."; \
-		cd $(SURREALDB_EMBEDDED_DIR) && make; \
+		cd $(SURREALDB_EMBEDDED_DIR) && make build-rust; \
 	else \
 		echo "surrealdb-embedded library already built"; \
 	fi
@@ -130,8 +131,11 @@ build: llama-cpp surrealdb-embedded
 	@mkdir -p $(BUILD_DIR)
 	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Copying shared libraries to build directory..."
-	@# Copy SurrealDB library
-	@cp $(SURREALDB_EMBEDDED_DIR)/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || true
+	@# Copy SurrealDB embedded library from Rust build directory
+	@echo "Copying SurrealDB embedded library..."
+	@cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || \
+	 cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib $(BUILD_DIR)/ 2>/dev/null || \
+	 echo "⚠ Warning: SurrealDB embedded library not found"
 	@# Copy ALL llama.cpp shared libraries (.so and .dylib)
 	@# This includes libraries for CUDA, Metal, ROCm, Vulkan, etc.
 	@echo "Copying all llama.cpp shared libraries..."
@@ -141,6 +145,7 @@ build: llama-cpp surrealdb-embedded
 	@find $(GO_LLAMA_DIR)/build/common -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
 	@find $(GO_LLAMA_DIR)/build/ggml -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
 	@echo "Shared libraries copied successfully"
+	@ls -lh $(BUILD_DIR)/libsurrealdb_embedded_rs.* 2>/dev/null && echo "✓ SurrealDB embedded library copied" || echo "⚠ SurrealDB embedded library not found in build/"
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Run the application
@@ -272,8 +277,11 @@ build-variant: surrealdb-embedded
 	@# Build the Go binary with variant-specific name
 	@mkdir -p $(BUILD_DIR)
 	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-$(VARIANT) ./cmd/remembrances-mcp
-	@# Copy SurrealDB library
-	@cp $(SURREALDB_EMBEDDED_DIR)/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || true
+	@# Copy SurrealDB embedded library
+	@echo "Copying SurrealDB embedded library..."
+	@cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || \
+	 cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib $(BUILD_DIR)/ 2>/dev/null || \
+	 echo "⚠ Warning: SurrealDB embedded library not found"
 	@# Copy variant-specific llama.cpp libraries to build root
 	@echo "Copying $(VARIANT) libraries to build directory..."
 	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.so $(BUILD_DIR)/ 2>/dev/null || true
@@ -345,9 +353,11 @@ dist-variant:
 	@# Copy variant-specific libraries
 	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.so dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
 	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.dylib dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
-	@# Copy SurrealDB library
-	@cp $(BUILD_DIR)/libsurrealdb_embedded_rs.so dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
-	@cp $(BUILD_DIR)/libsurrealdb_embedded_rs.dylib dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
+	@# Copy SurrealDB embedded library
+	@echo "Copying SurrealDB embedded library to distribution..."
+	@cp $(BUILD_DIR)/libsurrealdb_embedded_rs.so dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || \
+	 cp $(BUILD_DIR)/libsurrealdb_embedded_rs.dylib dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || \
+	 echo "⚠ Warning: SurrealDB embedded library not found for distribution"
 	@# Copy documentation and configs
 	@cp README.md dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
 	@cp LICENSE.txt dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true

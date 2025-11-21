@@ -263,5 +263,5 @@ Considerar alternativas como:
 ## Referencias
 
 - [SurrealDB Rust SDK](https://docs.surrealdb.com/docs/integration/libraries/rust)
-- [Wrapped library](https://github.com/yourusername/surrealdb-embedded)
+- [Wrapped library](https://github.com/madeindigio/surrealdb-embedded-golang)
 - Issue tracking: Este documento

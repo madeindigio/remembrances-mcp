@@ -150,6 +150,7 @@ func (s *SurrealDBStorage) GetDocument(ctx context.Context, filePath string) (*D
 	}
 
 	resultMap := queryResult.Result[0]
+
 	var embedding []float32
 	if embeddingSlice, ok := resultMap["embedding"].([]interface{}); ok {
 		embedding = make([]float32, len(embeddingSlice))
@@ -293,7 +294,8 @@ func (s *SurrealDBStorage) SaveDocumentChunks(ctx context.Context, filePath stri
 			}
 		`
 
-		if _, err := s.query(ctx, query, params); err != nil {
+		_, err := s.query(ctx, query, params)
+		if err != nil {
 			return fmt.Errorf("failed to create chunk %d: %w", i, err)
 		}
 	}

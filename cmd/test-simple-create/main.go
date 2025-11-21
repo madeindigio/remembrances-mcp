@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	embedded "github.com/yourusername/surrealdb-embedded"
+	embedded "github.com/madeindigio/surrealdb-embedded-golang"
 )
 
 func main() {
