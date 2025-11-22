@@ -114,15 +114,34 @@ func (s *SurrealDBStorage) UpdateVector(ctx context.Context, id, userID, content
 		emb64[i] = float64(v)
 	}
 
-	data := map[string]interface{}{
+	// Use DELETE FROM WHERE + CREATE to avoid deserialization issues with newlines
+	// First delete the existing record
+	deleteQuery := `DELETE FROM semantic_memories WHERE id = $id`
+	deleteParams := map[string]interface{}{"id": id}
+	if _, err := s.query(ctx, deleteQuery, deleteParams); err != nil {
+		return fmt.Errorf("failed to delete existing vector: %w", err)
+	}
+
+	// Recreate with updated values
+	createQuery := `
+		CREATE semantic_memories CONTENT {
+			id: $id,
+			user_id: $user_id,
+			content: $content,
+			embedding: $embedding,
+			metadata: $metadata
+		}
+	`
+	params := map[string]interface{}{
+		"id":        id,
+		"user_id":   userID,
 		"content":   content,
 		"embedding": emb64,
 		"metadata":  metadata,
 	}
 
-	_, err := s.update(ctx, id, data)
-	if err != nil {
-		return fmt.Errorf("failed to update vector: %w", err)
+	if _, err := s.query(ctx, createQuery, params); err != nil {
+		return fmt.Errorf("failed to recreate vector: %w", err)
 	}
 
 	return nil
@@ -130,7 +149,10 @@ func (s *SurrealDBStorage) UpdateVector(ctx context.Context, id, userID, content
 
 // DeleteVector deletes a vector memory
 func (s *SurrealDBStorage) DeleteVector(ctx context.Context, id, userID string) error {
-	_, err := s.delete(ctx, id)
+	// Use DELETE FROM WHERE to avoid deserialization issues with newlines
+	deleteQuery := `DELETE FROM semantic_memories WHERE id = $id`
+	params := map[string]interface{}{"id": id}
+	_, err := s.query(ctx, deleteQuery, params)
 	if err != nil {
 		return fmt.Errorf("failed to delete vector: %w", err)
 	}

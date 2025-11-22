@@ -30,7 +30,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 7 // v7: fix metadata to allow flexible fields
+	targetVersion := 8 // v8: fix kv_memories value field to allow strings with newlines
 	if currentVersion < targetVersion {
 		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -176,6 +176,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewV6DocumentChunks(s.db)
 	case 7:
 		migration = migrations.NewV7FlexibleMetadataFix(s.db)
+	case 8:
+		migration = migrations.NewV8FlexibleKVValue(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}
@@ -197,7 +199,7 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 			`DEFINE TABLE kv_memories SCHEMAFULL;`,
 			`DEFINE FIELD user_id ON kv_memories TYPE string;`,
 			`DEFINE FIELD key ON kv_memories TYPE string;`,
-			`DEFINE FIELD value ON kv_memories TYPE option<string | int | float | bool | object | array>;`,
+			`DEFINE FIELD value ON kv_memories FLEXIBLE TYPE option<string | int | float | bool | object | array>;`,
 			`DEFINE FIELD created_at ON kv_memories TYPE datetime DEFAULT time::now();`,
 			`DEFINE FIELD updated_at ON kv_memories TYPE datetime DEFAULT time::now();`,
 			`DEFINE INDEX idx_kv_user_key ON kv_memories FIELDS user_id, key UNIQUE;`,
@@ -274,6 +276,16 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 			`DEFINE FIELD properties ON entities FLEXIBLE TYPE object DEFAULT {};`,
 		}
 		log.Println("Migration V7: Fixed metadata/properties fields to be FLEXIBLE (allows dynamic nested fields)")
+	case 8:
+		// V8: Fix kv_memories value field to be FLEXIBLE
+		// This allows strings with newlines to be properly serialized/deserialized
+		statements = []string{
+			// Remove old field definition
+			`REMOVE FIELD value ON kv_memories;`,
+			// Redefine with FLEXIBLE
+			`DEFINE FIELD value ON kv_memories FLEXIBLE TYPE option<string | int | float | bool | object | array>;`,
+		}
+		log.Println("Migration V8: Fixed kv_memories value field to be FLEXIBLE (allows strings with newlines)")
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}

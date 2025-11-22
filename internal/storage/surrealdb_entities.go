@@ -189,7 +189,10 @@ func (s *SurrealDBStorage) GetEntity(ctx context.Context, entityID string) (*Ent
 
 // DeleteEntity deletes an entity and its relationships
 func (s *SurrealDBStorage) DeleteEntity(ctx context.Context, entityID string) error {
-	_, err := s.delete(ctx, entityID)
+	// Use DELETE FROM WHERE to avoid deserialization issues with newlines
+	deleteQuery := `DELETE FROM entities WHERE id = $id`
+	params := map[string]interface{}{"id": entityID}
+	_, err := s.query(ctx, deleteQuery, params)
 	if err != nil {
 		return fmt.Errorf("failed to delete entity: %w", err)
 	}

@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
-
 )
 
 // SaveFact saves a key-value fact for a user
@@ -16,24 +14,33 @@ func (s *SurrealDBStorage) SaveFact(ctx context.Context, userID, key string, val
 	}
 
 	if existingID != "" {
-		// Fact exists, update value and timestamp
-		updateQuery := "UPDATE " + existingID + " SET value = $value, updated_at = $updated_at"
+		// Fact exists - use DELETE FROM WHERE strategy to avoid response deserialization
+		// DELETE FROM doesn't return the deleted records by default
+		deleteQuery := `DELETE FROM kv_memories WHERE user_id = $user_id AND key = $key`
 		params := map[string]interface{}{
-			"value":      value,
-			"updated_at": time.Now().UTC(),
-		}
-		if _, err := s.query(ctx, updateQuery, params); err != nil {
-			return fmt.Errorf("failed to update fact: %w", err)
-		}
-	} else {
-		data := map[string]interface{}{
 			"user_id": userID,
 			"key":     key,
-			"value":   value,
 		}
-		if _, err := s.create(ctx, "kv_memories", data); err != nil {
-			return fmt.Errorf("failed to save fact: %w", err)
+		if _, err := s.query(ctx, deleteQuery, params); err != nil {
+			return fmt.Errorf("failed to delete existing fact: %w", err)
 		}
+	}
+
+	// Create (or recreate) the fact using query syntax
+	query := `
+		CREATE kv_memories CONTENT {
+			user_id: $user_id,
+			key: $key,
+			value: $value
+		}
+	`
+	params := map[string]interface{}{
+		"user_id": userID,
+		"key":     key,
+		"value":   value,
+	}
+	if _, err := s.query(ctx, query, params); err != nil {
+		return fmt.Errorf("failed to save fact: %w", err)
 	}
 
 	// Recalculate statistics after mutation
@@ -83,13 +90,31 @@ func (s *SurrealDBStorage) UpdateFact(ctx context.Context, userID, key string, v
 		return fmt.Errorf("fact not found for user %s and key %s", userID, key)
 	}
 
-	query := "UPDATE " + recordID + " SET value = $value, updated_at = $updated_at"
+	// Use DELETE FROM WHERE + CREATE strategy to avoid response deserialization issues
+	deleteQuery := `DELETE FROM kv_memories WHERE user_id = $user_id AND key = $key`
 	params := map[string]interface{}{
-		"value":      value,
-		"updated_at": time.Now().UTC(),
+		"user_id": userID,
+		"key":     key,
+	}
+	if _, err := s.query(ctx, deleteQuery, params); err != nil {
+		return fmt.Errorf("failed to delete existing fact: %w", err)
+	}
+
+	// Recreate with new value
+	query := `
+		CREATE kv_memories CONTENT {
+			user_id: $user_id,
+			key: $key,
+			value: $value
+		}
+	`
+	params = map[string]interface{}{
+		"user_id": userID,
+		"key":     key,
+		"value":   value,
 	}
 	if _, err := s.query(ctx, query, params); err != nil {
-		return fmt.Errorf("failed to update fact: %w", err)
+		return fmt.Errorf("failed to recreate fact: %w", err)
 	}
 
 	return nil
@@ -102,22 +127,11 @@ func (s *SurrealDBStorage) DeleteFact(ctx context.Context, userID, key string) e
 		"key":     key,
 	}
 
-	deleteQuery := "DELETE FROM kv_memories WHERE user_id = $user_id AND key = $key RETURN BEFORE"
-	result, err := s.query(ctx, deleteQuery, params)
+	// Use DELETE FROM WHERE without RETURN to avoid deserialization issues
+	deleteQuery := "DELETE FROM kv_memories WHERE user_id = $user_id AND key = $key"
+	_, err := s.query(ctx, deleteQuery, params)
 	if err != nil {
 		return fmt.Errorf("failed to delete fact: %w", err)
-	}
-
-	deletedCount := 0
-	if result != nil && len(*result) > 0 {
-		qr := (*result)[0]
-		if qr.Status == "OK" {
-			deletedCount = len(qr.Result)
-		}
-	}
-
-	if deletedCount == 0 {
-		return nil
 	}
 
 	if err := s.updateUserStat(ctx, userID, "key_value_count", -1); err != nil {
