@@ -31,7 +31,7 @@ endif
 # CGO flags for linking with llama.cpp and surrealdb-embedded
 export CGO_ENABLED := 1
 export CGO_CFLAGS := -I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include -I$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/include
-export CGO_LDFLAGS := -L$(GO_LLAMA_DIR) -L$(GO_LLAMA_DIR)/build/bin -L$(GO_LLAMA_DIR)/build/common -L$(SURREALDB_EMBEDDED_DIR) -lllama -lcommon -lggml -lggml-base -lsurrealdb_embedded_rs $(LLAMA_LDFLAGS)
+export CGO_LDFLAGS := -L$(GO_LLAMA_DIR) -L$(GO_LLAMA_DIR)/build/bin -L$(GO_LLAMA_DIR)/build/common -L$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release -lllama -lcommon -lggml -lggml-base -lsurrealdb_embedded_rs $(LLAMA_LDFLAGS)
 
 # Go linker flags to set RPATH
 GO_LDFLAGS := -ldflags="-r \$$ORIGIN"
@@ -56,6 +56,14 @@ help:
 	@echo "  make build-libs-openblas     - Build llama.cpp with OpenBLAS → build/libs/openblas/"
 	@echo "  make build-libs-cpu          - Build llama.cpp CPU-only → build/libs/cpu/"
 	@echo ""
+	@echo "Multi-variant binary builds:"
+	@echo "  make build-variant VARIANT=cuda  - Build single variant binary (remembrances-mcp-cuda)"
+	@echo "  make build-all-variants          - Build all variant binaries (cpu, cuda, hipblas, etc.)"
+	@echo ""
+	@echo "Distribution packaging:"
+	@echo "  make dist-variant VARIANT=cuda   - Package single variant with libraries as zip"
+	@echo "  make dist-all                    - Package all variants as separate zip files"
+	@echo ""
 	@echo "Cross-compilation targets:"
 	@echo "  make build-cross        - Cross-compile for all platforms using Docker"
 	@echo "  make build-libs-cross   - Build only shared libraries for cross-compilation"
@@ -71,7 +79,8 @@ help:
 	@echo "Examples:"
 	@echo "  make build                      # Build with default settings"
 	@echo "  make BUILD_TYPE=cuda build      # Build with CUDA support (recommended)"
-	@echo "  make build-libs-all-variants    # Build all GPU variants for distribution"
+	@echo "  make build-all-variants         # Build all GPU variant binaries"
+	@echo "  make dist-all                   # Package all variants for distribution"
 	@echo "  make run                        # Build and run"
 	@echo "  make build-cross                # Cross-compile for all platforms"
 	@echo "  make release-cross              # Create GitHub release"
@@ -107,9 +116,10 @@ surrealdb-embedded:
 		echo "Error: surrealdb-embedded not found at $(SURREALDB_EMBEDDED_DIR)"; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(SURREALDB_EMBEDDED_DIR)/libsurrealdb_embedded_rs.so" ]; then \
+	@if [ ! -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so" ] && \
+	   [ ! -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib" ]; then \
 		echo "surrealdb-embedded not built. Building now..."; \
-		cd $(SURREALDB_EMBEDDED_DIR) && make; \
+		cd $(SURREALDB_EMBEDDED_DIR) && make build-rust; \
 	else \
 		echo "surrealdb-embedded library already built"; \
 	fi
@@ -121,8 +131,11 @@ build: llama-cpp surrealdb-embedded
 	@mkdir -p $(BUILD_DIR)
 	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Copying shared libraries to build directory..."
-	@# Copy SurrealDB library
-	@cp $(SURREALDB_EMBEDDED_DIR)/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || true
+	@# Copy SurrealDB embedded library from Rust build directory
+	@echo "Copying SurrealDB embedded library..."
+	@cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || \
+	 cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib $(BUILD_DIR)/ 2>/dev/null || \
+	 echo "⚠ Warning: SurrealDB embedded library not found"
 	@# Copy ALL llama.cpp shared libraries (.so and .dylib)
 	@# This includes libraries for CUDA, Metal, ROCm, Vulkan, etc.
 	@echo "Copying all llama.cpp shared libraries..."
@@ -132,6 +145,7 @@ build: llama-cpp surrealdb-embedded
 	@find $(GO_LLAMA_DIR)/build/common -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
 	@find $(GO_LLAMA_DIR)/build/ggml -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
 	@echo "Shared libraries copied successfully"
+	@ls -lh $(BUILD_DIR)/libsurrealdb_embedded_rs.* 2>/dev/null && echo "✓ SurrealDB embedded library copied" || echo "⚠ SurrealDB embedded library not found in build/"
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Run the application
@@ -250,7 +264,144 @@ endif
 	@echo ""
 	@echo "To use a specific variant, copy libraries from build/libs/{variant}/ to build/"
 
-# Package all library variants for distribution
+# Build a single variant binary with specific name (e.g., remembrances-mcp-cuda)
+build-variant: surrealdb-embedded
+	@if [ -z "$(VARIANT)" ]; then \
+		echo "Error: VARIANT not specified"; \
+		echo "Usage: make build-variant VARIANT=cuda"; \
+		exit 1; \
+	fi
+	@echo "Building variant binary: $(BINARY_NAME)-$(VARIANT)"
+	@# First build the libraries for this variant
+	@$(MAKE) build-libs-variant VARIANT=$(VARIANT)
+	@# Build the Go binary with variant-specific name
+	@mkdir -p $(BUILD_DIR)
+	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-$(VARIANT) ./cmd/remembrances-mcp
+	@# Copy SurrealDB embedded library
+	@echo "Copying SurrealDB embedded library..."
+	@cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || \
+	 cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib $(BUILD_DIR)/ 2>/dev/null || \
+	 echo "⚠ Warning: SurrealDB embedded library not found"
+	@# Copy variant-specific llama.cpp libraries to build root
+	@echo "Copying $(VARIANT) libraries to build directory..."
+	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.so $(BUILD_DIR)/ 2>/dev/null || true
+	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.dylib $(BUILD_DIR)/ 2>/dev/null || true
+	@echo "✓ Variant binary built: $(BUILD_DIR)/$(BINARY_NAME)-$(VARIANT)"
+
+# Build all variant binaries
+build-all-variants:
+	@echo "Building all variant binaries for $(PLATFORM)..."
+	@echo ""
+ifeq ($(PLATFORM),darwin)
+	@# macOS: CPU and Metal
+	@echo "=== Building CPU variant binary ==="
+	@$(MAKE) build-variant VARIANT=cpu
+	@echo ""
+	@echo "=== Building Metal variant binary ==="
+	@$(MAKE) build-variant VARIANT=metal
+	@echo ""
+	@echo "✓ All macOS variant binaries built successfully!"
+else ifeq ($(PLATFORM),linux)
+	@# Linux: CPU, CUDA, HIPBlas, OpenBLAS
+	@echo "=== Building CPU variant binary ==="
+	@$(MAKE) build-variant VARIANT=cpu
+	@echo ""
+	@if command -v nvcc >/dev/null 2>&1; then \
+		echo "=== Building CUDA variant binary ==="; \
+		$(MAKE) build-variant VARIANT=cuda; \
+		echo ""; \
+	else \
+		echo "⚠ Skipping CUDA (nvcc not found)"; \
+	fi
+	@if [ -d "/opt/rocm" ]; then \
+		echo "=== Building HIPBlas variant binary ==="; \
+		$(MAKE) build-variant VARIANT=hipblas; \
+		echo ""; \
+	else \
+		echo "⚠ Skipping HIPBlas (ROCm not found)"; \
+	fi
+	@if pkg-config --exists openblas 2>/dev/null || [ -f "/usr/include/openblas/cblas.h" ]; then \
+		echo "=== Building OpenBLAS variant binary ==="; \
+		$(MAKE) build-variant VARIANT=openblas; \
+		echo ""; \
+	else \
+		echo "⚠ Skipping OpenBLAS (not found)"; \
+	fi
+	@echo "✓ All Linux variant binaries built successfully!"
+endif
+	@echo ""
+	@echo "Variant binaries available in $(BUILD_DIR)/:"
+	@ls -lh $(BUILD_DIR)/$(BINARY_NAME)-* 2>/dev/null || echo "  (none found)"
+
+# Package a single variant with its libraries as a zip file
+dist-variant:
+	@if [ -z "$(VARIANT)" ]; then \
+		echo "Error: VARIANT not specified"; \
+		echo "Usage: make dist-variant VARIANT=cuda"; \
+		exit 1; \
+	fi
+	@echo "Packaging $(VARIANT) variant for distribution..."
+	@# Ensure the variant binary exists
+	@if [ ! -f "$(BUILD_DIR)/$(BINARY_NAME)-$(VARIANT)" ]; then \
+		echo "Building $(VARIANT) variant first..."; \
+		$(MAKE) build-variant VARIANT=$(VARIANT); \
+	fi
+	@# Create dist directory structure
+	@mkdir -p dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)
+	@# Copy variant binary with default name
+	@cp $(BUILD_DIR)/$(BINARY_NAME)-$(VARIANT) dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/$(BINARY_NAME)
+	@# Copy variant-specific libraries
+	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.so dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
+	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.dylib dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
+	@# Copy SurrealDB embedded library
+	@echo "Copying SurrealDB embedded library to distribution..."
+	@cp $(BUILD_DIR)/libsurrealdb_embedded_rs.so dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || \
+	 cp $(BUILD_DIR)/libsurrealdb_embedded_rs.dylib dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || \
+	 echo "⚠ Warning: SurrealDB embedded library not found for distribution"
+	@# Copy documentation and configs
+	@cp README.md dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
+	@cp LICENSE.txt dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
+	@cp config.sample.yaml dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
+	@cp config.sample.gguf.yaml dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
+	@cp run-remembrances.sh dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
+	@# Create variant info file
+	@echo "Variant: $(VARIANT)" > dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/VARIANT_INFO.txt
+	@echo "Platform: $(PLATFORM)" >> dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/VARIANT_INFO.txt
+	@echo "Architecture: $(UNAME_M)" >> dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/VARIANT_INFO.txt
+	@echo "Built: $$(date)" >> dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/VARIANT_INFO.txt
+	@# Create zip archive
+	@cd dist-variants && zip -r $(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M).zip $(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)
+	@# Clean up temporary directory
+	@rm -rf dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)
+	@echo "✓ Package created: dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M).zip"
+	@ls -lh dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M).zip
+
+# Package all variants for distribution
+dist-all:
+	@echo "Packaging all variants for distribution..."
+	@mkdir -p dist-variants
+ifeq ($(PLATFORM),darwin)
+	@# macOS: CPU and Metal
+	@$(MAKE) dist-variant VARIANT=cpu
+	@$(MAKE) dist-variant VARIANT=metal
+else ifeq ($(PLATFORM),linux)
+	@# Linux: CPU and available GPU variants
+	@$(MAKE) dist-variant VARIANT=cpu
+	@if command -v nvcc >/dev/null 2>&1; then \
+		$(MAKE) dist-variant VARIANT=cuda; \
+	fi
+	@if [ -d "/opt/rocm" ]; then \
+		$(MAKE) dist-variant VARIANT=hipblas; \
+	fi
+	@if pkg-config --exists openblas 2>/dev/null || [ -f "/usr/include/openblas/cblas.h" ]; then \
+		$(MAKE) dist-variant VARIANT=openblas; \
+	fi
+endif
+	@echo ""
+	@echo "✓ All variant packages created in dist-variants/:"
+	@ls -lh dist-variants/*.zip 2>/dev/null || echo "  (no packages found)"
+
+# Package all library variants for distribution (legacy target)
 package-libs-all:
 	@echo "Packaging all library variants..."
 	@mkdir -p dist/libs

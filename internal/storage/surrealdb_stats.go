@@ -3,9 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
-
 )
 
 // GetStats returns statistics about stored memories by counting current records.
@@ -131,8 +129,6 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 
 // updateUserStat atomically updates a specific statistic for a user.
 func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField string, delta int) error {
-	log.Printf("DEBUG: updateUserStat called - userID: %s, statField: %s, delta: %d", userID, statField, delta)
-
 	var countQuery string
 	var params map[string]interface{}
 	var newValue int
@@ -182,7 +178,6 @@ func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField
 			return fmt.Errorf("failed to create user stat %s for user %s: %w", statField, userID, err)
 		}
 	}
-	log.Printf("DEBUG: updateUserStat completed successfully; %s = %d", statField, newValue)
 	return nil
 }
 

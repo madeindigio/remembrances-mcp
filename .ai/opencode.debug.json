@@ -1,0 +1,16 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "github-copilot/gpt-4.1",
+  "mcp": {
+    "remembrances": {
+      "type": "local",
+      "command": [
+        "/www/MCP/remembrances-mcp/build/remembrances-mcp",
+        "--config",
+        "/www/MCP/remembrances-mcp/config.sample.gguf.yaml"
+      ],
+      "enabled": true,
+      "environment": {}
+    }
+  }
+}

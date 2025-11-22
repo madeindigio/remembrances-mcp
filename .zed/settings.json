@@ -15,6 +15,12 @@
       "command": "mycommandmcp",
       "args": ["--config", "/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"]
     },
+    "remembrances": {
+      "env": {},
+      "enabled": true,
+      "command": "./build/remembrances-mcp",
+      "args": ["--config", "./config.sample.gguf.yaml"]
+    },
     "serena": {
       "env": {},
       "enabled": true,
@@ -30,12 +36,6 @@
         "--project",
         "/www/MCP/remembrances-mcp"
       ]
-    },
-    "remembrances": {
-      "env": {},
-      "enabled": true,
-      "command": "remembrances-mcp",
-      "args": ["--config", "/www/MCP/remembrances-mcp/config.sample.gguf.yaml"]
     }
   }
 }

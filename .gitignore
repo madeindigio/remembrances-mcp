@@ -2,6 +2,7 @@
 /bin/
 /build/
 /dist/
+/dist-variants/
 *.exe
 *.dll
 *.so

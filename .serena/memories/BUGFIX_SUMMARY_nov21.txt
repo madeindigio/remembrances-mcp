@@ -1,0 +1,64 @@
+================================================================================
+BUG FIX SUMMARY - Metadata Persistence Issue
+Date: November 21, 2025
+Status: RESOLVED
+================================================================================
+
+PROBLEM:
+- Metadata stored as empty {} in SurrealDB embedded
+- Documents reprocessed on every restart
+- Knowledge base lost file modification tracking
+
+ROOT CAUSE:
+- Schema used "TYPE object" instead of "FLEXIBLE TYPE object"
+- SurrealDB rejected dynamic nested fields silently
+- Migration V5 claimed fix but didn't actually apply it
+
+SOLUTION:
+- Added Migration V7 (internal/storage/surrealdb_schema.go:265-277)
+- REMOVE old field definitions
+- DEFINE with FLEXIBLE keyword
+- Target version updated to 7 (line 33)
+
+FILES MODIFIED:
+1. internal/storage/surrealdb_schema.go
+   - Migration V7 implementation
+   - V1 schema fixed with FLEXIBLE
+   - Remote mode handler added
+
+2. internal/storage/surrealdb_query_helper.go
+   - Removed debug logging
+
+3. internal/storage/surrealdb_documents.go
+   - Removed debug logging
+   - Fixed unused variable
+
+4. internal/storage/surrealdb_stats.go
+   - Removed debug logging
+
+TESTING:
+✅ test-simple-create: Library works correctly
+✅ test-schemaless: Metadata persists (4 fields)
+✅ test-direct-save: Full stack verified
+✅ Migration V7: Applies successfully
+✅ Data preservation: Confirmed
+
+BEFORE FIX:
+metadata IN:  map[chunk_count:2 chunk_index:0 last_modified:... source:test]
+metadata OUT: map[]  ← EMPTY!
+
+AFTER FIX:
+metadata IN:  map[chunk_count:2 chunk_index:0 last_modified:... source:test]
+metadata OUT: map[chunk_count:2 chunk_index:0 last_modified:... source:test]  ← CORRECT!
+
+DOCUMENTATION:
+- .serena/memories/BUG_FIX_metadata_persistence_nov21.md (comprehensive)
+- .serena/memories/BUGFIX_SUMMARY_nov21.txt (this file)
+
+MIGRATION PROCESS:
+1. Existing DBs: Auto-migrates on next startup
+2. Fresh installs: V1 schema includes FLEXIBLE
+3. Non-destructive: Preserves all existing data
+4. Verification: SELECT * FROM schema_version:current; (shows version 7)
+
+================================================================================

@@ -128,7 +128,9 @@ func (s *SurrealDBStorage) DeleteDocument(ctx context.Context, filePath string) 
 
 // GetDocument retrieves a knowledge base document by file path
 func (s *SurrealDBStorage) GetDocument(ctx context.Context, filePath string) (*Document, error) {
-	query := "SELECT * FROM knowledge_base WHERE file_path = $file_path"
+	// Try to find by source_file first (for chunked documents), then by file_path
+	// Order by chunk_index to get the first chunk
+	query := "SELECT * FROM knowledge_base WHERE source_file = $file_path OR file_path = $file_path ORDER BY chunk_index ASC LIMIT 1"
 	params := map[string]interface{}{
 		"file_path": filePath,
 	}
@@ -148,6 +150,7 @@ func (s *SurrealDBStorage) GetDocument(ctx context.Context, filePath string) (*D
 	}
 
 	resultMap := queryResult.Result[0]
+
 	var embedding []float32
 	if embeddingSlice, ok := resultMap["embedding"].([]interface{}); ok {
 		embedding = make([]float32, len(embeddingSlice))
@@ -291,7 +294,8 @@ func (s *SurrealDBStorage) SaveDocumentChunks(ctx context.Context, filePath stri
 			}
 		`
 
-		if _, err := s.query(ctx, query, params); err != nil {
+		_, err := s.query(ctx, query, params)
+		if err != nil {
 			return fmt.Errorf("failed to create chunk %d: %w", i, err)
 		}
 	}

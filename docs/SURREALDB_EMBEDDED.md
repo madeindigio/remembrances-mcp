@@ -220,5 +220,5 @@ El sistema de migraciones funciona de manera transparente con ambos backends:
 
 ## Referencias
 
-- [surrealdb-embedded](https://github.com/yourusername/surrealdb-embedded) - Librería Rust para SurrealDB embedded
+- [surrealdb-embedded](https://github.com/madeindigio/surrealdb-embedded-golang) - Librería Rust para SurrealDB embedded
 - [SurrealDB Official](https://surrealdb.com/) - Documentación oficial de SurrealDB

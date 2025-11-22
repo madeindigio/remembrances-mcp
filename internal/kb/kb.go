@@ -199,6 +199,47 @@ func (w *Watcher) processFile(ctx context.Context, fullPath string) {
 	startTime := time.Now()
 	slog.Debug("processing kb file", "file", rel)
 
+	// Get file info to check modification time
+	fileInfo, err := os.Stat(fullPath)
+	if err != nil {
+		slog.Warn("failed to stat kb file", "file", rel, "error", err)
+		return
+	}
+	fileModTime := fileInfo.ModTime()
+
+	// Check if document already exists and compare modification times
+	existing, err := w.storage.GetDocument(processingCtx, rel)
+	if err != nil {
+		slog.Info("DEBUG: error getting existing document (will process)", "file", rel, "error", err)
+	} else if existing == nil {
+		slog.Info("DEBUG: document not found in database (will process)", "file", rel)
+	} else {
+		slog.Info("DEBUG: document found in database", "file", rel, "has_metadata", existing.Metadata != nil, "metadata", existing.Metadata)
+		// Document exists, check if file has been modified since last processing
+		if lastModStr, ok := existing.Metadata["last_modified"].(string); ok {
+			if lastModTime, err := time.Parse(time.RFC3339, lastModStr); err == nil {
+				// Truncate both times to seconds for comparison (RFC3339 doesn't preserve nanoseconds)
+				fileModTimeTrunc := fileModTime.Truncate(time.Second)
+				lastModTimeTrunc := lastModTime.Truncate(time.Second)
+
+				// If file hasn't been modified since last processing, skip
+				if !fileModTimeTrunc.After(lastModTimeTrunc) {
+					slog.Debug("kb file not modified since last processing, skipping", "file", rel,
+						"file_mtime", fileModTimeTrunc.Format(time.RFC3339),
+						"db_mtime", lastModTimeTrunc.Format(time.RFC3339))
+					return
+				}
+				slog.Info("kb file modified, reprocessing", "file", rel,
+					"file_mtime", fileModTimeTrunc.Format(time.RFC3339),
+					"db_mtime", lastModTimeTrunc.Format(time.RFC3339))
+			} else {
+				slog.Info("DEBUG: failed to parse last_modified timestamp (will process)", "file", rel, "error", err, "last_modified", lastModStr)
+			}
+		} else {
+			slog.Info("DEBUG: document has no last_modified in metadata (will process)", "file", rel, "metadata_keys", getMetadataKeys(existing.Metadata))
+		}
+	}
+
 	content, err := os.ReadFile(fullPath)
 	if err != nil {
 		slog.Warn("failed reading kb file", "file", rel, "error", err)
@@ -234,8 +275,9 @@ func (w *Watcher) processFile(ctx context.Context, fullPath string) {
 
 	// Save each chunk as a separate document with its own embedding
 	metadata := map[string]interface{}{
-		"source":     "watcher",
-		"total_size": contentSize,
+		"source":        "watcher",
+		"total_size":    contentSize,
+		"last_modified": fileModTime.Format(time.RFC3339),
 	}
 
 	if err := w.storage.SaveDocumentChunks(processingCtx, rel, chunks, embeddings, metadata); err != nil {
@@ -244,6 +286,17 @@ func (w *Watcher) processFile(ctx context.Context, fullPath string) {
 	}
 
 	slog.Info("kb document synced", "file", rel, "bytes", contentSize, "chunks", len(chunks), "duration", time.Since(startTime))
+}
+
+func getMetadataKeys(metadata map[string]interface{}) []string {
+	if metadata == nil {
+		return nil
+	}
+	keys := make([]string, 0, len(metadata))
+	for k := range metadata {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func (w *Watcher) relativePath(full string) string {

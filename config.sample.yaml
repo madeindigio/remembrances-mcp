@@ -1,6 +1,11 @@
 # Sample YAML configuration file for Remembrances-MCP
 # This file contains all available configuration options with their default values.
 # You can copy this file to config.yaml and modify the values as needed.
+#
+# Standard locations (auto-detected if --config not specified):
+#   Linux: ~/.config/remembrances/config.yaml
+#   macOS: ~/Library/Application Support/remembrances/config.yaml
+#
 # Configuration can be overridden by command-line flags or environment variables.
 # Environment variables use the GOMEM_ prefix (e.g., GOMEM_SSE_ADDR).
 # Command-line flags take precedence over YAML, and environment variables over both.
@@ -87,4 +92,4 @@ ollama-model: "nomic-embed-text:latest"
 
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
-#log: ""
+log: "/www/MCP/remembrances-mcp/remembrances-mcp.externalsurreal.log"
