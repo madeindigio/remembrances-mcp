@@ -47,7 +47,8 @@ build: ## Build the static site
 	@echo "Building static site..."
 	docker run --rm \
 		-v $(WEBSITE_DIR):/src \
-		$(HUGO_IMAGE)
+		$(HUGO_IMAGE) \
+		hugo --cleanDestinationDir
 	@echo "Site built in $(PUBLIC_DIR)/"
 
 publish: build ## Build and publish to gh-pages branch
@@ -62,7 +63,12 @@ publish: build ## Build and publish to gh-pages branch
 
 clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."
-	rm -rf $(PUBLIC_DIR) resources .hugo_build.lock
+	@if [ -d "$(PUBLIC_DIR)" ] && [ "$$(stat -c '%u' $(PUBLIC_DIR) 2>/dev/null || stat -f '%u' $(PUBLIC_DIR) 2>/dev/null)" = "0" ]; then \
+		echo "Removing Docker-created files (requires sudo)..."; \
+		sudo rm -rf $(PUBLIC_DIR) resources .hugo_build.lock; \
+	else \
+		rm -rf $(PUBLIC_DIR) resources .hugo_build.lock; \
+	fi
 
 logs: ## Show Hugo server logs (if running detached)
 	docker logs -f $(CONTAINER_NAME)

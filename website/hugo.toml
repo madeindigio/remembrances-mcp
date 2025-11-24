@@ -3,57 +3,63 @@ title = 'Remembrances MCP'
 
 # Language configuration
 defaultContentLanguage = 'en'
-defaultContentLanguageInSubdir = false
+defaultContentLanguageInSubdir = true
 
 [languages]
   [languages.en]
     languageName = 'English'
-    weight = 1
     contentDir = 'content/en'
+    weight = 1
     [languages.en.params]
       description = "Remembrances MCP Documentation"
+      languageName = "English"
+      time_format_default = "2006-01-02"
+      time_format_blog = "2006-01-02"
     [[languages.en.menu.main]]
       name = "About"
       weight = 10
-      identifier = "about_en"
+      identifier = "about"
       url = "about/"
     [[languages.en.menu.main]]
       name = "Documentation"
       weight = 20
-      identifier = "docs_en"
+      identifier = "docs"
       url = "docs/"
     [[languages.en.menu.main]]
       name = "Blog"
       weight = 30
-      identifier = "blog_en"
+      identifier = "blog"
       url = "blog/"
-      
+
   [languages.es]
     languageName = 'Español'
     weight = 2
     contentDir = 'content/es'
     [languages.es.params]
       description = "Documentación de Remembrances MCP"
+      languageName = "Español"
+      time_format_default = "02/01/2006"
+      time_format_blog = "02/01/2006"
     [[languages.es.menu.main]]
       name = "Acerca de"
       weight = 10
-      identifier = "about_es"
+      identifier = "about"
       url = "about/"
     [[languages.es.menu.main]]
       name = "Documentación"
       weight = 20
-      identifier = "docs_es"
+      identifier = "docs"
       url = "docs/"
     [[languages.es.menu.main]]
       name = "Blog"
       weight = 30
-      identifier = "blog_es"
+      identifier = "blog"
       url = "blog/"
 
 [module]
   [module.hugoVersion]
-    extended = false
-    min = "0.110.0"
+    extended = true
+    min = "0.146.0"
   [[module.imports]]
     path = "github.com/google/docsy"
     disable = false
@@ -65,9 +71,6 @@ defaultContentLanguageInSubdir = false
     source = "layouts"
     target = "layouts"
   [[module.mounts]]
-    source = "content"
-    target = "content"
-  [[module.mounts]]
     source = "static"
     target = "static"
   [[module.mounts]]
@@ -77,12 +80,27 @@ defaultContentLanguageInSubdir = false
     source = "node_modules/@fortawesome/fontawesome-free"
     target = "assets/vendor/Font-Awesome"
 
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
 [params]
   # Docsy specific params
   version_menu = "Releases"
   archived_version = false
   repository_url = "https://github.com/madeindigio/remembrances-mcp"
-  
+
   [params.ui]
     breadcrumb_disable = false
     footer_about_enable = false
+    navbar_logo = true
+    navbar_translucent_over_cover_disable = false
+
+  # Language configuration
+  [params.ui.readingtime]
+    enable = false
+
+  # Enable language selector in navbar
+  [params.ui.showLightDarkModeMenu]
+    enable = true

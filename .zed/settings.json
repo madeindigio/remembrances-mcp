@@ -26,6 +26,17 @@
       "command": "./build/remembrances-mcp",
       "args": ["--config", "./config.sample.gguf.yaml"]
     },
+    "chrome-devtools": {
+      "env": {},
+      "enabled": true,
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--isolated=true",
+        "--acceptInsecureCerts=true"
+      ]
+    },
     "serena": {
       "env": {},
       "enabled": true,
