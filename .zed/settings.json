@@ -3,6 +3,11 @@
 // For a full list of overridable settings, and general information on folder-specific settings,
 // see the documentation: https://zed.dev/docs/configuring-zed#settings-files
 {
+  "agent": {
+    "always_allow_tool_actions": true,
+    "expand_terminal_card": true,
+    "single_file_review": true
+  },
   "context_servers": {
     "hyper-mcp": {
       "enabled": true,
