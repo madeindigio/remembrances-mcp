@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Documentación on Remembrances MCP</title>
+    <link>https://madeindigio.github.io/remembrances-mcp/es/docs/</link>
+    <description>Recent content in Documentación on Remembrances MCP</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <atom:link href="https://madeindigio.github.io/remembrances-mcp/es/docs/index.xml" rel="self" type="application/rss+xml" />
+  </channel>
+</rss>
