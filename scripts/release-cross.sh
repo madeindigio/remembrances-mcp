@@ -111,11 +111,11 @@ build_shared_libraries() {
     # Run the build-libs-cross.sh script inside the Docker container
     docker run --rm \
         -v "${PROJECT_ROOT}:/go/src/github.com/madeindigio/remembrances-mcp" \
-        -v "/www/MCP/Remembrances:/www/MCP/Remembrances" \
+        -v "~/www/MCP/Remembrances:~/www/MCP/Remembrances" \
         -w /go/src/github.com/madeindigio/remembrances-mcp \
         -e PROJECT_ROOT=/go/src/github.com/madeindigio/remembrances-mcp \
-        -e LLAMA_CPP_DIR=/www/MCP/Remembrances/go-llama.cpp \
-        -e SURREALDB_DIR=/www/MCP/Remembrances/surrealdb-embedded \
+        -e LLAMA_CPP_DIR=~/www/MCP/Remembrances/go-llama.cpp \
+        -e SURREALDB_DIR=~/www/MCP/Remembrances/surrealdb-embedded \
         --entrypoint /bin/bash \
         "${GORELEASER_CROSS_IMAGE}" \
         scripts/build-libs-cross.sh
@@ -138,7 +138,7 @@ run_goreleaser() {
     # Run goreleaser in Docker
     docker run --rm --privileged \
         -v "${PROJECT_ROOT}:/go/src/github.com/madeindigio/remembrances-mcp" \
-        -v "/www/MCP/Remembrances:/www/MCP/Remembrances" \
+        -v "~/www/MCP/Remembrances:~/www/MCP/Remembrances" \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -w /go/src/github.com/madeindigio/remembrances-mcp \
         ${env_vars} \

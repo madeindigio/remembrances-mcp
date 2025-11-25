@@ -40,7 +40,7 @@ wget https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nom
   --gguf-gpu-layers 32
   
 # Alternative: Set LD_LIBRARY_PATH manually
-export LD_LIBRARY_PATH=/www/MCP/Remembrances/go-llama.cpp/build/bin:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=~/www/MCP/Remembrances/go-llama.cpp/build/bin:$LD_LIBRARY_PATH
 ./build/remembrances-mcp \
   --gguf-model-path ./nomic-embed-text-v1.5.Q4_K_M.gguf \
   --gguf-threads 8 \
@@ -246,7 +246,7 @@ Starts the SurrealDB instance
 
 interactive: true
 ```bash
-surreal start --user root --pass root surrealkv:///www/MCP/remembrances-mcp/surreal_data
+surreal start --user root --pass root surrealkv://~/www/MCP/remembrances-mcp/surreal_data
 ```
 
 ### run-tests

@@ -13,7 +13,7 @@ func main() {
 	ctx := context.Background()
 
 	cfg := &storage.ConnectionConfig{
-		DBPath:    "surrealkv:///www/MCP/remembrances-mcp/remembrances.db",
+		DBPath:    "surrealkv://~/www/MCP/remembrances-mcp/remembrances.db",
 		Namespace: "test",
 		Database:  "test",
 	}
@@ -25,7 +25,7 @@ func main() {
 	defer store.Close()
 
 	fmt.Println("=== TEST: Save document with nested metadata ===")
-	
+
 	testMetadata := map[string]interface{}{
 		"source":        "test",
 		"last_modified": "2025-11-21T23:00:00Z",
@@ -41,11 +41,11 @@ func main() {
 	testFilePath := "TEST_METADATA_FILE.md"
 	testContent := "Test document to verify metadata persistence after migration V7."
 	testEmbedding := make([]float32, 768)
-	
+
 	if err := store.SaveDocument(ctx, testFilePath, testContent, testEmbedding, testMetadata); err != nil {
 		log.Fatal("Failed to save:", err)
 	}
-	
+
 	fmt.Println("✓ Document saved")
 
 	fmt.Println("\n=== TEST: Retrieve and check metadata ===")
@@ -59,7 +59,7 @@ func main() {
 
 	fmt.Printf("Document file_path: %s\n", doc.FilePath)
 	fmt.Printf("Metadata keys: %d\n", len(doc.Metadata))
-	
+
 	metaJSON, _ := json.MarshalIndent(doc.Metadata, "", "  ")
 	fmt.Printf("Metadata:\n%s\n", string(metaJSON))
 

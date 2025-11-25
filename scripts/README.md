@@ -54,7 +54,7 @@ Script para compilar shared libraries (llama.cpp y surrealdb-embedded) para toda
 # Normalmente llamado por release-cross.sh
 docker run --rm \
   -v $PWD:/go/src/github.com/madeindigio/remembrances-mcp \
-  -v /www/MCP/Remembrances:/www/MCP/Remembrances \
+  -v ~/www/MCP/Remembrances:~/www/MCP/Remembrances \
   -w /go/src/github.com/madeindigio/remembrances-mcp \
   ghcr.io/goreleaser/goreleaser-cross:v1.23 \
   bash scripts/build-libs-cross.sh
@@ -101,8 +101,8 @@ Script para probar la funcionalidad GGUF del proyecto.
 | Variable | Descripción | Default |
 |----------|-------------|---------|
 | `PROJECT_ROOT` | Raíz del proyecto | `/go/src/github.com/madeindigio/remembrances-mcp` |
-| `LLAMA_CPP_DIR` | Directorio de llama.cpp | `/www/MCP/Remembrances/go-llama.cpp` |
-| `SURREALDB_DIR` | Directorio de surrealdb-embedded | `/www/MCP/Remembrances/surrealdb-embedded` |
+| `LLAMA_CPP_DIR` | Directorio de llama.cpp | `~/www/MCP/Remembrances/go-llama.cpp` |
+| `SURREALDB_DIR` | Directorio de surrealdb-embedded | `~/www/MCP/Remembrances/surrealdb-embedded` |
 | `DIST_LIBS_DIR` | Directorio de salida | `${PROJECT_ROOT}/dist/libs` |
 
 ## Flujo de Trabajo
@@ -235,10 +235,10 @@ chmod +x scripts/*.sh
 
 ```bash
 # Verificar que el submodulo existe
-ls -la /www/MCP/Remembrances/go-llama.cpp/llama.cpp
+ls -la ~/www/MCP/Remembrances/go-llama.cpp/llama.cpp
 
 # Inicializar submodulos si es necesario
-cd /www/MCP/Remembrances/go-llama.cpp
+cd ~/www/MCP/Remembrances/go-llama.cpp
 git submodule update --init --recursive
 ```
 

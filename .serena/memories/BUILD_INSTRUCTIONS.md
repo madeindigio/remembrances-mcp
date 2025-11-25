@@ -50,10 +50,10 @@ cd remembrances-mcp
 
 ### 2. Initialize go-llama.cpp Submodules
 
-The go-llama.cpp library is located at `/www/MCP/Remembrances/go-llama.cpp` and uses git submodules:
+The go-llama.cpp library is located at `~/www/MCP/Remembrances/go-llama.cpp` and uses git submodules:
 
 ```bash
-cd /www/MCP/Remembrances/go-llama.cpp
+cd ~/www/MCP/Remembrances/go-llama.cpp
 git submodule update --init --recursive
 cd -
 ```
@@ -115,7 +115,7 @@ If you prefer to build manually or the Makefile doesn't work for your setup:
 #### Step 1: Build llama.cpp
 
 ```bash
-cd /www/MCP/Remembrances/go-llama.cpp
+cd ~/www/MCP/Remembrances/go-llama.cpp
 
 # Default build
 make libbinding.a
@@ -132,7 +132,7 @@ BUILD_TYPE=openblas make libbinding.a # OpenBLAS
 **Linux**:
 ```bash
 export CGO_ENABLED=1
-export GO_LLAMA_DIR=/www/MCP/Remembrances/go-llama.cpp
+export GO_LLAMA_DIR=~/www/MCP/Remembrances/go-llama.cpp
 export CGO_CFLAGS="-I$GO_LLAMA_DIR -I$GO_LLAMA_DIR/llama.cpp -I$GO_LLAMA_DIR/llama.cpp/common -I$GO_LLAMA_DIR/llama.cpp/ggml/include -I$GO_LLAMA_DIR/llama.cpp/include"
 export CGO_LDFLAGS="-L$GO_LLAMA_DIR -L$GO_LLAMA_DIR/build/bin -L$GO_LLAMA_DIR/build/common -lllama -lcommon -lggml -lggml-base -lm -lstdc++ -lpthread"
 ```
@@ -140,7 +140,7 @@ export CGO_LDFLAGS="-L$GO_LLAMA_DIR -L$GO_LLAMA_DIR/build/bin -L$GO_LLAMA_DIR/bu
 **macOS**:
 ```bash
 export CGO_ENABLED=1
-export GO_LLAMA_DIR=/www/MCP/Remembrances/go-llama.cpp
+export GO_LLAMA_DIR=~/www/MCP/Remembrances/go-llama.cpp
 export CGO_CFLAGS="-I$GO_LLAMA_DIR -I$GO_LLAMA_DIR/llama.cpp -I$GO_LLAMA_DIR/llama.cpp/common -I$GO_LLAMA_DIR/llama.cpp/ggml/include -I$GO_LLAMA_DIR/llama.cpp/include"
 export CGO_LDFLAGS="-L$GO_LLAMA_DIR -L$GO_LLAMA_DIR/build/bin -L$GO_LLAMA_DIR/build/common -lllama -lcommon -lggml -lggml-base -lm -lstdc++ -lpthread -framework Accelerate -framework Foundation -framework Metal -framework MetalKit -framework MetalPerformanceShaders"
 ```
@@ -148,7 +148,7 @@ export CGO_LDFLAGS="-L$GO_LLAMA_DIR -L$GO_LLAMA_DIR/build/bin -L$GO_LLAMA_DIR/bu
 #### Step 3: Build Go Application
 
 ```bash
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 go build -v -o build/remembrances-mcp ./cmd/remembrances-mcp
 ```
 
@@ -197,7 +197,7 @@ wget https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nom
 
 **Solution**:
 ```bash
-cd /www/MCP/Remembrances/go-llama.cpp
+cd ~/www/MCP/Remembrances/go-llama.cpp
 git submodule update --init --recursive
 ```
 
@@ -210,7 +210,7 @@ make check-env
 
 Also ensure llama.cpp is built:
 ```bash
-cd /www/MCP/Remembrances/go-llama.cpp
+cd ~/www/MCP/Remembrances/go-llama.cpp
 make libbinding.a
 ```
 

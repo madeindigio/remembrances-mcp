@@ -63,7 +63,7 @@ CMake Error at /usr/share/cmake-3.18/Modules/CMakeFindBinUtils.cmake:143 (messag
 
 **Error:**
 ```
-error: failed to parse lock file at: /www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs/Cargo.lock
+error: failed to parse lock file at: ~/www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs/Cargo.lock
 
 Caused by:
   lock file version `4` was found, but this version of Cargo does not understand this lock file, perhaps Cargo needs to be updated?
@@ -85,7 +85,7 @@ Caused by:
 
 **Warning (non-critical):**
 ```
-fatal: detected dubious ownership in repository at '/www/MCP/Remembrances/go-llama.cpp/llama.cpp'
+fatal: detected dubious ownership in repository at '~/www/MCP/Remembrances/go-llama.cpp/llama.cpp'
 ```
 
 **Solution:** Add git configuration in the Dockerfile or build script

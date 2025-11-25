@@ -9,7 +9,7 @@ The test failures were caused by CBOR unmarshaling errors in SurrealDB operation
 The SurrealDB Go client's `surrealdb.Select()` and `surrealdb.Delete()` methods return arrays instead of single objects, but the code was expecting single map objects, causing CBOR unmarshaling errors.
 
 ## Fix Applied
-Updated two methods in `/www/MCP/remembrances-mcp/internal/storage/surrealdb.go`:
+Updated two methods in `~/www/MCP/remembrances-mcp/internal/storage/surrealdb.go`:
 
 ### 1. GetFact Method
 **Before:** Used `surrealdb.Select[map[string]interface{}]`

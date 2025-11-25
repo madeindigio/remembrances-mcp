@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// Connect to embedded DB
-	db, err := embedded.NewRocksDB("/www/MCP/remembrances-mcp/test-simple.db")
+	db, err := embedded.NewRocksDB("~/www/MCP/remembrances-mcp/test-simple.db")
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
@@ -67,7 +67,7 @@ func main() {
 
 	// Reopen and check
 	fmt.Println("\n6. Reopening...")
-	db2, err := embedded.NewRocksDB("/www/MCP/remembrances-mcp/test-simple.db")
+	db2, err := embedded.NewRocksDB("~/www/MCP/remembrances-mcp/test-simple.db")
 	if err != nil {
 		log.Fatalf("Failed to reopen: %v", err)
 	}

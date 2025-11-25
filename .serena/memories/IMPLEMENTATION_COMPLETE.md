@@ -86,7 +86,7 @@ Se ha implementado exitosamente el soporte completo para modelos GGUF de embeddi
 
 1. **`go.mod`**
    - Añadida dependencia `github.com/madeindigio/go-llama.cpp`
-   - Replace local hacia `/www/MCP/Remembrances/go-llama.cpp`
+   - Replace local hacia `~/www/MCP/Remembrances/go-llama.cpp`
    - Replace adicional para `github.com/go-skynet/go-llama.cpp`
 
 2. **`pkg/embedder/factory.go`**
@@ -117,7 +117,7 @@ Se ha implementado exitosamente el soporte completo para modelos GGUF de embeddi
    - Lista de características
    - Beneficios documentados
 
-7. **`/www/MCP/Remembrances/go-llama.cpp/go.mod`**
+7. **`~/www/MCP/Remembrances/go-llama.cpp/go.mod`**
    - Módulo renombrado de `github.com/go-skynet/go-llama.cpp` a `github.com/madeindigio/go-llama.cpp`
 
 ---
@@ -175,7 +175,7 @@ gguf-gpu-layers: 32
 ```bash
 $ make build
 Checking llama.cpp library...
-llama.cpp library already built at /www/MCP/Remembrances/go-llama.cpp/build/bin/
+llama.cpp library already built at ~/www/MCP/Remembrances/go-llama.cpp/build/bin/
 llama.cpp library ready
 Building remembrances-mcp with GGUF support...
 Build complete: build/remembrances-mcp
@@ -235,7 +235,7 @@ Basado en benchmarks de llama.cpp y go-llama.cpp:
 ### 1. Compilar
 
 ```bash
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 make build
 ```
 
@@ -377,7 +377,7 @@ El sistema está listo para:
 
 La implementación depende de `go-llama.cpp` ubicado en:
 ```
-/www/MCP/Remembrances/go-llama.cpp
+~/www/MCP/Remembrances/go-llama.cpp
 ```
 
 Este debe estar compilado antes del primer build del proyecto principal. El Makefile verifica y guía en caso de no estar compilado.
@@ -388,7 +388,7 @@ Este debe estar compilado antes del primer build del proyecto principal. El Make
 
 Alternativa manual:
 ```bash
-export LD_LIBRARY_PATH=/www/MCP/Remembrances/go-llama.cpp/build/bin:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=~/www/MCP/Remembrances/go-llama.cpp/build/bin:$LD_LIBRARY_PATH
 ./build/remembrances-mcp [flags]
 ```
 

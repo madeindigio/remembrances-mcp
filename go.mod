@@ -44,6 +44,6 @@ require (
 	golang.org/x/text v0.21.0 // indirect
 )
 
-replace github.com/madeindigio/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
+replace github.com/madeindigio/go-llama.cpp => ~/www/MCP/Remembrances/go-llama.cpp
 
-replace github.com/madeindigio/surrealdb-embedded-golang => /www/MCP/Remembrances/surrealdb-embedded
+replace github.com/madeindigio/surrealdb-embedded-golang => ~/www/MCP/Remembrances/surrealdb-embedded

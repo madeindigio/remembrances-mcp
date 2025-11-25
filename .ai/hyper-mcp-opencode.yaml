@@ -49,7 +49,7 @@ plugins:
         - api.search.brave.com
   logseq:
     url: oci://ghcr.io/sevir/hyper-mcp/plugin-logseq:latest
-    #url: file:///www/MCP/hyper-mcp/examples/plugins/logseq/target/wasm32-wasip1/release/plugin.wasm
+    #url: file://~/www/MCP/hyper-mcp/examples/plugins/logseq/target/wasm32-wasip1/release/plugin.wasm
     runtime_config:
       env_vars:
         LOGSEQ_API_KEY: "idi"
@@ -63,7 +63,7 @@ plugins:
         - 127.0.0.1
   # youtrack:
   #   url: oci://ghcr.io/sevir/hyper-mcp/plugin-youtrack:latest
-  #   #url: file:///www/MCP/hyper-mcp/examples/plugins/youtrack/target/wasm32-wasip1/release/plugin.wasm
+  #   #url: file://~/www/MCP/hyper-mcp/examples/plugins/youtrack/target/wasm32-wasip1/release/plugin.wasm
   #   runtime_config:
   #     env_vars:
   #       YOUTRACK_BASE_URL: "${YOUTRACK_BASE_URL}"

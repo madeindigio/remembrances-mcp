@@ -4,8 +4,8 @@
 all: build
 
 # Variables
-GO_LLAMA_DIR := /www/MCP/Remembrances/go-llama.cpp
-SURREALDB_EMBEDDED_DIR := /www/MCP/Remembrances/surrealdb-embedded
+GO_LLAMA_DIR := ~/www/MCP/Remembrances/go-llama.cpp
+SURREALDB_EMBEDDED_DIR := ~/www/MCP/Remembrances/surrealdb-embedded
 BUILD_DIR := build
 BINARY_NAME := remembrances-mcp
 

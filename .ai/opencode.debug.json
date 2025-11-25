@@ -5,9 +5,9 @@
     "remembrances": {
       "type": "local",
       "command": [
-        "/www/MCP/remembrances-mcp/build/remembrances-mcp",
+        "~/www/MCP/remembrances-mcp/build/remembrances-mcp",
         "--config",
-        "/www/MCP/remembrances-mcp/config.sample.gguf.yaml"
+        "~/www/MCP/remembrances-mcp/config.sample.gguf.yaml"
       ],
       "enabled": true,
       "environment": {}

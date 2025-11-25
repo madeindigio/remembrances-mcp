@@ -6,8 +6,8 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Path to go-llama.cpp libraries
-LLAMA_LIB_DIR="/www/MCP/Remembrances/go-llama.cpp/build/bin"
-LLAMA_COMMON_DIR="/www/MCP/Remembrances/go-llama.cpp/build/common"
+LLAMA_LIB_DIR="~/www/MCP/Remembrances/go-llama.cpp/build/bin"
+LLAMA_COMMON_DIR="~/www/MCP/Remembrances/go-llama.cpp/build/common"
 
 # Add llama.cpp library directories to LD_LIBRARY_PATH
 export LD_LIBRARY_PATH="${LLAMA_LIB_DIR}:${LLAMA_COMMON_DIR}:${LD_LIBRARY_PATH}"
@@ -16,7 +16,7 @@ export LD_LIBRARY_PATH="${LLAMA_LIB_DIR}:${LLAMA_COMMON_DIR}:${LD_LIBRARY_PATH}"
 if [ ! -f "${LLAMA_LIB_DIR}/libllama.so" ]; then
     echo "Error: llama.cpp libraries not found at ${LLAMA_LIB_DIR}"
     echo "Please build llama.cpp first:"
-    echo "  cd /www/MCP/Remembrances/go-llama.cpp"
+    echo "  cd ~/www/MCP/Remembrances/go-llama.cpp"
     echo "  make libbinding.a"
     exit 1
 fi

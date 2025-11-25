@@ -13,7 +13,7 @@ func main() {
 	ctx := context.Background()
 
 	config := &storage.ConnectionConfig{
-		DBPath:    "surrealkv:///www/MCP/remembrances-mcp/remembrances.db",
+		DBPath:    "surrealkv://~/www/MCP/remembrances-mcp/remembrances.db",
 		Namespace: "test",
 		Database:  "test",
 		Timeout:   30 * time.Second,

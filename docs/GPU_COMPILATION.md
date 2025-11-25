@@ -92,7 +92,7 @@ Si prefieres compilar manualmente:
 #### Paso 1: Navegar al directorio go-llama.cpp
 
 ```bash
-cd /www/MCP/Remembrances/go-llama.cpp
+cd ~/www/MCP/Remembrances/go-llama.cpp
 ```
 
 #### Paso 2: Inicializar submodulos (si no lo has hecho)
@@ -133,16 +133,16 @@ cmake --build . --config Release -j$(nproc)
 
 ```bash
 # Volver al directorio del proyecto
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 
 # Copiar todas las librerías .so
-find /www/MCP/Remembrances/go-llama.cpp/build -name "*.so*" -exec cp {} build/ \;
+find ~/www/MCP/Remembrances/go-llama.cpp/build -name "*.so*" -exec cp {} build/ \;
 ```
 
 ### Opción 3: Usar el Makefile del proyecto
 
 ```bash
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 
 # Limpiar compilación anterior
 make clean-all
@@ -176,7 +176,7 @@ Deberías ver algo como:
 Después de compilar las librerías CUDA, recompila el proyecto:
 
 ```bash
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 make clean
 make BUILD_TYPE=cuda build
 ```

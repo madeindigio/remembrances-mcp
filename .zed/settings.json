@@ -18,7 +18,7 @@
       "env": {},
       "enabled": true,
       "command": "mycommandmcp",
-      "args": ["--config", "/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"]
+      "args": ["--config", "~/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"]
     },
     "remembrances": {
       "env": {},
@@ -50,7 +50,7 @@
         "--context",
         "ide-assistant",
         "--project",
-        "/www/MCP/remembrances-mcp"
+        "~/www/MCP/remembrances-mcp"
       ]
     }
   }

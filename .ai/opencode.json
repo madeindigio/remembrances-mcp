@@ -16,7 +16,7 @@
       "command": [
         "mycommandmcp",
         "--config",
-        "/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"
+        "~/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"
       ],
       "enabled": true,
       "environment": {}
@@ -33,7 +33,7 @@
         "--context",
         "ide-assistant",
         "--project",
-        "/www/MCP/remembrances-mcp"
+        "~/www/MCP/remembrances-mcp"
       ],
       "enabled": true,
       "environment": {}
@@ -41,9 +41,9 @@
     "remembrances": {
       "type": "local",
       "command": [
-        "/www/MCP/remembrances-mcp/remembrances-mcp",
+        "~/www/MCP/remembrances-mcp/remembrances-mcp",
         "--config",
-        "/www/MCP/remembrances-mcp/config.sample.yaml"
+        "~/www/MCP/remembrances-mcp/config.sample.yaml"
       ],
       "enabled": true,
       "environment": {}
