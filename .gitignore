@@ -2,6 +2,7 @@
 /bin/
 /build/
 /dist/
+/output/
 *.exe
 *.dll
 *.so
