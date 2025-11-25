@@ -3,15 +3,45 @@
 # Default target
 all: build
 
-# Variables
-GO_LLAMA_DIR := ~/www/MCP/Remembrances/go-llama.cpp
-SURREALDB_EMBEDDED_DIR := ~/www/MCP/Remembrances/surrealdb-embedded
+# Variables - Use $(HOME) instead of ~ for proper expansion in make
+# These can be overridden via environment variables or command line
+GO_LLAMA_DIR ?= $(HOME)/www/MCP/Remembrances/go-llama.cpp
+SURREALDB_EMBEDDED_DIR ?= $(HOME)/www/MCP/Remembrances/surrealdb-embedded
 BUILD_DIR := build
 BINARY_NAME := remembrances-mcp
+
+# Version information from git
+# Get latest tag (version), default to "dev" if no tags exist
+VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "dev")
+# Get current commit hash (short)
+COMMIT_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+# Get full commit hash
+COMMIT_HASH_FULL := $(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
+# Check if working directory is dirty
+GIT_DIRTY := $(shell git diff --quiet 2>/dev/null || echo "-dirty")
+# Build version string (append -dirty if there are uncommitted changes)
+BUILD_VERSION := $(VERSION)$(GIT_DIRTY)
+
+# Go ldflags for version injection
+VERSION_PKG := github.com/madeindigio/remembrances-mcp/pkg/version
+GO_VERSION_LDFLAGS := -X $(VERSION_PKG).Version=$(BUILD_VERSION) -X $(VERSION_PKG).CommitHash=$(COMMIT_HASH)
 
 # Detect OS and architecture
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
+
+# Normalize architecture names
+ifeq ($(UNAME_M),x86_64)
+	ARCH := amd64
+else ifeq ($(UNAME_M),amd64)
+	ARCH := amd64
+else ifeq ($(UNAME_M),arm64)
+	ARCH := arm64
+else ifeq ($(UNAME_M),aarch64)
+	ARCH := arm64
+else
+	ARCH := $(UNAME_M)
+endif
 
 # Platform-specific settings
 ifeq ($(UNAME_S),Darwin)
@@ -19,11 +49,23 @@ ifeq ($(UNAME_S),Darwin)
 	PLATFORM := darwin
 	LLAMA_LDFLAGS := -framework Accelerate -framework Foundation -framework Metal -framework MetalKit -framework MetalPerformanceShaders
 	BUILD_TYPE ?= metal
+	# macOS library extension
+	LIB_EXT := dylib
+	# RPATH for macOS - use @executable_path
+	RPATH_FLAG := -Wl,-rpath,@executable_path
+	# Go linker flags for macOS
+	GO_LDFLAGS := -ldflags="-r @executable_path"
 else ifeq ($(UNAME_S),Linux)
 	# Linux
 	PLATFORM := linux
 	LLAMA_LDFLAGS := -lm -lstdc++ -lpthread
 	BUILD_TYPE ?=
+	# Linux library extension
+	LIB_EXT := so
+	# RPATH for Linux
+	RPATH_FLAG := -Wl,-rpath,$$ORIGIN
+	# Go linker flags for Linux
+	GO_LDFLAGS := -ldflags="-r \$$ORIGIN"
 else
 	$(error Unsupported platform: $(UNAME_S))
 endif
@@ -33,8 +75,8 @@ export CGO_ENABLED := 1
 export CGO_CFLAGS := -I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include -I$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/include
 export CGO_LDFLAGS := -L$(GO_LLAMA_DIR) -L$(GO_LLAMA_DIR)/build/bin -L$(GO_LLAMA_DIR)/build/common -L$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release -lllama -lcommon -lggml -lggml-base -lsurrealdb_embedded_rs $(LLAMA_LDFLAGS)
 
-# Go linker flags to set RPATH
-GO_LDFLAGS := -ldflags="-r \$$ORIGIN"
+# Go linker flags to set RPATH - platform-specific, defined above
+# GO_LDFLAGS is set per-platform in the ifeq blocks above
 
 help:
 	@echo "Remembrances-MCP Build System"
@@ -47,6 +89,18 @@ help:
 	@echo "  make clean              - Clean all build artifacts"
 	@echo "  make test               - Run tests"
 	@echo "  make run                - Build and run the application"
+	@echo "  make check-env          - Show build environment and library status"
+	@echo ""
+	@echo "macOS Cross-compilation (arm64 ↔ x86_64):"
+	@echo "  make build-darwin-arm64    - Build libraries for Apple Silicon (arm64)"
+	@echo "  make build-darwin-amd64    - Build libraries for Intel (x86_64)"
+	@echo "  make build-darwin-universal - Build Universal Binary (both architectures)"
+	@echo "  make dist-darwin-arm64     - Create distribution package for arm64"
+	@echo "  make dist-darwin-amd64     - Create distribution package for x86_64"
+	@echo ""
+	@echo "SurrealDB cross-compilation:"
+	@echo "  make build-surrealdb-darwin-arm64  - Build surrealdb-embedded for arm64"
+	@echo "  make build-surrealdb-darwin-amd64  - Build surrealdb-embedded for x86_64"
 	@echo ""
 	@echo "Multi-variant library builds:"
 	@echo "  make build-libs-all-variants - Build llama.cpp for all GPU types"
@@ -64,7 +118,7 @@ help:
 	@echo "  make dist-variant VARIANT=cuda   - Package single variant with libraries as zip"
 	@echo "  make dist-all                    - Package all variants as separate zip files"
 	@echo ""
-	@echo "Cross-compilation targets:"
+	@echo "Cross-compilation targets (Docker):"
 	@echo "  make build-cross        - Cross-compile for all platforms using Docker"
 	@echo "  make build-libs-cross   - Build only shared libraries for cross-compilation"
 	@echo "  make release-cross      - Create a cross-platform release"
@@ -76,28 +130,38 @@ help:
 	@echo "  BUILD_TYPE=hipblas  - Build with ROCm support (Linux)"
 	@echo "  BUILD_TYPE=openblas - Build with OpenBLAS support"
 	@echo ""
+	@echo "Environment variables:"
+	@echo "  GO_LLAMA_DIR          - Path to go-llama.cpp (default: \$$HOME/www/MCP/Remembrances/go-llama.cpp)"
+	@echo "  SURREALDB_EMBEDDED_DIR - Path to surrealdb-embedded (default: \$$HOME/www/MCP/Remembrances/surrealdb-embedded)"
+	@echo ""
 	@echo "Examples:"
-	@echo "  make build                      # Build with default settings"
-	@echo "  make BUILD_TYPE=cuda build      # Build with CUDA support (recommended)"
+	@echo "  make build                      # Build with default settings (native arch)"
+	@echo "  make BUILD_TYPE=cuda build      # Build with CUDA support (Linux)"
+	@echo "  make build-darwin-amd64         # Cross-compile for Intel Mac"
+	@echo "  make dist-darwin-arm64          # Create arm64 distribution"
+	@echo "  make build-darwin-universal     # Create Universal Binary libraries"
 	@echo "  make build-all-variants         # Build all GPU variant binaries"
 	@echo "  make dist-all                   # Package all variants for distribution"
 	@echo "  make run                        # Build and run"
-	@echo "  make build-cross                # Cross-compile for all platforms"
-	@echo "  make release-cross              # Create GitHub release"
+	@echo "  make check-env                  # Show current build environment"
 
 # Build llama.cpp library
 llama-cpp:
 	@echo "Checking llama.cpp library..."
-	@if [ ! -d "$(GO_LLAMA_DIR)/llama.cpp" ]; then \
+	@echo "  GO_LLAMA_DIR: $(GO_LLAMA_DIR)"
+	@echo "  Platform: $(PLATFORM) / $(ARCH)"
+	@# Check if the llama.cpp submodule exists (look for CMakeLists.txt inside llama.cpp/)
+	@if [ ! -f "$(GO_LLAMA_DIR)/llama.cpp/CMakeLists.txt" ]; then \
 		echo "Error: llama.cpp submodule not found at $(GO_LLAMA_DIR)/llama.cpp"; \
 		echo "Please run: cd $(GO_LLAMA_DIR) && git submodule update --init --recursive"; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(GO_LLAMA_DIR)/build/bin/libllama.so" ]; then \
-		echo "llama.cpp not built. Building now..."; \
+	@# Check for already built libraries (platform-specific extension)
+	@if [ ! -f "$(GO_LLAMA_DIR)/build/bin/libllama.$(LIB_EXT)" ]; then \
+		echo "llama.cpp not built. Building now for $(PLATFORM)/$(ARCH)..."; \
 		echo "Note: If this fails, please build manually:"; \
-		echo "  cd $(GO_LLAMA_DIR) && make libbinding.a"; \
-		cd $(GO_LLAMA_DIR) && BUILD_TYPE=$(BUILD_TYPE) cmake -B build -DLLAMA_STATIC=OFF && cmake --build build --config Release -j; \
+		echo "  cd $(GO_LLAMA_DIR) && cmake -B build llama.cpp -DLLAMA_STATIC=OFF && cmake --build build --config Release -j"; \
+		cd "$(GO_LLAMA_DIR)" && BUILD_TYPE=$(BUILD_TYPE) cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
 	else \
 		echo "llama.cpp library already built at $(GO_LLAMA_DIR)/build/bin/"; \
 	fi
@@ -112,14 +176,14 @@ llama-cpp-clean:
 # Build surrealdb-embedded library
 surrealdb-embedded:
 	@echo "Checking surrealdb-embedded library..."
+	@echo "  SURREALDB_EMBEDDED_DIR: $(SURREALDB_EMBEDDED_DIR)"
 	@if [ ! -d "$(SURREALDB_EMBEDDED_DIR)" ]; then \
 		echo "Error: surrealdb-embedded not found at $(SURREALDB_EMBEDDED_DIR)"; \
 		exit 1; \
 	fi
-	@if [ ! -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so" ] && \
-	   [ ! -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib" ]; then \
-		echo "surrealdb-embedded not built. Building now..."; \
-		cd $(SURREALDB_EMBEDDED_DIR) && make build-rust; \
+	@if [ ! -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.$(LIB_EXT)" ]; then \
+		echo "surrealdb-embedded not built for $(PLATFORM)/$(ARCH). Building now..."; \
+		cd "$(SURREALDB_EMBEDDED_DIR)" && make build-rust; \
 	else \
 		echo "surrealdb-embedded library already built"; \
 	fi
@@ -128,24 +192,38 @@ surrealdb-embedded:
 # Build the main project
 build: llama-cpp surrealdb-embedded
 	@echo "Building $(BINARY_NAME) with GGUF and embedded SurrealDB support..."
+	@echo "  Target: $(PLATFORM)/$(ARCH)"
+	@echo "  Version: $(BUILD_VERSION)"
+	@echo "  Commit: $(COMMIT_HASH)"
 	@mkdir -p $(BUILD_DIR)
-	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
+	go build -mod=mod -v -ldflags="$(GO_VERSION_LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Copying shared libraries to build directory..."
 	@# Copy SurrealDB embedded library from Rust build directory
 	@echo "Copying SurrealDB embedded library..."
-	@cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || \
-	 cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib $(BUILD_DIR)/ 2>/dev/null || \
+	@cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.$(LIB_EXT)" "$(BUILD_DIR)/" 2>/dev/null || \
 	 echo "⚠ Warning: SurrealDB embedded library not found"
-	@# Copy ALL llama.cpp shared libraries (.so and .dylib)
+	@# Copy ALL llama.cpp shared libraries (platform-specific extension)
 	@# This includes libraries for CUDA, Metal, ROCm, Vulkan, etc.
-	@echo "Copying all llama.cpp shared libraries..."
-	@find $(GO_LLAMA_DIR)/build/bin -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
+	@echo "Copying all llama.cpp shared libraries (*.$(LIB_EXT))..."
+	@find "$(GO_LLAMA_DIR)/build/bin" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true
 	@# Also check other common locations in the build directory
-	@find $(GO_LLAMA_DIR)/build/src -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
-	@find $(GO_LLAMA_DIR)/build/common -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
-	@find $(GO_LLAMA_DIR)/build/ggml -type f \( -name "*.so" -o -name "*.dylib" \) -exec cp {} $(BUILD_DIR)/ \; 2>/dev/null || true
+	@find "$(GO_LLAMA_DIR)/build/src" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true
+	@find "$(GO_LLAMA_DIR)/build/common" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true
+	@find "$(GO_LLAMA_DIR)/build/ggml" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true
 	@echo "Shared libraries copied successfully"
 	@ls -lh $(BUILD_DIR)/libsurrealdb_embedded_rs.* 2>/dev/null && echo "✓ SurrealDB embedded library copied" || echo "⚠ SurrealDB embedded library not found in build/"
+	@ls -lh $(BUILD_DIR)/libllama.* 2>/dev/null && echo "✓ llama.cpp libraries copied" || echo "⚠ llama.cpp libraries not found in build/"
+ifeq ($(PLATFORM),darwin)
+	@# Fix RPATH for macOS - add @executable_path and update library references
+	@echo "Fixing macOS library paths..."
+	@install_name_tool -add_rpath @executable_path "$(BUILD_DIR)/$(BINARY_NAME)" 2>/dev/null || true
+	@# Fix any absolute paths to surrealdb library
+	@for lib_path in $$(otool -L "$(BUILD_DIR)/$(BINARY_NAME)" | grep surrealdb_embedded_rs | grep -v "@rpath" | awk '{print $$1}'); do \
+		echo "  Fixing reference: $$lib_path -> @rpath/libsurrealdb_embedded_rs.dylib"; \
+		install_name_tool -change "$$lib_path" "@rpath/libsurrealdb_embedded_rs.dylib" "$(BUILD_DIR)/$(BINARY_NAME)"; \
+	done
+	@echo "✓ macOS library paths fixed"
+endif
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Run the application
@@ -166,31 +244,207 @@ build-libs-variant:
 		echo "Usage: make build-libs-variant VARIANT=cuda"; \
 		exit 1; \
 	fi
-	@echo "Building llama.cpp with $(VARIANT) support..."
+	@echo "Building llama.cpp with $(VARIANT) support for $(PLATFORM)/$(ARCH)..."
 	@mkdir -p $(BUILD_DIR)/libs/$(VARIANT)
 	@# Clean previous llama.cpp build
-	@cd $(GO_LLAMA_DIR) && rm -rf build && rm -f prepare *.o *.a
+	@cd "$(GO_LLAMA_DIR)" && rm -rf build && rm -f prepare *.o *.a
 	@# Build with specific variant
 	@if [ "$(VARIANT)" = "cpu" ]; then \
-		cd $(GO_LLAMA_DIR) && \
+		cd "$(GO_LLAMA_DIR)" && \
 		cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DCMAKE_BUILD_TYPE=Release && \
 		cmake --build build --config Release -j; \
 	else \
-		cd $(GO_LLAMA_DIR) && BUILD_TYPE=$(VARIANT) \
+		cd "$(GO_LLAMA_DIR)" && BUILD_TYPE=$(VARIANT) \
 		cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DCMAKE_BUILD_TYPE=Release && \
 		cmake --build build --config Release -j; \
 	fi
-	@# Copy all shared libraries to variant directory
+	@# Copy all shared libraries to variant directory (platform-specific)
 	@echo "Copying libraries to $(BUILD_DIR)/libs/$(VARIANT)/"
-	@find $(GO_LLAMA_DIR)/build -type f \( -name "*.so" -o -name "*.so.*" -o -name "*.dylib" \) \
-		-exec cp {} $(BUILD_DIR)/libs/$(VARIANT)/ \; 2>/dev/null || true
+	@find "$(GO_LLAMA_DIR)/build" -type f -name "*.$(LIB_EXT)" \
+		-exec cp {} "$(BUILD_DIR)/libs/$(VARIANT)/" \; 2>/dev/null || true
 	@# Create variant info file
 	@echo "Variant: $(VARIANT)" > $(BUILD_DIR)/libs/$(VARIANT)/BUILD_INFO.txt
 	@echo "Built: $$(date)" >> $(BUILD_DIR)/libs/$(VARIANT)/BUILD_INFO.txt
 	@echo "Platform: $(PLATFORM)" >> $(BUILD_DIR)/libs/$(VARIANT)/BUILD_INFO.txt
-	@echo "Arch: $(UNAME_M)" >> $(BUILD_DIR)/libs/$(VARIANT)/BUILD_INFO.txt
+	@echo "Arch: $(ARCH)" >> $(BUILD_DIR)/libs/$(VARIANT)/BUILD_INFO.txt
 	@ls -lh $(BUILD_DIR)/libs/$(VARIANT)/
 	@echo "✓ $(VARIANT) libraries built successfully"
+
+# macOS-specific: Build for specific architecture (arm64 or amd64)
+build-darwin-arch:
+	@if [ -z "$(TARGET_ARCH)" ]; then \
+		echo "Error: TARGET_ARCH not specified"; \
+		echo "Usage: make build-darwin-arch TARGET_ARCH=arm64"; \
+		echo "       make build-darwin-arch TARGET_ARCH=x86_64"; \
+		exit 1; \
+	fi
+	@if [ "$(PLATFORM)" != "darwin" ]; then \
+		echo "Error: This target is only for macOS"; \
+		exit 1; \
+	fi
+	@echo "Building llama.cpp for macOS $(TARGET_ARCH)..."
+	@mkdir -p $(BUILD_DIR)/libs/darwin-$(TARGET_ARCH)
+	@# Clean and build for specific architecture
+	@cd "$(GO_LLAMA_DIR)" && rm -rf build-$(TARGET_ARCH)
+	@# Set architecture-specific flags for cross-compilation
+	@if [ "$(TARGET_ARCH)" = "x86_64" ]; then \
+		echo "Cross-compiling for Intel x86_64..."; \
+		cd "$(GO_LLAMA_DIR)" && \
+		cmake -B build-$(TARGET_ARCH) llama.cpp \
+			-DLLAMA_STATIC=OFF \
+			-DCMAKE_BUILD_TYPE=Release \
+			-DCMAKE_OSX_ARCHITECTURES=x86_64 \
+			-DCMAKE_C_FLAGS="-arch x86_64" \
+			-DCMAKE_CXX_FLAGS="-arch x86_64" \
+			-DGGML_NATIVE=OFF \
+			-DLLAMA_METAL=OFF && \
+		cmake --build build-$(TARGET_ARCH) --config Release -j; \
+	else \
+		echo "Building for Apple Silicon arm64..."; \
+		cd "$(GO_LLAMA_DIR)" && \
+		cmake -B build-$(TARGET_ARCH) llama.cpp \
+			-DLLAMA_STATIC=OFF \
+			-DCMAKE_BUILD_TYPE=Release \
+			-DCMAKE_OSX_ARCHITECTURES=arm64 \
+			-DLLAMA_METAL=ON && \
+		cmake --build build-$(TARGET_ARCH) --config Release -j; \
+	fi
+	@# Copy libraries
+	@find "$(GO_LLAMA_DIR)/build-$(TARGET_ARCH)" -type f -name "*.dylib" \
+		-exec cp {} "$(BUILD_DIR)/libs/darwin-$(TARGET_ARCH)/" \; 2>/dev/null || true
+	@echo "✓ macOS $(TARGET_ARCH) libraries built"
+
+# Build for macOS arm64 (Apple Silicon)
+build-darwin-arm64:
+	@echo "Building llama.cpp for macOS arm64 (Apple Silicon)..."
+	@$(MAKE) build-darwin-arch TARGET_ARCH=arm64
+	@echo "Building surrealdb-embedded for macOS arm64..."
+	@$(MAKE) build-surrealdb-darwin-arm64
+
+# Build for macOS amd64 (Intel)
+build-darwin-amd64:
+	@echo "Building llama.cpp for macOS amd64 (Intel)..."
+	@$(MAKE) build-darwin-arch TARGET_ARCH=x86_64
+	@echo "Building surrealdb-embedded for macOS amd64..."
+	@$(MAKE) build-surrealdb-darwin-amd64
+
+# Build Universal Binary for macOS (both arm64 and x86_64)
+build-darwin-universal: build-darwin-arm64 build-darwin-amd64
+	@echo "Creating Universal Binary for macOS..."
+	@mkdir -p $(BUILD_DIR)/libs/darwin-universal
+	@# Combine llama.cpp libraries using lipo
+	@echo "Combining llama.cpp libraries..."
+	@for lib in $(BUILD_DIR)/libs/darwin-arm64/*.dylib; do \
+		libname=$$(basename $$lib); \
+		if [ -f "$(BUILD_DIR)/libs/darwin-x86_64/$$libname" ]; then \
+			echo "Creating universal $$libname..."; \
+			lipo -create \
+				"$(BUILD_DIR)/libs/darwin-arm64/$$libname" \
+				"$(BUILD_DIR)/libs/darwin-x86_64/$$libname" \
+				-output "$(BUILD_DIR)/libs/darwin-universal/$$libname"; \
+		else \
+			echo "Copying $$libname (arm64 only)..."; \
+			cp "$$lib" "$(BUILD_DIR)/libs/darwin-universal/"; \
+		fi \
+	done
+	@# Combine surrealdb-embedded library if both exist
+	@echo "Combining surrealdb-embedded libraries..."
+	@if [ -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/aarch64-apple-darwin/release/libsurrealdb_embedded_rs.dylib" ] && \
+	   [ -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/x86_64-apple-darwin/release/libsurrealdb_embedded_rs.dylib" ]; then \
+		lipo -create \
+			"$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/aarch64-apple-darwin/release/libsurrealdb_embedded_rs.dylib" \
+			"$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/x86_64-apple-darwin/release/libsurrealdb_embedded_rs.dylib" \
+			-output "$(BUILD_DIR)/libs/darwin-universal/libsurrealdb_embedded_rs.dylib"; \
+		echo "✓ Universal surrealdb_embedded_rs.dylib created"; \
+	else \
+		echo "⚠ Cannot create universal surrealdb library - missing one or both architectures"; \
+		cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib" \
+			"$(BUILD_DIR)/libs/darwin-universal/" 2>/dev/null || true; \
+	fi
+	@echo "✓ Universal Binary libraries created in $(BUILD_DIR)/libs/darwin-universal/"
+	@ls -lh $(BUILD_DIR)/libs/darwin-universal/
+
+# Build surrealdb-embedded for specific Rust target
+build-surrealdb-target:
+	@if [ -z "$(RUST_TARGET)" ]; then \
+		echo "Error: RUST_TARGET not specified"; \
+		echo "Usage: make build-surrealdb-target RUST_TARGET=aarch64-apple-darwin"; \
+		exit 1; \
+	fi
+	@echo "Building surrealdb-embedded for $(RUST_TARGET)..."
+	@cd "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs" && \
+		rustup target add $(RUST_TARGET) 2>/dev/null || true && \
+		cargo build --release --target $(RUST_TARGET)
+	@mkdir -p $(BUILD_DIR)/libs/surrealdb-$(RUST_TARGET)
+	@cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/$(RUST_TARGET)/release/libsurrealdb_embedded_rs.dylib" \
+		"$(BUILD_DIR)/libs/surrealdb-$(RUST_TARGET)/" 2>/dev/null || \
+	 cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/$(RUST_TARGET)/release/libsurrealdb_embedded_rs.so" \
+		"$(BUILD_DIR)/libs/surrealdb-$(RUST_TARGET)/" 2>/dev/null || \
+	 echo "⚠ Could not copy surrealdb library for $(RUST_TARGET)"
+	@echo "✓ surrealdb-embedded built for $(RUST_TARGET)"
+
+# Build surrealdb-embedded for macOS arm64
+build-surrealdb-darwin-arm64:
+	@echo "Building surrealdb-embedded for macOS arm64 (Apple Silicon)..."
+	@$(MAKE) build-surrealdb-target RUST_TARGET=aarch64-apple-darwin
+
+# Build surrealdb-embedded for macOS amd64
+build-surrealdb-darwin-amd64:
+	@echo "Building surrealdb-embedded for macOS amd64 (Intel)..."
+	@$(MAKE) build-surrealdb-target RUST_TARGET=x86_64-apple-darwin
+
+# Build complete distribution for macOS arm64
+dist-darwin-arm64: build-darwin-arm64
+	@echo "Creating distribution for macOS arm64..."
+	@echo "  Version: $(BUILD_VERSION), Commit: $(COMMIT_HASH)"
+	@mkdir -p dist/darwin-arm64
+	@# Build Go binary for arm64 with correct library paths
+	@# libcommon is static (.a), so we link it directly
+	CGO_CFLAGS="-I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include -I$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/include" \
+	CGO_LDFLAGS="-L$(GO_LLAMA_DIR)/build-arm64/bin -L$(GO_LLAMA_DIR)/build-arm64/common -L$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/aarch64-apple-darwin/release -lllama -lggml -lggml-base -lsurrealdb_embedded_rs $(GO_LLAMA_DIR)/build-arm64/common/libcommon.a $(LLAMA_LDFLAGS) -lc++" \
+		GOARCH=arm64 GOOS=darwin go build -mod=mod -v -ldflags="$(GO_VERSION_LDFLAGS)" -o dist/darwin-arm64/$(BINARY_NAME) ./cmd/remembrances-mcp
+	@# Copy libraries
+	@cp $(BUILD_DIR)/libs/darwin-arm64/*.dylib dist/darwin-arm64/ 2>/dev/null || \
+	 find "$(GO_LLAMA_DIR)/build-arm64" -name "*.dylib" -exec cp {} dist/darwin-arm64/ \; 2>/dev/null || \
+	 find "$(GO_LLAMA_DIR)/build/bin" -name "*.dylib" -exec cp {} dist/darwin-arm64/ \; 2>/dev/null || true
+	@cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/aarch64-apple-darwin/release/libsurrealdb_embedded_rs.dylib" \
+		dist/darwin-arm64/ 2>/dev/null || \
+	 cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib" \
+		dist/darwin-arm64/ 2>/dev/null || true
+	@cp README.md LICENSE.txt config.sample.yaml config.sample.gguf.yaml dist/darwin-arm64/ 2>/dev/null || true
+	@# Fix RPATH for macOS
+	@echo "Fixing macOS library paths for arm64 distribution..."
+	@install_name_tool -add_rpath @executable_path dist/darwin-arm64/$(BINARY_NAME) 2>/dev/null || true
+	@for lib_path in $$(otool -L dist/darwin-arm64/$(BINARY_NAME) | grep surrealdb_embedded_rs | grep -v "@rpath" | awk '{print $$1}'); do \
+		install_name_tool -change "$$lib_path" "@rpath/libsurrealdb_embedded_rs.dylib" dist/darwin-arm64/$(BINARY_NAME); \
+	done
+	@echo "✓ Distribution created in dist/darwin-arm64/"
+	@ls -lh dist/darwin-arm64/
+
+# Build complete distribution for macOS amd64
+dist-darwin-amd64: build-darwin-amd64
+	@echo "Creating distribution for macOS amd64..."
+	@echo "  Version: $(BUILD_VERSION), Commit: $(COMMIT_HASH)"
+	@mkdir -p dist/darwin-amd64
+	@# Build Go binary for amd64 with x86_64-specific library paths
+	@# Note: Metal is disabled for x86_64, libcommon is static (.a) so we link it directly
+	CGO_CFLAGS="-I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include -I$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/include" \
+	CGO_LDFLAGS="-L$(GO_LLAMA_DIR)/build-x86_64/bin -L$(GO_LLAMA_DIR)/build-x86_64/common -L$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/x86_64-apple-darwin/release -lllama -lggml -lggml-base -lsurrealdb_embedded_rs $(GO_LLAMA_DIR)/build-x86_64/common/libcommon.a -framework Accelerate -framework Foundation -lc++" \
+		GOARCH=amd64 GOOS=darwin go build -mod=mod -v -ldflags="$(GO_VERSION_LDFLAGS)" -o dist/darwin-amd64/$(BINARY_NAME) ./cmd/remembrances-mcp
+	@# Copy libraries
+	@cp $(BUILD_DIR)/libs/darwin-x86_64/*.dylib dist/darwin-amd64/ 2>/dev/null || \
+	 find "$(GO_LLAMA_DIR)/build-x86_64" -name "*.dylib" -exec cp {} dist/darwin-amd64/ \; 2>/dev/null || true
+	@cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/x86_64-apple-darwin/release/libsurrealdb_embedded_rs.dylib" \
+		dist/darwin-amd64/ 2>/dev/null || true
+	@cp README.md LICENSE.txt config.sample.yaml config.sample.gguf.yaml dist/darwin-amd64/ 2>/dev/null || true
+	@# Fix RPATH for macOS
+	@echo "Fixing macOS library paths for amd64 distribution..."
+	@install_name_tool -add_rpath @executable_path dist/darwin-amd64/$(BINARY_NAME) 2>/dev/null || true
+	@for lib_path in $$(otool -L dist/darwin-amd64/$(BINARY_NAME) | grep surrealdb_embedded_rs | grep -v "@rpath" | awk '{print $$1}'); do \
+		install_name_tool -change "$$lib_path" "@rpath/libsurrealdb_embedded_rs.dylib" dist/darwin-amd64/$(BINARY_NAME); \
+	done
+	@echo "✓ Distribution created in dist/darwin-amd64/"
+	@ls -lh dist/darwin-amd64/
 
 # Build CUDA variant
 build-libs-cuda:
@@ -487,10 +741,29 @@ build-dev: llama-cpp
 check-env:
 	@echo "Build Environment:"
 	@echo "  Platform: $(PLATFORM)"
-	@echo "  Architecture: $(UNAME_M)"
+	@echo "  Architecture: $(UNAME_M) (normalized: $(ARCH))"
 	@echo "  Build Type: $(BUILD_TYPE)"
+	@echo "  Library Extension: $(LIB_EXT)"
 	@echo "  Go Version: $$(go version)"
 	@echo "  CGO Enabled: $(CGO_ENABLED)"
 	@echo "  llama.cpp Dir: $(GO_LLAMA_DIR)"
+	@echo "  SurrealDB Dir: $(SURREALDB_EMBEDDED_DIR)"
 	@echo "  CGO_CFLAGS: $(CGO_CFLAGS)"
 	@echo "  CGO_LDFLAGS: $(CGO_LDFLAGS)"
+	@echo ""
+	@echo "Version Information:"
+	@echo "  Version: $(VERSION)"
+	@echo "  Build Version: $(BUILD_VERSION)"
+	@echo "  Commit Hash: $(COMMIT_HASH)"
+	@echo "  Commit (full): $(COMMIT_HASH_FULL)"
+	@echo ""
+	@echo "Library Status:"
+	@echo "  llama.cpp: $$(ls $(GO_LLAMA_DIR)/build/bin/libllama.$(LIB_EXT) 2>/dev/null && echo 'Found' || echo 'Not built')"
+	@echo "  surrealdb: $$(ls $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.$(LIB_EXT) 2>/dev/null && echo 'Found' || echo 'Not built')"
+ifeq ($(PLATFORM),darwin)
+	@echo ""
+	@echo "macOS Cross-compilation targets:"
+	@echo "  make build-darwin-arm64     - Build for Apple Silicon"
+	@echo "  make build-darwin-amd64     - Build for Intel"
+	@echo "  make build-darwin-universal - Build Universal Binary"
+endif
