@@ -18,13 +18,13 @@
       "env": {},
       "enabled": true,
       "command": "mycommandmcp",
-      "args": ["--config", "~/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"]
+      "args": ["--config", "/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"]
     },
     "remembrances": {
       "env": {},
       "enabled": true,
-      "command": "./build/remembrances-mcp",
-      "args": ["--config", "./config.sample.gguf.yaml"]
+      "command": "remembrances-mcp",
+      "args": ["--config", "/www/MCP/remembrances-mcp/config.sample.gguf.yaml"]
     },
     "chrome-devtools": {
       "env": {},

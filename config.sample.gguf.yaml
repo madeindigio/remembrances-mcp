@@ -62,7 +62,6 @@ gguf-model-path: "/www/Remembrances/nomic-embed-text-v1.5.Q4_K_M.gguf"
 # Number of GPU layers for GGUF model (0 = CPU only) (default: 0)
 # Higher values offload more computation to GPU
 gguf-gpu-layers: 32
-
 # ========== Ollama Configuration ==========
 # URL for the Ollama server (default: "http://localhost:11434")
 #ollama-url: "http://localhost:11434"
@@ -92,4 +91,4 @@ gguf-gpu-layers: 32
 
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
-log: "~/www/MCP/remembrances-mcp/remembrances-mcp.log"
+#log: "~/www/MCP/remembrances-mcp/remembrances-mcp.log"

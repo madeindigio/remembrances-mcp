@@ -53,7 +53,9 @@ ifeq ($(UNAME_S),Darwin)
 	LIB_EXT := dylib
 	# RPATH for macOS - use @executable_path
 	RPATH_FLAG := -Wl,-rpath,@executable_path
-	# Go linker flags for macOS
+	# Go linker RPATH option for macOS
+	RPATH_OPTION := -r @executable_path
+	# Go linker flags for macOS (RPATH only, no version - use GO_ALL_LDFLAGS for full flags)
 	GO_LDFLAGS := -ldflags="-r @executable_path"
 else ifeq ($(UNAME_S),Linux)
 	# Linux
@@ -64,7 +66,9 @@ else ifeq ($(UNAME_S),Linux)
 	LIB_EXT := so
 	# RPATH for Linux
 	RPATH_FLAG := -Wl,-rpath,$$ORIGIN
-	# Go linker flags for Linux
+	# Go linker RPATH option for Linux
+	RPATH_OPTION := -r \$$ORIGIN
+	# Go linker flags for Linux (RPATH only, no version - use GO_ALL_LDFLAGS for full flags)
 	GO_LDFLAGS := -ldflags="-r \$$ORIGIN"
 else
 	$(error Unsupported platform: $(UNAME_S))
@@ -196,7 +200,7 @@ build: llama-cpp surrealdb-embedded
 	@echo "  Version: $(BUILD_VERSION)"
 	@echo "  Commit: $(COMMIT_HASH)"
 	@mkdir -p $(BUILD_DIR)
-	go build -mod=mod -v -ldflags="$(GO_VERSION_LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
+	go build -mod=mod -v -ldflags="$(RPATH_OPTION) $(GO_VERSION_LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Copying shared libraries to build directory..."
 	@# Copy SurrealDB embedded library from Rust build directory
 	@echo "Copying SurrealDB embedded library..."
