@@ -19,7 +19,7 @@ Se ha implementado completamente el soporte para modelos GGUF de embeddings usan
 
 
 ```bash
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 make build
 ```
 
@@ -31,7 +31,7 @@ Esto compilará:
 **Salida esperada:**
 ```
 Checking llama.cpp library...
-llama.cpp library already built at /www/MCP/Remembrances/go-llama.cpp/build/bin/
+llama.cpp library already built at ~/www/MCP/Remembrances/go-llama.cpp/build/bin/
 llama.cpp library ready
 Building remembrances-mcp with GGUF support...
 Build complete: build/remembrances-mcp
@@ -74,7 +74,7 @@ huggingface-cli download nomic-ai/nomic-embed-text-v1.5-GGUF nomic-embed-text-v1
 ### Configuración Manual de LD_LIBRARY_PATH
 
 ```bash
-export LD_LIBRARY_PATH=/www/MCP/Remembrances/go-llama.cpp/build/bin:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=~/www/MCP/Remembrances/go-llama.cpp/build/bin:$LD_LIBRARY_PATH
 ./build/remembrances-mcp \
   --gguf-model-path ./nomic-embed-text-v1.5.Q4_K_M.gguf \
   --gguf-threads 8

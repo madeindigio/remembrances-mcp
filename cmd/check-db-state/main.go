@@ -14,7 +14,7 @@ func main() {
 
 	// Create storage config (same as in config.sample.gguf.yaml)
 	cfg := &storage.ConnectionConfig{
-		DBPath:    "surrealkv:///www/MCP/remembrances-mcp/remembrances.db",
+		DBPath:    "surrealkv://~/www/MCP/remembrances-mcp/remembrances.db",
 		Namespace: "test",
 		Database:  "test",
 	}

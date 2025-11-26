@@ -26,7 +26,7 @@ tests/
 ### All Tests
 ```bash
 # Run complete test suite
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 bash tests/run_all.sh
 ```
 
@@ -63,7 +63,7 @@ Tests require these environment variables (set automatically by test scripts):
 - `GOMEM_SURREALDB_PASS="root"`
 - `GOMEM_OLLAMA_URL="http://localhost:11434"`
 - `GOMEM_OLLAMA_MODEL="nomic-embed-text:latest"`
-- `GOMEM_KNOWLEDGE_BASE="/www/MCP/remembrances-mcp/.serena/memories"`
+- `GOMEM_KNOWLEDGE_BASE="~/www/MCP/remembrances-mcp/.serena/memories"`
 - `GOMEM_SURREALDB_START_CMD="surreal start --user root --pass root surrealkv://$REPO_ROOT/surreal_data"`
 
 ### Dependencies
@@ -103,7 +103,7 @@ Each test produces:
 
 ```bash
 $ bash tests/test_http.sh
-Starting server (HTTP) -> logging to /www/MCP/remembrances-mcp/tests/http_test.log
+Starting server (HTTP) -> logging to ~/www/MCP/remembrances-mcp/tests/http_test.log
 HTTP smoke test: server initialized successfully (PID=12345)
 Port 8081 is listening
 Testing health endpoint...

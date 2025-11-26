@@ -51,7 +51,7 @@ The MCP protocol's `protocol.NewTool()` function doesn't support `interface{}` t
 - The registration helper will report which specific tool returned nil
 
 ## Files Modified
-- `/www/MCP/remembrances-mcp/pkg/mcp_tools/tools.go`:
+- `~/www/MCP/remembrances-mcp/pkg/mcp_tools/tools.go`:
   - Updated all input struct type definitions
   - Added `stringMapToInterfaceMap` helper function
   - Updated all tool factory functions to handle errors

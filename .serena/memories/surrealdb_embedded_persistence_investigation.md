@@ -109,7 +109,7 @@ pub extern "C" fn surreal_close(handle: i32) -> i32 {
 }
 ```
 
-**Estado:** Compilado y copiado a `/www/MCP/Remembrances/surrealdb-embedded/libsurrealdb_embedded_rs.so`
+**Estado:** Compilado y copiado a `~/www/MCP/Remembrances/surrealdb-embedded/libsurrealdb_embedded_rs.so`
 
 #### 3.3 Problema Más Fundamental: Queries No Devuelven Datos 🔴
 
@@ -132,7 +132,7 @@ db.Query("SELECT * FROM test_table", nil)  // => []  ❌ VACÍO!
 
 ### 4. Análisis del Código Rust del Wrapper
 
-**Ubicación:** `/www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs/src/lib.rs`
+**Ubicación:** `~/www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs/src/lib.rs`
 
 **Función problemática:** `surreal_query`
 
@@ -244,7 +244,7 @@ Considerar alternativas como:
 - `internal/storage/surrealdb_documents.go` - Modificación de GetDocument
 
 ### Rust  
-- `/www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs/src/lib.rs` - Fix de surreal_close
+- `~/www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs/src/lib.rs` - Fix de surreal_close
 
 ### Tests Creados
 - `cmd/test-db-contents/main.go`

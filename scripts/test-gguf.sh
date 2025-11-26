@@ -44,7 +44,7 @@ echo "GPU Layers: $GPU_LAYERS"
 echo ""
 
 # Check if llama.cpp is built
-LLAMA_DIR="/www/MCP/Remembrances/go-llama.cpp"
+LLAMA_DIR="~/www/MCP/Remembrances/go-llama.cpp"
 if [ ! -f "$LLAMA_DIR/build/bin/libllama.a" ]; then
     echo -e "${YELLOW}Warning: llama.cpp library not found${NC}"
     echo "Building llama.cpp..."

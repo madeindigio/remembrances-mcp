@@ -59,7 +59,7 @@ surrealdb-database: "test"
 
 El proyecto ahora requiere la librería `surrealdb-embedded` que debe estar compilada en:
 ```
-/www/MCP/Remembrances/surrealdb-embedded
+~/www/MCP/Remembrances/surrealdb-embedded
 ```
 
 ### Compilar el proyecto
@@ -83,7 +83,7 @@ make surrealdb-embedded
 ## Estructura de Archivos
 
 ```
-/www/MCP/remembrances-mcp/
+~/www/MCP/remembrances-mcp/
 ├── internal/storage/
 │   ├── surrealdb.go                    # Lógica principal con soporte dual
 │   ├── surrealdb_query_helper.go      # Helpers para queries en ambos backends
@@ -167,10 +167,10 @@ Asegúrate de que la librería compartida esté en el PATH o en el mismo directo
 
 ```bash
 # Opción 1: Añadir al PATH
-export LD_LIBRARY_PATH=/www/MCP/Remembrances/surrealdb-embedded:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=~/www/MCP/Remembrances/surrealdb-embedded:$LD_LIBRARY_PATH
 
 # Opción 2: Copiar al directorio build (ya se hace automáticamente con make build)
-cp /www/MCP/Remembrances/surrealdb-embedded/libsurrealdb_embedded_rs.so ./build/
+cp ~/www/MCP/Remembrances/surrealdb-embedded/libsurrealdb_embedded_rs.so ./build/
 ```
 
 ### Error de compilación con CGO
@@ -183,7 +183,7 @@ make build
 
 # O configurar manualmente
 export CGO_ENABLED=1
-export CGO_LDFLAGS="-L/www/MCP/Remembrances/surrealdb-embedded -lsurrealdb_embedded_rs"
+export CGO_LDFLAGS="-L~/www/MCP/Remembrances/surrealdb-embedded -lsurrealdb_embedded_rs"
 ```
 
 ## Compatibilidad

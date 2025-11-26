@@ -13,7 +13,7 @@ Según la verificación:
 ### 1. Limpiar compilación anterior (si existe)
 
 ```bash
-cd /www/MCP/Remembrances/go-llama.cpp
+cd ~/www/MCP/Remembrances/go-llama.cpp
 rm -rf build
 rm -f prepare *.o *.a
 ```
@@ -23,7 +23,7 @@ rm -f prepare *.o *.a
 El script automáticamente detectará y usará CUDA 12.6:
 
 ```bash
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 ./scripts/build-cuda-libs.sh
 ```
 

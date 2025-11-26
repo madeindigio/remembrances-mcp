@@ -26,7 +26,7 @@ func main() {
 
 	// Create storage
 	cfg := &storage.ConnectionConfig{
-		DBPath:    "surrealkv:///www/MCP/remembrances-mcp/remembrances.db",
+		DBPath:    "surrealkv://~/www/MCP/remembrances-mcp/remembrances.db",
 		Namespace: "test",
 		Database:  "test",
 	}

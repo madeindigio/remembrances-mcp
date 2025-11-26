@@ -21,12 +21,12 @@ Se comentaron todos los `eprintln!()` en el código Rust de `surrealdb_embedded_
 - Líneas 277, 281, 285, 291, 296, 300, 306, 311, 315: Mensajes de debug en `surreal_query`
 - Líneas 432, 437, 443: Mensajes de debug en `surreal_query_with_params`
 
-**Archivo modificado**: `/www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs/src/lib.rs`
+**Archivo modificado**: `~/www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs/src/lib.rs`
 
 ## Problema 2: Parsing Incorrecto del Prefijo `surrealkv://`
 
 ### Síntomas
-Al configurar `db-path: "surrealkv:///www/MCP/remembrances-mcp/remembrances.db"`, el sistema intentaba crear una carpeta llamada `surrealkv` en el path local en lugar de usar el backend SurrealKV.
+Al configurar `db-path: "surrealkv://~/www/MCP/remembrances-mcp/remembrances.db"`, el sistema intentaba crear una carpeta llamada `surrealkv` en el path local en lugar de usar el backend SurrealKV.
 
 ### Causa Raíz
 El código Go en `internal/storage/surrealdb.go` estaba usando directamente `embedded.NewRocksDB()` en lugar de `embedded.NewFromURL()`, lo que no permitía interpretar los prefijos de URL.
@@ -48,7 +48,7 @@ Esto permite soportar todos los backends:
 - `surrealkv:///path/to/db` - Backend SurrealKV  
 - `file:///path/to/db` - Deprecated, usa RocksDB
 
-**Archivo modificado**: `/www/MCP/remembrances-mcp/internal/storage/surrealdb.go:72`
+**Archivo modificado**: `~/www/MCP/remembrances-mcp/internal/storage/surrealdb.go:72`
 
 ### Nota sobre Sintaxis de URL
 La sintaxis con tres barras (`surrealkv:///path`) es **correcta**:
@@ -92,7 +92,7 @@ Para identificar el problema real, se recomienda:
 
 2. **Verificar el archivo de base de datos**:
    ```bash
-   ls -lh /www/MCP/remembrances-mcp/remembrances.db/
+   ls -lh ~/www/MCP/remembrances-mcp/remembrances.db/
    ```
    - Debería contener archivos de SurrealKV
    - El tamaño debería crecer al añadir datos
@@ -112,23 +112,23 @@ Para identificar el problema real, se recomienda:
 ## Archivos Modificados
 
 ### Librería SurrealDB Embedded
-- `/www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs/src/lib.rs`
+- `~/www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs/src/lib.rs`
   - Comentados 15 mensajes `eprintln!()`
   - Recompilada con `cargo build --release`
 
 ### Proyecto Principal
-- `/www/MCP/remembrances-mcp/internal/storage/surrealdb.go:72`
+- `~/www/MCP/remembrances-mcp/internal/storage/surrealdb.go:72`
   - Cambiado `embedded.NewRocksDB()` por `embedded.NewFromURL()`
 
 ## Compilación y Despliegue
 
 ```bash
 # 1. Reconstruir librería Rust
-cd /www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs
+cd ~/www/MCP/Remembrances/surrealdb-embedded/surrealdb_embedded_rs
 cargo build --release
 
 # 2. Reconstruir proyecto principal
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 make clean && make build
 
 # 3. Verificar librerías copiadas
@@ -140,10 +140,10 @@ ls -lh build/libsurrealdb_embedded_rs.so
 
 ```yaml
 # config.sample.gguf.yaml
-db-path: "surrealkv:///www/MCP/remembrances-mcp/remembrances.db"
+db-path: "surrealkv://~/www/MCP/remembrances-mcp/remembrances.db"
 
 # Para RocksDB:
-# db-path: "rocksdb:///www/MCP/remembrances-mcp/remembrances.db"
+# db-path: "rocksdb://~/www/MCP/remembrances-mcp/remembrances.db"
 
 # Para memoria (testing):
 # db-path: "memory://"
@@ -155,7 +155,7 @@ Para probar los cambios:
 
 ```bash
 # 1. Eliminar base de datos anterior para empezar limpio
-rm -rf /www/MCP/remembrances-mcp/remembrances.db
+rm -rf ~/www/MCP/remembrances-mcp/remembrances.db
 
 # 2. Ejecutar con configuración
 ./build/remembrances-mcp --config config.sample.gguf.yaml

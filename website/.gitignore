@@ -1,0 +1,14 @@
+# Hugo build artifacts
+public/
+resources/
+.hugo_build.lock
+
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Dart Sass binary
+bin/
+
+# OS files
+.DS_Store

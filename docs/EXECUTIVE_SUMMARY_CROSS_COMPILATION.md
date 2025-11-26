@@ -97,7 +97,7 @@ libmtmd.so        (724 KB)
 
 **Original Error:**
 ```
-go: /www/MCP/Remembrances/go-llama.cpp@ used for two different module paths
+go: ~/www/MCP/Remembrances/go-llama.cpp@ used for two different module paths
 ```
 
 **Cause:** Two `replace` directives pointed to the same directory
@@ -112,12 +112,12 @@ go: /www/MCP/Remembrances/go-llama.cpp@ used for two different module paths
 
 **Original Error:**
 ```
-reading /www/MCP/Remembrances/go-llama.cpp/go.mod: no such file or directory
+reading ~/www/MCP/Remembrances/go-llama.cpp/go.mod: no such file or directory
 ```
 
 **Cause:** GoReleaser could not access local modules
 
-**Solution Applied:** Added `-v "/www/MCP/Remembrances:/www/MCP/Remembrances"` in `run_goreleaser()`
+**Solution Applied:** Added `-v "~/www/MCP/Remembrances:~/www/MCP/Remembrances"` in `run_goreleaser()`
 
 **Status:** ✅ Permanently solved
 

@@ -1,8 +1,54 @@
-# Build Scripts
+# Build & Installation Scripts
 
-Este directorio contiene scripts para compilar y crear releases del proyecto Remembrances-MCP.
+Este directorio contiene scripts para compilar, crear releases e instalar el proyecto Remembrances-MCP.
 
 ## Scripts Disponibles
+
+### 📦 `install.sh`
+
+Script de instalación automática para Linux y macOS. Permite instalar Remembrances-MCP con un solo comando.
+
+**Instalación rápida:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/madeindigio/remembrances-mcp/main/scripts/install.sh | bash
+```
+
+**¿Qué hace?**
+1. Detecta automáticamente el sistema operativo (Linux/macOS)
+2. Detecta la arquitectura (amd64/aarch64)
+3. Descarga la release apropiada de GitHub
+4. Instala el binario y las bibliotecas compartidas
+5. Crea la configuración por defecto con rutas apropiadas
+6. Descarga el modelo GGUF de embeddings (~260MB)
+7. Configura el PATH en `.bashrc` y `.zshrc`
+
+**Directorios de instalación:**
+
+| OS | Binario + Libraries | Configuración |
+|----|---------------------|---------------|
+| Linux | `~/.local/share/remembrances/bin/` | `~/.config/remembrances/` |
+| macOS | `~/Library/Application Support/remembrances/bin/` | `~/Library/Application Support/remembrances/` |
+
+> **Nota:** Las shared libraries (`.so`, `.dylib`) se instalan en el mismo directorio que el binario. El binario está compilado para buscar las bibliotecas primero en su propio directorio.
+
+**Variables de entorno:**
+- `REMEMBRANCES_VERSION` - Versión a instalar (default: `v1.4.6`)
+
+**Ejemplo con versión específica:**
+```bash
+REMEMBRANCES_VERSION=v1.4.5 curl -fsSL https://raw.githubusercontent.com/madeindigio/remembrances-mcp/main/scripts/install.sh | bash
+```
+
+**Después de la instalación:**
+```bash
+# Recargar shell
+source ~/.bashrc  # o ~/.zshrc
+
+# Verificar instalación
+remembrances-mcp --help
+```
+
+---
 
 ### 🚀 `release-cross.sh`
 
@@ -54,7 +100,7 @@ Script para compilar shared libraries (llama.cpp y surrealdb-embedded) para toda
 # Normalmente llamado por release-cross.sh
 docker run --rm \
   -v $PWD:/go/src/github.com/madeindigio/remembrances-mcp \
-  -v /www/MCP/Remembrances:/www/MCP/Remembrances \
+  -v ~/www/MCP/Remembrances:~/www/MCP/Remembrances \
   -w /go/src/github.com/madeindigio/remembrances-mcp \
   ghcr.io/goreleaser/goreleaser-cross:v1.23 \
   bash scripts/build-libs-cross.sh
@@ -101,8 +147,8 @@ Script para probar la funcionalidad GGUF del proyecto.
 | Variable | Descripción | Default |
 |----------|-------------|---------|
 | `PROJECT_ROOT` | Raíz del proyecto | `/go/src/github.com/madeindigio/remembrances-mcp` |
-| `LLAMA_CPP_DIR` | Directorio de llama.cpp | `/www/MCP/Remembrances/go-llama.cpp` |
-| `SURREALDB_DIR` | Directorio de surrealdb-embedded | `/www/MCP/Remembrances/surrealdb-embedded` |
+| `LLAMA_CPP_DIR` | Directorio de llama.cpp | `~/www/MCP/Remembrances/go-llama.cpp` |
+| `SURREALDB_DIR` | Directorio de surrealdb-embedded | `~/www/MCP/Remembrances/surrealdb-embedded` |
 | `DIST_LIBS_DIR` | Directorio de salida | `${PROJECT_ROOT}/dist/libs` |
 
 ## Flujo de Trabajo
@@ -235,10 +281,10 @@ chmod +x scripts/*.sh
 
 ```bash
 # Verificar que el submodulo existe
-ls -la /www/MCP/Remembrances/go-llama.cpp/llama.cpp
+ls -la ~/www/MCP/Remembrances/go-llama.cpp/llama.cpp
 
 # Inicializar submodulos si es necesario
-cd /www/MCP/Remembrances/go-llama.cpp
+cd ~/www/MCP/Remembrances/go-llama.cpp
 git submodule update --init --recursive
 ```
 

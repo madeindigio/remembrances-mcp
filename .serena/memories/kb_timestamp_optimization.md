@@ -152,7 +152,7 @@ Esto permite:
 
 ### Compilación
 ```bash
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 make build
 ```
 

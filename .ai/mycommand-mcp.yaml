@@ -10,7 +10,7 @@ tools:
   - name: "initial-context"
     description: "Get initial context information for tasks"
     command: ".ai/scripts/initial-context.sh"
-    path: "/www/MCP/remembrances-mcp/"
+    path: "~/www/MCP/remembrances-mcp/"
     accepts_args: true
     accept_input: false
 
@@ -31,20 +31,20 @@ tools:
   - name: "terminal"
     description: "Call to Bash terminal, send all commands to run into input argument"
     command: "bash"
-    path: "/www/MCP/remembrances-mcp/"
+    path: "~/www/MCP/remembrances-mcp/"
     accepts_args: true
     accept_input: true
 
   - name: "osx-shell"
     description: "Execute commands in an OSX zsh shell environment, send all commands to run into input argument"
     command: "./ai/scripts/osx-connection.sh"
-    path: "/www/MCP/remembrances-mcp/"
+    path: "~/www/MCP/remembrances-mcp/"
     accepts_args: false
     accept_input: true
 
   - name: "opencode-agent-debug"
     description: "Send to an opencode agent connected to remembrances last build for testing tools and logic, send the test to the agent tasks in the input argument"
     command: "./ai/scripts/opencode-debug.sh"
-    path: "/www/MCP/remembrances-mcp/"
+    path: "~/www/MCP/remembrances-mcp/"
     accepts_args: false
     accept_input: true

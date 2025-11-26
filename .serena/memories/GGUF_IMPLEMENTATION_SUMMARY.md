@@ -102,7 +102,7 @@ require (
     github.com/madeindigio/go-llama.cpp v0.0.0-00010101000000-000000000000
 )
 
-replace github.com/madeindigio/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
+replace github.com/madeindigio/go-llama.cpp => ~/www/MCP/Remembrances/go-llama.cpp
 ```
 
 **Note**: Also updated go-llama.cpp module name from `github.com/go-skynet/go-llama.cpp` to `github.com/madeindigio/go-llama.cpp`
@@ -430,7 +430,7 @@ Potential improvements for future versions:
 - **go-llama.cpp** (github.com/madeindigio/go-llama.cpp)
   - Custom fork with nomic-bert and qwen support
   - CGO bindings to llama.cpp
-  - Located at: `/www/MCP/Remembrances/go-llama.cpp`
+  - Located at: `~/www/MCP/Remembrances/go-llama.cpp`
 
 ### System Requirements
 

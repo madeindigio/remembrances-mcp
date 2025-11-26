@@ -15,16 +15,16 @@ During the initial execution of `./scripts/release-cross.sh`, the following issu
 ### 2. Duplicate Replace Directives in go.mod
 - **Issue**: Two `replace` directives pointed to the same directory, causing a Go error:
 ```
-replace github.com/madeindigio/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
-replace github.com/go-skynet/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
+replace github.com/madeindigio/go-llama.cpp => ~/www/MCP/Remembrances/go-llama.cpp
+replace github.com/go-skynet/go-llama.cpp => ~/www/MCP/Remembrances/go-llama.cpp
 ```
 - **Solution**: Removed the duplicate directive for `go-skynet/go-llama.cpp`.
 
 ### 3. Docker Volumes Not Mounted
-- **Issue**: GoReleaser could not access `/www/MCP/Remembrances/` for local modules.
+- **Issue**: GoReleaser could not access `~/www/MCP/Remembrances/` for local modules.
 - **Solution**: Added volume mount in `run_goreleaser()`:
 ```bash
--v "/www/MCP/Remembrances:/www/MCP/Remembrances"
+-v "~/www/MCP/Remembrances:~/www/MCP/Remembrances"
 ```
 
 ### 4. CURL Dependency in llama.cpp
@@ -75,7 +75,7 @@ Comprehensive documentation on:
 **Changes:**
 - Added `GORELEASER_CROSS_IMAGE` variable to use custom image
 - Updated `build_shared_libraries()` with `--entrypoint /bin/bash`
-- Updated `run_goreleaser()` to mount `/www/MCP/Remembrances` volume
+- Updated `run_goreleaser()` to mount `~/www/MCP/Remembrances` volume
 - All Docker image references now use `${GORELEASER_CROSS_IMAGE}`
 - Added fault tolerance in library compilation
 
@@ -85,7 +85,7 @@ Comprehensive documentation on:
 
 ### 3. `go.mod`
 **Changes:**
-- Removed `replace github.com/go-skynet/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp` directive
+- Removed `replace github.com/go-skynet/go-llama.cpp => ~/www/MCP/Remembrances/go-llama.cpp` directive
 
 ### 4. `.goreleaser.yml`
 **Changes:**

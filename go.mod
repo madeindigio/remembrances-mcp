@@ -44,6 +44,19 @@ require (
 	golang.org/x/text v0.21.0 // indirect
 )
 
-replace github.com/madeindigio/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
+// Local development replacements
+// These use absolute paths expanded at build time. For portable builds, create a go.work file:
+//   go work init .
+//   go work use $HOME/www/MCP/Remembrances/go-llama.cpp
+//   go work use $HOME/www/MCP/Remembrances/surrealdb-embedded
+//
+// Or set environment variables before building:
+//   export GO_LLAMA_DIR=$HOME/www/MCP/Remembrances/go-llama.cpp
+//   export SURREALDB_DIR=$HOME/www/MCP/Remembrances/surrealdb-embedded
+//   go mod edit -replace github.com/madeindigio/go-llama.cpp=$GO_LLAMA_DIR
+//   go mod edit -replace github.com/madeindigio/surrealdb-embedded-golang=$SURREALDB_DIR
 
-replace github.com/madeindigio/surrealdb-embedded-golang => /www/MCP/Remembrances/surrealdb-embedded
+// Default paths for the main development environment
+replace github.com/madeindigio/go-llama.cpp => /Users/digio/www/MCP/Remembrances/go-llama.cpp
+
+replace github.com/madeindigio/surrealdb-embedded-golang => /Users/digio/www/MCP/Remembrances/surrealdb-embedded

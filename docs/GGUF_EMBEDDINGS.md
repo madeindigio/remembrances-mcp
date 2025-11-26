@@ -260,7 +260,7 @@ Run with:
 
 1. **"llama.cpp submodule not found"**:
    ```bash
-   cd /www/MCP/Remembrances/go-llama.cpp
+   cd ~/www/MCP/Remembrances/go-llama.cpp
    git submodule update --init --recursive
    ```
 

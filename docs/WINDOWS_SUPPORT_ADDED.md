@@ -60,8 +60,8 @@ $ ls -lh dist/libs/linux-amd64/
 
 **Cause:** Two `replace` directives pointed to the same directory:
 ```go
-replace github.com/madeindigio/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
-replace github.com/go-skynet/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
+replace github.com/madeindigio/go-llama.cpp => ~/www/MCP/Remembrances/go-llama.cpp
+replace github.com/go-skynet/go-llama.cpp => ~/www/MCP/Remembrances/go-llama.cpp
 ```
 
 **Solution:** Removed the duplicate `go-skynet/go-llama.cpp` directive from the `go.mod` file
@@ -71,11 +71,11 @@ replace github.com/go-skynet/go-llama.cpp => /www/MCP/Remembrances/go-llama.cpp
 ### Issue 3: Docker Volumes Not Mounted
 **Error:** GoReleaser could not access local modules
 
-**Cause:** The `/www/MCP/Remembrances/` directory was not mounted in the container
+**Cause:** The `~/www/MCP/Remembrances/` directory was not mounted in the container
 
 **Solution:** Added mount in `run_goreleaser()`:
 ```bash
--v "/www/MCP/Remembrances:/www/MCP/Remembrances"
+-v "~/www/MCP/Remembrances:~/www/MCP/Remembrances"
 ```
 
 ---
@@ -255,8 +255,8 @@ export GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:v1.23-rust
 export GITHUB_TOKEN=your_token_here
 
 # Custom paths (optional)
-export LLAMA_CPP_DIR=/www/MCP/Remembrances/go-llama.cpp
-export SURREALDB_DIR=/www/MCP/Remembrances/surrealdb-embedded
+export LLAMA_CPP_DIR=~/www/MCP/Remembrances/go-llama.cpp
+export SURREALDB_DIR=~/www/MCP/Remembrances/surrealdb-embedded
 ```
 
 ## 📦 Output Structure

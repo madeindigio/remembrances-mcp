@@ -13,7 +13,7 @@ The project uses a custom Docker image based on `goreleaser-cross` with addition
 
 - Docker installed and running
 - Sufficient disk space (~10GB for Docker image and build artifacts)
-- Access to `/www/MCP/Remembrances/` directory with:
+- Access to `~/www/MCP/Remembrances/` directory with:
   - `go-llama.cpp` module
   - `surrealdb-embedded` module
 
@@ -120,8 +120,8 @@ This script:
 - `GORELEASER_CROSS_VERSION`: Version tag for default image (default: `v1.23`)
 - `GITHUB_TOKEN`: GitHub token for releases
 - `PROJECT_ROOT`: Project root directory (auto-detected)
-- `LLAMA_CPP_DIR`: Path to go-llama.cpp (default: `/www/MCP/Remembrances/go-llama.cpp`)
-- `SURREALDB_DIR`: Path to surrealdb-embedded (default: `/www/MCP/Remembrances/surrealdb-embedded`)
+- `LLAMA_CPP_DIR`: Path to go-llama.cpp (default: `~/www/MCP/Remembrances/go-llama.cpp`)
+- `SURREALDB_DIR`: Path to surrealdb-embedded (default: `~/www/MCP/Remembrances/surrealdb-embedded`)
 
 ## Build Output
 

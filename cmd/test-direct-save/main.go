@@ -14,7 +14,7 @@ func main() {
 
 	// Create storage instance
 	storageConfig := &storage.ConnectionConfig{
-		DBPath:    "/www/MCP/remembrances-mcp/remembrances.db",
+		DBPath:    "~/www/MCP/remembrances-mcp/remembrances.db",
 		Namespace: "test",
 		Database:  "test",
 		Timeout:   30 * time.Second,

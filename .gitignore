@@ -3,6 +3,7 @@
 /build/
 /dist/
 /dist-variants/
+/output/
 *.exe
 *.dll
 *.so

@@ -58,7 +58,7 @@ Esto:
 Después de tener las librerías CUDA:
 
 ```bash
-cd /www/MCP/remembrances-mcp
+cd ~/www/MCP/remembrances-mcp
 make clean
 make BUILD_TYPE=cuda build
 ```

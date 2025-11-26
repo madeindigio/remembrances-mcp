@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// Connect to embedded DB
-	db, err := embedded.NewRocksDB("/www/MCP/remembrances-mcp/remembrances.db")
+	db, err := embedded.NewRocksDB("~/www/MCP/remembrances-mcp/remembrances.db")
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}

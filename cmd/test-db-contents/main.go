@@ -14,7 +14,7 @@ func main() {
 	ctx := context.Background()
 
 	// Read config from file or use defaults
-	dbPath := "/www/MCP/remembrances-mcp/remembrances.db"
+	dbPath := "~/www/MCP/remembrances-mcp/remembrances.db"
 	if len(os.Args) > 1 {
 		dbPath = os.Args[1]
 	}

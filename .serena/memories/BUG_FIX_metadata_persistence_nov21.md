@@ -298,7 +298,7 @@ Migration V7 is **non-destructive**:
 
 - **Related Documentation**:
   - `.serena/memories/surrealdb_embedded_fixes_nov21.md` - Initial investigation
-  - `/www/MCP/Remembrances/surrealdb-embedded/BUG_ANALYSIS.md` - Library testing
+  - `~/www/MCP/Remembrances/surrealdb-embedded/BUG_ANALYSIS.md` - Library testing
   - `internal/storage/surrealdb_schema.go` - Schema definitions
 
 - **Test Programs**:
