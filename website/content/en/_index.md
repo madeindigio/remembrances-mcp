@@ -1,4 +1,3 @@
-```
 ---
 title: "Remembrances MCP"
 linkTitle: "Remembrances MCP"
@@ -51,6 +50,7 @@ It uses **local embeddings** and **SurrealDB** to store and retrieve information
 {{< /blocks/section >}}
 
 {{< blocks/section color="dark" >}}
+<div class="row">
 {{% blocks/feature icon="fa-lock" title="Privacy First" %}}
 All embeddings generated locally with GGUF models. No data sent externally.
 {{% /blocks/feature %}}
@@ -62,6 +62,7 @@ Support for Metal (macOS), CUDA (NVIDIA), and ROCm (AMD) for blazing-fast perfor
 {{% blocks/feature icon="fa-database" title="Multiple Storage Layers" %}}
 Key-value, vector/RAG, and graph database support with SurrealDB.
 {{% /blocks/feature %}}
+</div>
 {{< /blocks/section >}}
 
 {{< blocks/section color="white" >}}
@@ -70,33 +71,16 @@ Key-value, vector/RAG, and graph database support with SurrealDB.
 <p class="text-center">Get started with Remembrances MCP in minutes</p>
 </div>
 
-<div class="col-lg-4">
-<h3>1. Download Model</h3>
-<p>Download a GGUF embedding model from Hugging Face:</p>
-<pre><code>wget https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf</code></pre>
+<div class="col-12">
+<h3>For Linux or MacOSX</h3>
+<p>Execute the install script:</p>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/madeindigio/remembrances-mcp/main/scripts/install.sh | bash</code></pre>
 </div>
 
-<div class="col-lg-4">
-<h3>2. Build & Run</h3>
-<p>Build the project and start the server:</p>
-<pre><code>make build
-./run-remembrances.sh \
-  --gguf-model-path ./nomic-embed-text-v1.5.Q4_K_M.gguf \
-  --gguf-gpu-layers 32</code></pre>
-</div>
-
-<div class="col-lg-4">
-<h3>3. Connect Your Agent</h3>
-<p>Configure your AI agent to use the MCP server:</p>
-<pre><code>{
-  "mcpServers": {
-    "remembrances": {
-      "command": "./remembrances-mcp",
-      "args": ["--gguf-model-path", "model.gguf"]
-    }
-  }
-}</code></pre>
+<div class="col-12">
+<h3>For Windows</h3>
+<p>Use the linux version in WSL or with docker:</p>
+<pre><code>docker run ....</code></pre>
 </div>
 
 {{< /blocks/section >}}
-```

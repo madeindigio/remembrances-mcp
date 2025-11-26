@@ -1,4 +1,3 @@
-```
 ---
 title: "Remembrances MCP"
 linkTitle: "Remembrances MCP"
@@ -51,6 +50,7 @@ Utiliza **embeddings locales** y **SurrealDB** para almacenar y recuperar inform
 {{< /blocks/section >}}
 
 {{< blocks/section color="dark" >}}
+<div class="row">
 {{% blocks/feature icon="fa-lock" title="Privacidad Primero" %}}
 Todos los embeddings se generan localmente con modelos GGUF. Sin envío de datos externos.
 {{% /blocks/feature %}}
@@ -62,6 +62,7 @@ Soporte para Metal (macOS), CUDA (NVIDIA) y ROCm (AMD) para un rendimiento ultra
 {{% blocks/feature icon="fa-database" title="Múltiples Capas de Almacenamiento" %}}
 Soporte para clave-valor, vector/RAG y base de datos de grafos con SurrealDB.
 {{% /blocks/feature %}}
+</div>
 {{< /blocks/section >}}
 
 {{< blocks/section color="white" >}}
@@ -99,4 +100,3 @@ Soporte para clave-valor, vector/RAG y base de datos de grafos con SurrealDB.
 </div>
 
 {{< /blocks/section >}}
-```

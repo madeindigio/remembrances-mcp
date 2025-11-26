@@ -21,6 +21,7 @@ Traditional AI agents are stateless - they forget everything between conversatio
 
 ## Key Features
 
+<div class="row">
 {{% blocks/feature icon="fa-lock" title="Privacy-First Local Embeddings" %}}
 Generate embeddings completely locally using GGUF models. Your data never leaves your machine, ensuring complete privacy and security.
 {{% /blocks/feature %}}
@@ -44,7 +45,7 @@ Support for multiple embedding providers: GGUF Models (local), Ollama (local ser
 {{% blocks/feature icon="fa-shield-alt" title="Privacy Control" %}}
 Keep sensitive data local with GGUF embeddings and embedded SurrealDB - no cloud dependencies required.
 {{% /blocks/feature %}}
-
+</div>
 {{% /blocks/section %}}
 
 {{% blocks/section color="primary" %}}
@@ -53,6 +54,7 @@ Keep sensitive data local with GGUF embeddings and embedded SurrealDB - no cloud
 
 Remembrances MCP empowers your AI agents with powerful memory capabilities while maintaining complete control over your data.
 
+<div class="row">
 {{% blocks/feature icon="fa-brain" title="Persistent Memory" %}}
 Store facts, conversations, and knowledge permanently. Your AI remembers what matters.
 {{% /blocks/feature %}}
@@ -64,7 +66,7 @@ Find relevant information using vector embeddings. Smart search that understands
 {{% blocks/feature icon="fa-project-diagram" title="Relationship Mapping" %}}
 Understand connections between different pieces of information using graph database capabilities.
 {{% /blocks/feature %}}
-
+</div>
 {{% /blocks/section %}}
 
 {{% blocks/section color="white" %}}
@@ -72,24 +74,31 @@ Understand connections between different pieces of information using graph datab
 ## Use Cases
 
 <div class="row">
-<div class="col-md-6">
 
-### 🤖 Personal AI Assistants
+{{% blocks/feature icon="fa-robot" title="Personal AI Assistants" %}}
 Remember user preferences and past conversations to provide a truly personalized experience.
+{{% /blocks/feature %}}
 
-### 🔬 Research Assistants
+{{% blocks/feature icon="fa-book-atlas" title="Research Assistants" %}}
 Build and query knowledge bases from documents, papers, and research materials.
+{{% /blocks/feature %}}
 
-</div>
-<div class="col-md-6">
-
-### 💬 Customer Support
+{{% blocks/feature icon="fa-user" title="Customer Support" %}}
 Maintain context across multiple interactions for better customer service.
+{{% /blocks/feature %}}
 
-### 💻 Development Tools
+{{% blocks/feature icon="fa-code" title="Development Tools" %}}
 Store and retrieve code snippets, documentation, and technical knowledge.
+{{% /blocks/feature %}}
 
-</div>
+{{% blocks/feature icon="fa-brain" title="AI Agents" %}}
+Learn from experiences and improve the results.
+{{% /blocks/feature %}}
+
+{{% blocks/feature icon="fa-building" title="Enterprise knowledge retention" %}}
+The knowledge learned for the workers is saved in a company shared database.
+{{% /blocks/feature %}}
+
 </div>
 
 {{% /blocks/section %}}
@@ -121,12 +130,8 @@ We welcome contributions from the community! Whether you want to report a bug, s
 
 ## Developed by Digio
 
-<div style="text-align: center; padding: 2rem 0;">
-
 Remembrances MCP is developed and maintained by [**Digio**](https://digio.es), a software development company specializing in AI and innovative solutions.
 
 Visit us at [digio.es](https://digio.es) to learn more about our work.
-
-</div>
 
 {{% /blocks/section %}}

@@ -21,6 +21,7 @@ Los agentes IA tradicionales no tienen estado - olvidan todo entre conversacione
 
 ## Características Principales
 
+<div class="row">
 {{% blocks/feature icon="fa-lock" title="Embeddings Locales que Priorizan la Privacidad" %}}
 Genera embeddings completamente en local usando modelos GGUF. Tus datos nunca salen de tu máquina, garantizando privacidad y seguridad completas.
 {{% /blocks/feature %}}
@@ -44,7 +45,7 @@ Soporte para múltiples proveedores de embeddings: Modelos GGUF (local), Ollama 
 {{% blocks/feature icon="fa-shield-alt" title="Control de Privacidad" %}}
 Mantén datos sensibles en local con embeddings GGUF y SurrealDB embebido - sin dependencias en la nube.
 {{% /blocks/feature %}}
-
+</div>
 {{% /blocks/section %}}
 
 {{% blocks/section color="primary" %}}
@@ -53,6 +54,7 @@ Mantén datos sensibles en local con embeddings GGUF y SurrealDB embebido - sin 
 
 Remembrances MCP potencia tus agentes IA con poderosas capacidades de memoria mientras mantienes el control completo sobre tus datos.
 
+<div class="row">
 {{% blocks/feature icon="fa-brain" title="Memoria Persistente" %}}
 Almacena hechos, conversaciones y conocimiento permanentemente. Tu IA recuerda lo que importa.
 {{% /blocks/feature %}}
@@ -64,7 +66,7 @@ Encuentra información relevante usando embeddings vectoriales. Búsqueda inteli
 {{% blocks/feature icon="fa-project-diagram" title="Mapeo de Relaciones" %}}
 Entiende conexiones entre diferentes piezas de información usando capacidades de base de datos de grafos.
 {{% /blocks/feature %}}
-
+</div>
 {{% /blocks/section %}}
 
 {{% blocks/section color="white" %}}
@@ -72,24 +74,31 @@ Entiende conexiones entre diferentes piezas de información usando capacidades d
 ## Casos de Uso
 
 <div class="row">
-<div class="col-md-6">
 
-### 🤖 Asistentes IA Personales
+{{% blocks/feature icon="fa-robot" title="Asistentes IA Personales" %}}
 Recuerda preferencias de usuario y conversaciones pasadas para proporcionar una experiencia verdaderamente personalizada.
+{{% /blocks/feature %}}
 
-### 🔬 Asistentes de Investigación
+{{% blocks/feature icon="fa-book-atlas" title="Asistentes de Investigación" %}}
 Construye y consulta bases de conocimiento desde documentos, papers y materiales de investigación.
+{{% /blocks/feature %}}
 
-</div>
-<div class="col-md-6">
-
-### 💬 Soporte al Cliente
+{{% blocks/feature icon="fa-user" title="Soporte al Cliente" %}}
 Mantén contexto a través de múltiples interacciones para un mejor servicio al cliente.
+{{% /blocks/feature %}}
 
-### 💻 Herramientas de Desarrollo
+{{% blocks/feature icon="fa-code" title="Herramientas de Desarrollo" %}}
 Almacena y recupera fragmentos de código, documentación y conocimiento técnico.
+{{% /blocks/feature %}}
 
-</div>
+{{% blocks/feature icon="fa-brain" title="Agentes IA" %}}
+Aprende de experiencias y mejora los resultados.
+{{% /blocks/feature %}}
+
+{{% blocks/feature icon="fa-building" title="Retención de Conocimiento Empresarial" %}}
+El conocimiento aprendido por los trabajadores se guarda en una base de datos compartida de la empresa.
+{{% /blocks/feature %}}
+
 </div>
 
 {{% /blocks/section %}}
@@ -121,12 +130,8 @@ Remembrances MCP es **código abierto** y está disponible en [GitHub](https://g
 
 ## Desarrollado por Digio
 
-<div style="text-align: center; padding: 2rem 0;">
-
 Remembrances MCP es desarrollado y mantenido por [**Digio**](https://digio.es), una empresa de desarrollo de software especializada en IA y soluciones innovadoras.
 
 Visítanos en [digio.es](https://digio.es) para conocer más sobre nuestro trabajo.
-
-</div>
 
 {{% /blocks/section %}}
