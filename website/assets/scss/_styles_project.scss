@@ -282,10 +282,42 @@ html {
   padding: 3rem 0;
 }
 
+/* Feature blocks container - grid layout */
+.td-block--white .row,
+.td-block--primary .row,
+.td-block--secondary .row,
+.td-block--dark .row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin: 0;
+}
+
+/* Ensure features display in grid on larger screens */
+@media (min-width: 768px) {
+
+  .td-block--white .row,
+  .td-block--primary .row,
+  .td-block--secondary .row,
+  .td-block--dark .row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+
+  .td-block--white .row,
+  .td-block--primary .row,
+  .td-block--secondary .row,
+  .td-block--dark .row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 .blocks-feature {
   text-align: center;
   padding: 2rem 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -305,6 +337,11 @@ html {
   font-weight: 600;
   margin-bottom: 1rem;
   color: var(--digio-dark);
+  text-align: center;
+}
+
+.blocks-feature p {
+  text-align: center;
 }
 
 /* Section backgrounds with gradients */
