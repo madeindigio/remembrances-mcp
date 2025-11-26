@@ -282,36 +282,53 @@ html {
   padding: 3rem 0;
 }
 
-/* Feature blocks container - grid layout */
-.td-block--white .row,
-.td-block--primary .row,
-.td-block--secondary .row,
-.td-block--dark .row {
+/* Feature blocks container - grid layout for Docsy sections */
+.td-block--white>.container,
+.td-block--primary>.container,
+.td-block--secondary>.container,
+.td-block--dark>.container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: 1fr;
   gap: 2rem;
-  margin: 0;
 }
 
 /* Ensure features display in grid on larger screens */
 @media (min-width: 768px) {
 
-  .td-block--white .row,
-  .td-block--primary .row,
-  .td-block--secondary .row,
-  .td-block--dark .row {
+  .td-block--white>.container,
+  .td-block--primary>.container,
+  .td-block--secondary>.container,
+  .td-block--dark>.container {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 1200px) {
 
-  .td-block--white .row,
-  .td-block--primary .row,
-  .td-block--secondary .row,
-  .td-block--dark .row {
+  .td-block--white>.container,
+  .td-block--primary>.container,
+  .td-block--secondary>.container,
+  .td-block--dark>.container {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+/* Reset h2 titles within sections to span full width */
+.td-block--white>.container>h2,
+.td-block--primary>.container>h2,
+.td-block--secondary>.container>h2,
+.td-block--dark>.container>h2 {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+
+/* Reset paragraphs after h2 to span full width */
+.td-block--white>.container>p,
+.td-block--primary>.container>p,
+.td-block--secondary>.container>p,
+.td-block--dark>.container>p {
+  grid-column: 1 / -1;
+  text-align: center;
 }
 
 .blocks-feature {
