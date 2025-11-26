@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Blog on Remembrances MCP</title>
-    <link>https://madeindigio.github.io/remembrances-mcp/en/blog/</link>
-    <description>Recent content in Blog on Remembrances MCP</description>
-    <generator>Hugo</generator>
-    <language>en</language>
-    <atom:link href="https://madeindigio.github.io/remembrances-mcp/en/blog/index.xml" rel="self" type="application/rss+xml" />
-  </channel>
-</rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Blog on Remembrances MCP</title><link>https://madeindigio.github.io/remembrances-mcp/en/blog/</link><description>Recent content in Blog on Remembrances MCP</description><generator>Hugo</generator><language>en</language><lastBuildDate>Sat, 22 Nov 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://madeindigio.github.io/remembrances-mcp/en/blog/index.xml" rel="self" type="application/rss+xml"/><item><title>Release 1.4.6: Stability and Reliability Improvements</title><link>https://madeindigio.github.io/remembrances-mcp/en/blog/2025/release-1.4.6/</link><pubDate>Sat, 22 Nov 2025 00:00:00 +0000</pubDate><guid>https://madeindigio.github.io/remembrances-mcp/en/blog/2025/release-1.4.6/</guid><description>&lt;p>We&amp;rsquo;re pleased to announce &lt;strong>Remembrances MCP 1.4.6&lt;/strong>, a maintenance release focused on stability and reliability improvements based on valuable feedback from our community since the 1.0.0 launch.&lt;/p>
+&lt;h2 id="whats-fixed">What&amp;rsquo;s Fixed&lt;/h2>
+&lt;h3 id="-improved-memory-handling">🔧 Improved Memory Handling&lt;/h3>
+&lt;p>We&amp;rsquo;ve addressed several issues related to how memories are processed and stored:&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>Better batch processing&lt;/strong> – Fixed an issue where processing large batches of embeddings could fail under certain conditions. The system now handles memory more efficiently when working with many documents at once.&lt;/p></description></item><item><title>Release 1.0.0: True Local-First AI Memory</title><link>https://madeindigio.github.io/remembrances-mcp/en/blog/2025/release-1.0.0/</link><pubDate>Tue, 18 Nov 2025 00:00:00 +0000</pubDate><guid>https://madeindigio.github.io/remembrances-mcp/en/blog/2025/release-1.0.0/</guid><description>&lt;p>We&amp;rsquo;re thrilled to announce the release of &lt;strong>Remembrances MCP 1.0.0&lt;/strong> – a major milestone that delivers on our promise of truly local-first AI memory!&lt;/p>
+&lt;h2 id="whats-new">What&amp;rsquo;s New&lt;/h2>
+&lt;h3 id="-native-gguf-model-support">🧠 Native GGUF Model Support&lt;/h3>
+&lt;p>The headline feature of this release is &lt;strong>built-in support for GGUF embedding models&lt;/strong>. You no longer need to run Ollama or rely on external OpenAI-compatible APIs to generate embeddings. Simply download a GGUF model from Hugging Face and point Remembrances MCP to it:&lt;/p></description></item></channel></rss>
