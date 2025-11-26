@@ -3,19 +3,22 @@
 /* Digio Color Palette (based on digio.es) */
 :root {
   /* Primary colors - Modern blues and purples */
-  --digio-primary: #4F46E5; /* Indigo */
+  --digio-primary: #4F46E5;
+  /* Indigo */
   --digio-primary-dark: #4338CA;
   --digio-primary-light: #818CF8;
-  
+
   /* Secondary colors */
-  --digio-secondary: #06B6D4; /* Cyan */
-  --digio-accent: #8B5CF6; /* Purple */
-  
+  --digio-secondary: #06B6D4;
+  /* Cyan */
+  --digio-accent: #8B5CF6;
+  /* Purple */
+
   /* Neutral colors */
   --digio-dark: #1E293B;
   --digio-gray: #64748B;
   --digio-light: #F8FAFC;
-  
+
   /* Success/Info colors */
   --digio-success: #10B981;
   --digio-info: #3B82F6;
@@ -24,7 +27,7 @@
 /* Override Docsy primary color */
 .td-navbar {
   background: linear-gradient(135deg, var(--digio-primary) 0%, var(--digio-accent) 100%) !important;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Primary buttons */
@@ -120,7 +123,9 @@ tbody tr:hover {
   line-height: 1.7;
 }
 
-.td-content h1, .td-content h2, .td-content h3 {
+.td-content h1,
+.td-content h2,
+.td-content h3 {
   color: var(--digio-dark);
   font-weight: 700;
 }
@@ -171,6 +176,50 @@ tbody tr:hover {
   background: linear-gradient(135deg, var(--digio-dark) 0%, #0F172A 100%);
 }
 
+.td-footer__links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.td-footer__links a {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.td-footer__links a:hover {
+  color: white;
+  background: rgba(79, 70, 229, 0.3);
+  transform: translateY(-2px);
+}
+
+.td-footer__links i {
+  font-size: 1.1rem;
+}
+
+.td-footer__links .mx-2 {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+@media (max-width: 576px) {
+  .td-footer__links {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .td-footer__links .mx-2 {
+    display: none;
+  }
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
@@ -186,7 +235,7 @@ html {
   .td-cover .lead {
     font-size: 1.1rem;
   }
-  
+
   .btn-lg {
     font-size: 1rem;
     padding: 0.75rem 1.5rem;
@@ -199,6 +248,7 @@ html {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -225,4 +275,137 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, var(--digio-primary-dark) 0%, var(--digio-primary) 100%);
+}
+
+/* Enhanced About Page Styles */
+.blocks-section {
+  padding: 3rem 0;
+}
+
+.blocks-feature {
+  text-align: center;
+  padding: 2rem 1rem;
+  margin-bottom: 2rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.blocks-feature:hover {
+  transform: translateY(-5px);
+}
+
+.blocks-feature i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+  color: var(--digio-primary);
+}
+
+.blocks-feature h3,
+.blocks-feature h4 {
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--digio-dark);
+}
+
+/* Section backgrounds with gradients */
+.td-block--primary {
+  background: linear-gradient(135deg, var(--digio-primary) 0%, var(--digio-accent) 100%);
+  color: white;
+}
+
+.td-block--secondary {
+  background: linear-gradient(135deg, var(--digio-secondary) 0%, var(--digio-info) 100%);
+  color: white;
+}
+
+.td-block--dark {
+  background: linear-gradient(135deg, var(--digio-dark) 0%, #0F172A 100%);
+  color: white;
+}
+
+.td-block--white {
+  background: var(--digio-light);
+}
+
+/* Feature grid layout */
+.row-cols-1>*,
+.row-cols-md-3>* {
+  margin-bottom: 1.5rem;
+}
+
+/* Cover block enhancements */
+.td-cover-block {
+  padding: 4rem 0;
+}
+
+.td-cover-block h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+.td-cover-block p {
+  font-size: 1.25rem;
+  line-height: 1.6;
+}
+
+/* Lead block */
+.td-block--lead {
+  font-size: 1.15rem;
+  line-height: 1.7;
+  padding: 2rem 0;
+}
+
+.td-block--lead h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+/* About page specific overrides */
+.td-content--about {
+  .blocks-section {
+    padding: 3rem 0;
+  }
+
+  .use-cases {
+    padding: 2rem 0;
+
+    h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--digio-primary);
+    }
+  }
+}
+
+/* Icon styling for FontAwesome icons in features */
+.fa-lock,
+.fa-bolt,
+.fa-database,
+.fa-book,
+.fa-plug,
+.fa-shield-alt,
+.fa-brain,
+.fa-search,
+.fa-project-diagram {
+  color: inherit;
+}
+
+/* Responsive design for About page */
+@media (max-width: 768px) {
+  .td-cover-block h1 {
+    font-size: 2rem;
+  }
+
+  .td-cover-block p {
+    font-size: 1.1rem;
+  }
+
+  .blocks-feature {
+    padding: 1.5rem 0.5rem;
+  }
+
+  .blocks-feature i {
+    font-size: 2.5rem;
+  }
 }
