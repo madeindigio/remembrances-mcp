@@ -59,7 +59,7 @@ publish: build ## Build and publish to gh-pages branch
 		-v $(HOME)/.ssh:/root/.ssh:ro \
 		-w /src \
 		python:3.10-slim \
-		bash -c "cd /src && python3 publish_gh_pages_docker.py"
+		bash -c "apt-get update && apt-get install -y --no-install-recommends git rsync && cd /src && python3 publish_gh_pages_docker.py"
 
 clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."
