@@ -4,6 +4,7 @@
 /dist/
 /dist-variants/
 /output/
+/models/
 *.exe
 *.dll
 *.so

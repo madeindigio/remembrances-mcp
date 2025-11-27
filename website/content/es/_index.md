@@ -1,15 +1,15 @@
 ---
-title: "Remembrances MCP"
-linkTitle: "Remembrances MCP"
+title: "Remembrances"
+linkTitle: "Remembrances"
 ---
 
-{{< blocks/cover title="Remembrances MCP" image_anchor="center" height="full" color="dark" >}}
+{{< blocks/cover title="Remembrances" image_anchor="center" height="full" color="dark" >}}
 <div class="mx-auto">
   <p class="lead mt-5">Memoria a largo plazo para agentes IA con embeddings locales que priorizan la privacidad y opcionalmente base de datos compartida self-hosted</p>
   <div class="mx-auto mt-5">
     <a class="btn btn-lg btn-primary mr-3 mb-4" href="{{< relref "/docs" >}}">
       Comenzar <i class="fas fa-arrow-alt-circle-right ml-2"></i>
-    </a>
+    </a>&nbsp;
     <a class="btn btn-lg btn-secondary mr-3 mb-4" href="https://github.com/madeindigio/remembrances-mcp">
       Ver en GitHub <i class="fab fa-github ml-2 "></i>
     </a>
@@ -71,32 +71,27 @@ Soporte para clave-valor, vector/RAG y base de datos de grafos con SurrealDB.
 <p class="text-center">Comienza con Remembrances MCP en minutos</p>
 </div>
 
-<div class="col-lg-4">
-<h3>1. Descargar Modelo</h3>
-<p>Descarga un modelo de embeddings GGUF desde Hugging Face:</p>
-<pre><code>wget https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf</code></pre>
+<div class="col-12">
+    <h3>Para Linux o MacOSX</h3>
+    <p>Ejecuta el script de instalación:</p>
+<pre><code>
+
+    curl -fsSL https://raw.githubusercontent.com/madeindigio/remembrances-mcp/main/scripts/install.sh | bash
+
+</code></pre>
 </div>
 
-<div class="col-lg-4">
-<h3>2. Compilar y Ejecutar</h3>
-<p>Compila el proyecto e inicia el servidor:</p>
-<pre><code>make build
-./run-remembrances.sh \
-  --gguf-model-path ./nomic-embed-text-v1.5.Q4_K_M.gguf \
-  --gguf-gpu-layers 32</code></pre>
-</div>
+<div class="col-12">
+    <h3>Para Windows</h3>
+    <p>Usa la versión de Linux en WSL o con Docker:</p>
+<pre><code>
 
-<div class="col-lg-4">
-<h3>3. Conecta tu Agente</h3>
-<p>Configura tu agente IA para usar el servidor MCP:</p>
-<pre><code>{
-  "mcpServers": {
-    "remembrances": {
-      "command": "./remembrances-mcp",
-      "args": ["--gguf-model-path", "model.gguf"]
-    }
-  }
-}</code></pre>
+    docker run -it --rm \
+    -v /path/to/data:/data \
+    -v /path/to/kb:/knowledge-base \
+    ghcr.io/madeindigio/remembrances-mcp:latest
+    
+</code></pre>
 </div>
 
 {{< /blocks/section >}}

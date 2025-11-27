@@ -1,15 +1,15 @@
 ---
-title: "Remembrances MCP"
-linkTitle: "Remembrances MCP"
+title: "Remembrances"
+linkTitle: "Remembrances"
 ---
 
-{{< blocks/cover title="Remembrances MCP" image_anchor="center" height="full" color="dark" >}}
+{{< blocks/cover title="Remembrances" image_anchor="center" height="full" color="dark" >}}
 <div class="mx-auto">
   <p class="lead mt-5">Long-term memory for AI agents with privacy-first local embeddings and on-premise shared database (optional)</p>
   <div class="mx-auto mt-5">
     <a class="btn btn-lg btn-primary mr-3 mb-4" href="{{< relref "/docs" >}}">
       Get Started <i class="fas fa-arrow-alt-circle-right ml-2"></i>
-    </a>
+    </a>&nbsp;
     <a class="btn btn-lg btn-secondary mr-3 mb-4" href="https://github.com/madeindigio/remembrances-mcp">
       View on GitHub <i class="fab fa-github ml-2 "></i>
     </a>
@@ -74,13 +74,24 @@ Key-value, vector/RAG, and graph database support with SurrealDB.
 <div class="col-12">
 <h3>For Linux or MacOSX</h3>
 <p>Execute the install script:</p>
-<pre><code>curl -fsSL https://raw.githubusercontent.com/madeindigio/remembrances-mcp/main/scripts/install.sh | bash</code></pre>
+<pre><code>
+
+    curl -fsSL https://raw.githubusercontent.com/madeindigio/remembrances-mcp/main/scripts/install.sh | bash
+
+</code></pre>
 </div>
 
 <div class="col-12">
 <h3>For Windows</h3>
 <p>Use the linux version in WSL or with docker:</p>
-<pre><code>docker run ....</code></pre>
+<pre><code>
+
+    docker run -it --rm \
+    -v /path/to/data:/data \
+    -v /path/to/kb:/knowledge-base \
+    ghcr.io/madeindigio/remembrances-mcp:cpu
+    
+</code></pre>
 </div>
 
 {{< /blocks/section >}}

@@ -1,0 +1,72 @@
+# Git
+.git
+.gitignore
+.gitmodules
+
+# Build artifacts (except what we need)
+build/
+output/
+*.log
+
+# Go cache and modules (not needed, binary is pre-built)
+vendor/
+go.sum
+
+# IDE and editor files
+.vscode/
+.zed/
+.ai/
+.idea/
+*.swp
+*.swo
+*~
+
+# Documentation and website (not needed in image)
+docs/
+website/
+*.md
+!README.md
+
+# Test files
+*_test.go
+tests/
+examples/
+
+# Development files
+*.log
+*.tmp
+*.bak
+
+# Serena/AI config
+.serena/
+.gemini/
+.github/
+
+# Local configuration (we have our own Docker config)
+config.yaml
+kvagerc
+.kvagerc
+
+# Database files (should be mounted as volume)
+*.db
+remembrances.db/
+
+# Other Docker files we don't need
+docker-scripts/
+Dockerfile
+docker/Dockerfile.goreleaser-custom
+
+# Scripts not needed in container
+scripts/
+
+# GoReleaser files
+.goreleaser.yml
+.goreleaser.yml.backup
+dist/
+
+# Keep these (explicitly, though .dockerignore works by exclusion):
+# - docker/Dockerfile.cuda (the dockerfile itself)
+# - dist-variants/remembrances-mcp-cuda-linux-x86_64/ (binary and libs)
+# - models/ (GGUF model)
+# - config.sample.gguf.yaml (sample config)
+# - LICENSE.txt (license file)

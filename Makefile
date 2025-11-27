@@ -1,4 +1,7 @@
-.PHONY: all build clean test llama-cpp llama-cpp-clean help
+.PHONY: all build clean test llama-cpp llama-cpp-clean help \
+	docker-build-cuda docker-push-cuda docker-run-cuda docker-stop-cuda \
+	docker-build-cpu docker-push-cpu docker-run-cpu docker-stop-cpu \
+	docker-download-model docker-prepare-cuda docker-prepare-cpu docker-login docker-help
 
 # Default target
 all: build
@@ -138,6 +141,17 @@ help:
 	@echo "  GO_LLAMA_DIR          - Path to go-llama.cpp (default: \$$HOME/www/MCP/Remembrances/go-llama.cpp)"
 	@echo "  SURREALDB_EMBEDDED_DIR - Path to surrealdb-embedded (default: \$$HOME/www/MCP/Remembrances/surrealdb-embedded)"
 	@echo ""
+	@echo "Docker (GitHub Container Registry):"
+	@echo "  make docker-help            - Show detailed Docker usage"
+	@echo "  make docker-prepare-cpu     - Build CPU binary + download GGUF model"
+	@echo "  make docker-build-cpu       - Build lightweight Docker image (~350MB)"
+	@echo "  make docker-prepare-cuda    - Build CUDA binary + download GGUF model"
+	@echo "  make docker-build-cuda      - Build CUDA Docker image (~3GB)"
+	@echo "  make docker-push-cpu        - Push CPU image to ghcr.io"
+	@echo "  make docker-push-cuda       - Push CUDA image to ghcr.io"
+	@echo "  make docker-run-cpu         - Run container (no GPU needed)"
+	@echo "  make docker-run-cuda        - Run container with GPU support"
+	@echo ""
 	@echo "Examples:"
 	@echo "  make build                      # Build with default settings (native arch)"
 	@echo "  make BUILD_TYPE=cuda build      # Build with CUDA support (Linux)"
@@ -146,6 +160,8 @@ help:
 	@echo "  make build-darwin-universal     # Create Universal Binary libraries"
 	@echo "  make build-all-variants         # Build all GPU variant binaries"
 	@echo "  make dist-all                   # Package all variants for distribution"
+	@echo "  make docker-prepare-cpu && make docker-build-cpu    # Build CPU Docker image"
+	@echo "  make docker-prepare-cuda && make docker-build-cuda  # Build CUDA Docker image"
 	@echo "  make run                        # Build and run"
 	@echo "  make check-env                  # Show current build environment"
 
@@ -771,3 +787,349 @@ ifeq ($(PLATFORM),darwin)
 	@echo "  make build-darwin-amd64     - Build for Intel"
 	@echo "  make build-darwin-universal - Build Universal Binary"
 endif
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Docker Configuration and Targets
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Docker configuration
+DOCKER_REGISTRY := ghcr.io
+DOCKER_ORG := madeindigio
+DOCKER_IMAGE := remembrances-mcp
+DOCKER_TAG_CUDA := cuda
+DOCKER_TAG_CPU := cpu
+DOCKER_FULL_IMAGE := $(DOCKER_REGISTRY)/$(DOCKER_ORG)/$(DOCKER_IMAGE)
+
+# GGUF Model configuration (same as install.sh)
+GGUF_MODEL_URL := https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf?download=true
+GGUF_MODEL_NAME := nomic-embed-text-v1.5.Q4_K_M.gguf
+MODELS_DIR := models
+
+# Docker run configuration (can be overridden)
+DOCKER_DATA_PATH ?= $(HOME)/.local/share/remembrances/data
+DOCKER_KB_PATH ?= $(HOME)/.local/share/remembrances/knowledge-base
+DOCKER_PORT ?= 8080
+
+docker-help:
+	@echo ""
+	@echo "═══════════════════════════════════════════════════════════════"
+	@echo "           Docker Build & Publish (GitHub Container Registry)"
+	@echo "═══════════════════════════════════════════════════════════════"
+	@echo ""
+	@echo "Two image variants available:"
+	@echo "  CPU  - Lightweight (~350MB), no GPU required, uses debian:bookworm-slim"
+	@echo "  CUDA - GPU accelerated (~3GB), requires NVIDIA GPU + Container Toolkit"
+	@echo ""
+	@echo "CPU Image (Recommended for most users):"
+	@echo "  make docker-prepare-cpu     - Build CPU binary + download model"
+	@echo "  make docker-build-cpu       - Build lightweight Docker image"
+	@echo "  make docker-push-cpu        - Push CPU image to GHCR"
+	@echo "  make docker-run-cpu         - Run container (no GPU needed)"
+	@echo "  make docker-stop-cpu        - Stop CPU container"
+	@echo ""
+	@echo "CUDA Image (For GPU acceleration):"
+	@echo "  make docker-prepare-cuda    - Build CUDA binary + download model"
+	@echo "  make docker-build-cuda      - Build CUDA Docker image"
+	@echo "  make docker-push-cuda       - Push CUDA image to GHCR"
+	@echo "  make docker-run-cuda        - Run container with --gpus all"
+	@echo "  make docker-stop-cuda       - Stop CUDA container"
+	@echo ""
+	@echo "Common targets:"
+	@echo "  make docker-download-model  - Download GGUF embedding model (~260MB)"
+	@echo "  make docker-login           - Login to GitHub Container Registry"
+	@echo ""
+	@echo "Configuration (override via environment or command line):"
+	@echo "  DOCKER_DATA_PATH=$(DOCKER_DATA_PATH)"
+	@echo "  DOCKER_KB_PATH=$(DOCKER_KB_PATH)"
+	@echo "  DOCKER_PORT=$(DOCKER_PORT)"
+	@echo ""
+	@echo "Example workflows:"
+	@echo "  # CPU (lightweight)"
+	@echo "  make docker-prepare-cpu && make docker-build-cpu && make docker-run-cpu"
+	@echo ""
+	@echo "  # CUDA (GPU)"
+	@echo "  make docker-prepare-cuda && make docker-build-cuda && make docker-run-cuda"
+	@echo ""
+	@echo "Run with custom paths:"
+	@echo "  make docker-run-cpu DOCKER_DATA_PATH=/my/data DOCKER_KB_PATH=/my/kb DOCKER_PORT=9090"
+	@echo ""
+
+# Download GGUF model for Docker image
+docker-download-model:
+	@echo "Downloading GGUF embedding model..."
+	@mkdir -p $(MODELS_DIR)
+	@if [ -f "$(MODELS_DIR)/$(GGUF_MODEL_NAME)" ]; then \
+		echo "Model already exists: $(MODELS_DIR)/$(GGUF_MODEL_NAME)"; \
+		ls -lh $(MODELS_DIR)/$(GGUF_MODEL_NAME); \
+	else \
+		echo "Downloading $(GGUF_MODEL_NAME) (~260MB)..."; \
+		curl -fsSL --progress-bar -o "$(MODELS_DIR)/$(GGUF_MODEL_NAME)" "$(GGUF_MODEL_URL)"; \
+		echo "✓ Model downloaded to $(MODELS_DIR)/$(GGUF_MODEL_NAME)"; \
+		ls -lh $(MODELS_DIR)/$(GGUF_MODEL_NAME); \
+	fi
+
+# Prepare everything needed for Docker CPU build
+docker-prepare-cpu: docker-download-model
+	@echo ""
+	@echo "Building CPU variant for Docker..."
+	@$(MAKE) dist-variant VARIANT=cpu
+	@echo ""
+	@echo "Extracting CPU variant for Docker build..."
+	@cd dist-variants && unzip -o $(BINARY_NAME)-cpu-$(PLATFORM)-$(UNAME_M).zip
+	@echo ""
+	@echo "✓ Docker CPU preparation complete!"
+	@echo "  Binary: dist-variants/$(BINARY_NAME)-cpu-$(PLATFORM)-$(UNAME_M)/"
+	@ls -la dist-variants/$(BINARY_NAME)-cpu-$(PLATFORM)-$(UNAME_M)/
+	@echo ""
+	@echo "  Model: $(MODELS_DIR)/$(GGUF_MODEL_NAME)"
+	@echo ""
+	@echo "Next step: make docker-build-cpu"
+
+# Prepare everything needed for Docker CUDA build
+docker-prepare-cuda: docker-download-model
+	@echo ""
+	@echo "Building CUDA variant for Docker..."
+	@echo "NOTE: This requires llama.cpp built with CUDA support (libggml-cuda.so)"
+	@$(MAKE) dist-variant VARIANT=cuda
+	@echo ""
+	@echo "Extracting CUDA variant for Docker build..."
+	@cd dist-variants && unzip -o $(BINARY_NAME)-cuda-$(PLATFORM)-$(UNAME_M).zip
+	@echo ""
+	@# Verify CUDA library exists
+	@if [ ! -f "dist-variants/$(BINARY_NAME)-cuda-$(PLATFORM)-$(UNAME_M)/libggml-cuda.so" ]; then \
+		echo "⚠ WARNING: libggml-cuda.so not found!"; \
+		echo "  Your build may be CPU-only. For real CUDA support:"; \
+		echo "  1. Install CUDA toolkit"; \
+		echo "  2. Rebuild with: BUILD_TYPE=cuda make build-libs-cuda"; \
+		echo "  3. Then: make dist-variant VARIANT=cuda"; \
+		echo ""; \
+	fi
+	@echo "✓ Docker CUDA preparation complete!"
+	@echo "  Binary: dist-variants/$(BINARY_NAME)-cuda-$(PLATFORM)-$(UNAME_M)/"
+	@ls -la dist-variants/$(BINARY_NAME)-cuda-$(PLATFORM)-$(UNAME_M)/
+	@echo ""
+	@echo "  Model: $(MODELS_DIR)/$(GGUF_MODEL_NAME)"
+	@echo ""
+	@echo "Next step: make docker-build-cuda"
+
+# Distribution directory variables
+DIST_DIR_CPU := dist-variants/$(BINARY_NAME)-cpu-$(PLATFORM)-$(UNAME_M)
+DIST_DIR_CUDA := dist-variants/$(BINARY_NAME)-cuda-$(PLATFORM)-$(UNAME_M)
+
+# Build Docker image - CPU version (lightweight)
+docker-build-cpu:
+	@echo "Building Docker image: $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CPU)"
+	@echo "  Distribution dir: $(DIST_DIR_CPU)"
+	@echo ""
+	@# Verify prerequisites
+	@if [ ! -d "$(DIST_DIR_CPU)" ]; then \
+		echo "Error: CPU variant not found at $(DIST_DIR_CPU)"; \
+		echo "Run 'make docker-prepare-cpu' first."; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(MODELS_DIR)/$(GGUF_MODEL_NAME)" ]; then \
+		echo "Error: GGUF model not found. Run 'make docker-download-model' first."; \
+		exit 1; \
+	fi
+	@# Build the image
+	docker build \
+		-f docker/Dockerfile.cpu \
+		-t $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CPU) \
+		-t $(DOCKER_FULL_IMAGE):$(VERSION)-cpu \
+		-t $(DOCKER_FULL_IMAGE):latest \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(COMMIT_HASH) \
+		--build-arg DIST_DIR=$(DIST_DIR_CPU) \
+		.
+	@echo ""
+	@echo "✓ Docker CPU image built successfully!"
+	@echo "  $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CPU)"
+	@echo "  $(DOCKER_FULL_IMAGE):$(VERSION)-cpu"
+	@echo "  $(DOCKER_FULL_IMAGE):latest"
+	@echo ""
+	@echo "Image size:"
+	@docker images $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CPU) --format "  {{.Size}}"
+	@echo ""
+	@echo "Next step: make docker-login && make docker-push-cpu"
+	@echo "Or run locally: make docker-run-cpu"
+
+# Build Docker image - CUDA version (GPU accelerated)
+docker-build-cuda:
+	@echo "Building Docker image: $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CUDA)"
+	@echo "  Distribution dir: $(DIST_DIR_CUDA)"
+	@echo ""
+	@# Verify prerequisites
+	@if [ ! -d "$(DIST_DIR_CUDA)" ]; then \
+		echo "Error: CUDA variant not found at $(DIST_DIR_CUDA)"; \
+		echo "Run 'make docker-prepare-cuda' first."; \
+		exit 1; \
+	fi
+	@if [ ! -f "$(MODELS_DIR)/$(GGUF_MODEL_NAME)" ]; then \
+		echo "Error: GGUF model not found. Run 'make docker-download-model' first."; \
+		exit 1; \
+	fi
+	@# Build the image
+	docker build \
+		-f docker/Dockerfile.cuda \
+		-t $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CUDA) \
+		-t $(DOCKER_FULL_IMAGE):$(VERSION)-cuda \
+		--build-arg VERSION=$(VERSION) \
+		--build-arg COMMIT=$(COMMIT_HASH) \
+		--build-arg DIST_DIR=$(DIST_DIR_CUDA) \
+		.
+	@echo ""
+	@echo "✓ Docker CUDA image built successfully!"
+	@echo "  $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CUDA)"
+	@echo "  $(DOCKER_FULL_IMAGE):$(VERSION)-cuda"
+	@echo ""
+	@echo "Image size:"
+	@docker images $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CUDA) --format "  {{.Size}}"
+	@echo ""
+	@echo "Next step: make docker-login && make docker-push-cuda"
+	@echo "Or run locally: make docker-run-cuda"
+
+# Login to GitHub Container Registry
+docker-login:
+	@echo "Logging in to GitHub Container Registry..."
+	@if [ -z "$$GITHUB_TOKEN" ]; then \
+		echo "Error: GITHUB_TOKEN environment variable not set."; \
+		echo ""; \
+		echo "To create a token:"; \
+		echo "  1. Go to https://github.com/settings/tokens"; \
+		echo "  2. Create a token with 'write:packages' scope"; \
+		echo "  3. Export it: export GITHUB_TOKEN=ghp_xxxx"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "$$GITHUB_TOKEN" | docker login $(DOCKER_REGISTRY) -u $(DOCKER_ORG) --password-stdin
+	@echo "✓ Logged in to $(DOCKER_REGISTRY)"
+
+# Push Docker CPU image to GitHub Container Registry
+docker-push-cpu: docker-login
+	@echo "Pushing CPU Docker image to GitHub Container Registry..."
+	docker push $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CPU)
+	docker push $(DOCKER_FULL_IMAGE):$(VERSION)-cpu
+	docker push $(DOCKER_FULL_IMAGE):latest
+	@echo ""
+	@echo "✓ CPU images pushed successfully!"
+	@echo "  $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CPU)"
+	@echo "  $(DOCKER_FULL_IMAGE):$(VERSION)-cpu"
+	@echo "  $(DOCKER_FULL_IMAGE):latest"
+	@echo ""
+	@echo "Pull with: docker pull $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CPU)"
+
+# Push Docker CUDA image to GitHub Container Registry
+docker-push-cuda: docker-login
+	@echo "Pushing CUDA Docker image to GitHub Container Registry..."
+	docker push $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CUDA)
+	docker push $(DOCKER_FULL_IMAGE):$(VERSION)-cuda
+	@echo ""
+	@echo "✓ CUDA images pushed successfully!"
+	@echo "  $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CUDA)"
+	@echo "  $(DOCKER_FULL_IMAGE):$(VERSION)-cuda"
+	@echo ""
+	@echo "Pull with: docker pull $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CUDA)"
+
+# Run Docker container - CPU version (no GPU required)
+docker-run-cpu:
+	@echo "Starting Remembrances-MCP container (CPU)..."
+	@echo ""
+	@echo "Configuration:"
+	@echo "  Data path: $(DOCKER_DATA_PATH)"
+	@echo "  Knowledge base: $(DOCKER_KB_PATH)"
+	@echo "  Port: $(DOCKER_PORT)"
+	@echo ""
+	@# Create directories if they don't exist
+	@mkdir -p $(DOCKER_DATA_PATH) $(DOCKER_KB_PATH)
+	@# Run container
+	docker run -d \
+		--name remembrances-mcp-cpu \
+		-p $(DOCKER_PORT):8080 \
+		-v $(DOCKER_DATA_PATH):/data \
+		-v $(DOCKER_KB_PATH):/knowledge-base \
+		--restart unless-stopped \
+		$(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CPU)
+	@echo ""
+	@echo "✓ Container started!"
+	@echo "  Name: remembrances-mcp-cpu"
+	@echo "  API: http://localhost:$(DOCKER_PORT)"
+	@echo "  Data: $(DOCKER_DATA_PATH)"
+	@echo "  Knowledge Base: $(DOCKER_KB_PATH)"
+	@echo ""
+	@echo "Commands:"
+	@echo "  View logs: docker logs -f remembrances-mcp-cpu"
+	@echo "  Stop: make docker-stop-cpu"
+	@echo "  Shell: docker exec -it remembrances-mcp-cpu /bin/bash"
+
+# Stop Docker CPU container
+docker-stop-cpu:
+	@echo "Stopping Remembrances-MCP CPU container..."
+	-docker stop remembrances-mcp-cpu
+	-docker rm remembrances-mcp-cpu
+	@echo "✓ CPU container stopped and removed"
+
+# Run Docker container - CUDA version (GPU accelerated)
+docker-run-cuda:
+	@echo "Starting Remembrances-MCP container (CUDA)..."
+	@echo ""
+	@echo "Configuration:"
+	@echo "  Data path: $(DOCKER_DATA_PATH)"
+	@echo "  Knowledge base: $(DOCKER_KB_PATH)"
+	@echo "  Port: $(DOCKER_PORT)"
+	@echo "  GPU: all"
+	@echo ""
+	@# Create directories if they don't exist
+	@mkdir -p $(DOCKER_DATA_PATH) $(DOCKER_KB_PATH)
+	@# Run container with GPU support
+	docker run -d \
+		--name remembrances-mcp-cuda \
+		--gpus all \
+		-p $(DOCKER_PORT):8080 \
+		-v $(DOCKER_DATA_PATH):/data \
+		-v $(DOCKER_KB_PATH):/knowledge-base \
+		--restart unless-stopped \
+		$(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CUDA)
+	@echo ""
+	@echo "✓ Container started with GPU support!"
+	@echo "  Name: remembrances-mcp-cuda"
+	@echo "  API: http://localhost:$(DOCKER_PORT)"
+	@echo "  Data: $(DOCKER_DATA_PATH)"
+	@echo "  Knowledge Base: $(DOCKER_KB_PATH)"
+	@echo ""
+	@echo "Commands:"
+	@echo "  View logs: docker logs -f remembrances-mcp-cuda"
+	@echo "  Stop: make docker-stop-cuda"
+	@echo "  Shell: docker exec -it remembrances-mcp-cuda /bin/bash"
+
+# Stop Docker CUDA container
+docker-stop-cuda:
+	@echo "Stopping Remembrances-MCP CUDA container..."
+	-docker stop remembrances-mcp-cuda
+	-docker rm remembrances-mcp-cuda
+	@echo "✓ CUDA container stopped and removed"
+
+# Show Docker container status
+docker-status:
+	@echo "Remembrances-MCP Container Status:"
+	@echo ""
+	@docker ps -a --filter "name=remembrances-mcp" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}"
+	@echo ""
+	@echo "Recent logs (CPU container):"
+	@docker logs --tail 5 remembrances-mcp-cpu 2>/dev/null || echo "  (CPU container not running)"
+	@echo ""
+	@echo "Recent logs (CUDA container):"
+	@docker logs --tail 5 remembrances-mcp-cuda 2>/dev/null || echo "  (CUDA container not running)"
+
+# Clean all Docker artifacts
+docker-clean:
+	@echo "Cleaning all Docker artifacts..."
+	-docker stop remembrances-mcp-cpu 2>/dev/null || true
+	-docker stop remembrances-mcp-cuda 2>/dev/null || true
+	-docker rm remembrances-mcp-cpu 2>/dev/null || true
+	-docker rm remembrances-mcp-cuda 2>/dev/null || true
+	-docker rmi $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CPU) 2>/dev/null || true
+	-docker rmi $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CUDA) 2>/dev/null || true
+	-docker rmi $(DOCKER_FULL_IMAGE):$(VERSION)-cpu 2>/dev/null || true
+	-docker rmi $(DOCKER_FULL_IMAGE):$(VERSION)-cuda 2>/dev/null || true
+	-docker rmi $(DOCKER_FULL_IMAGE):latest 2>/dev/null || true
+	@echo "✓ Docker artifacts cleaned"

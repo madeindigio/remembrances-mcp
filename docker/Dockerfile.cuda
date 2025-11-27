@@ -1,0 +1,166 @@
+# Dockerfile for Remembrances-MCP - CUDA Version (GPU Accelerated)
+# This Dockerfile is designed for LOCAL builds where the binary and libraries
+# are pre-compiled on the host machine WITH CUDA support.
+#
+# IMPORTANT: This requires llama.cpp to be built with CUDA support!
+# The build must include libggml-cuda.so which links against CUDA runtime.
+#
+# Prerequisites:
+#   1. NVIDIA GPU with CUDA support
+#   2. NVIDIA Container Toolkit installed on host
+#   3. llama.cpp built with: BUILD_TYPE=cuda make build-libs-cuda
+#   4. Binary built with: make dist-variant VARIANT=cuda
+#
+# Build: make docker-build-cuda
+# Run:   make docker-run-cuda
+#
+# For manual build:
+#   docker build -f docker/Dockerfile.cuda -t ghcr.io/madeindigio/remembrances-mcp:cuda .
+#
+# For manual run:
+#   docker run -d --gpus all \
+#     -p 8080:8080 \
+#     -v /path/to/data:/data \
+#     -v /path/to/knowledge-base:/knowledge-base \
+#     ghcr.io/madeindigio/remembrances-mcp:cuda
+#
+# Environment variables for runtime configuration:
+#   GOMEM_HTTP_ADDR       - HTTP API address (default: :8080)
+#   GOMEM_GGUF_GPU_LAYERS - GPU layers for GGUF model (default: 99)
+#   GOMEM_GGUF_THREADS    - CPU threads for GGUF model (default: 0 = auto)
+#   GOMEM_SURREALDB_USER  - SurrealDB username (default: root)
+#   GOMEM_SURREALDB_PASS  - SurrealDB password (default: root)
+
+# Use NVIDIA CUDA runtime as base for GPU support
+# This provides libcudart.so, libcublas.so, and other CUDA runtime libraries
+FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+
+# Build arguments for versioning and paths
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG DIST_DIR=dist-variants/remembrances-mcp-cuda-linux-x86_64
+
+LABEL org.opencontainers.image.source="https://github.com/madeindigio/remembrances-mcp"
+LABEL org.opencontainers.image.description="Remembrances-MCP Server with CUDA support for GPU-accelerated embeddings"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.revision="${COMMIT}"
+LABEL maintainer="madeindigio"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN groupadd -r remembrances && useradd -r -g remembrances remembrances
+
+# Create directories for data, config, models, and knowledge base
+RUN mkdir -p /app /data /config /models /knowledge-base \
+    && chown -R remembrances:remembrances /app /data /config /models /knowledge-base
+
+WORKDIR /app
+
+# Copy pre-built binary and shared libraries from local build
+# These must be built locally using: make dist-variant VARIANT=cuda
+# DIST_DIR is passed as build arg from Makefile
+#
+# Expected libraries for CUDA build:
+#   - remembrances-mcp (main binary)
+#   - libllama.so (llama.cpp core)
+#   - libggml.so, libggml-base.so (GGML base)
+#   - libggml-cuda.so (CUDA backend - THIS IS REQUIRED FOR GPU!)
+#   - libsurrealdb_embedded_rs.so (SurrealDB)
+COPY --chown=remembrances:remembrances ${DIST_DIR}/remembrances-mcp /app/
+COPY --chown=remembrances:remembrances ${DIST_DIR}/*.so* /app/
+
+# Copy GGUF model (downloaded separately or provided)
+# Model: nomic-embed-text-v1.5.Q4_K_M.gguf (~260MB)
+# Download from: https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf
+COPY --chown=remembrances:remembrances models/nomic-embed-text-v1.5.Q4_K_M.gguf /models/
+
+# Copy sample configuration for reference
+COPY --chown=remembrances:remembrances config.sample.gguf.yaml /config/config.sample.yaml
+
+# Create default configuration for Docker
+# Note: Environment variables (GOMEM_*) can override these settings at runtime
+RUN cat > /config/config.yaml << 'EOF'
+# Remembrances-MCP Docker Configuration (CUDA Version)
+# This configuration is optimized for containerized deployment with CUDA GPU
+#
+# Environment variables (GOMEM_*) take precedence over these values.
+# Example: GOMEM_GGUF_GPU_LAYERS=50 will override gguf-gpu-layers below.
+
+# Enable HTTP API transport
+http: true
+http-addr: ":8080"
+
+# Path to the knowledge base directory (mount as volume)
+knowledge-base: "/knowledge-base"
+
+# ========== SurrealDB Configuration ==========
+# Path to the embedded SurrealDB database (mount as volume for persistence)
+db-path: "surrealkv:///data/remembrances.db"
+
+# SurrealDB credentials
+surrealdb-user: "root"
+surrealdb-pass: "root"
+surrealdb-namespace: "remembrances"
+surrealdb-database: "production"
+
+# ========== GGUF Local Model Configuration ==========
+# Path to GGUF model file for local embeddings
+gguf-model-path: "/models/nomic-embed-text-v1.5.Q4_K_M.gguf"
+
+# Number of threads for GGUF model (0 = auto-detect)
+gguf-threads: 0
+
+# Number of GPU layers for GGUF model
+# Set to high value (99) to maximize GPU utilization with CUDA
+# Lower this if you run out of VRAM
+gguf-gpu-layers: 99
+
+# ========== Text Chunking Configuration ==========
+chunk-size: 1500
+chunk-overlap: 200
+EOF
+
+# Set library path for runtime - required for CUDA and llama.cpp libraries
+ENV LD_LIBRARY_PATH="/app:${LD_LIBRARY_PATH}"
+
+# Default environment variables (can be overridden at runtime)
+# These use the GOMEM_ prefix as expected by the application
+ENV GOMEM_HTTP="true"
+ENV GOMEM_HTTP_ADDR=":8080"
+ENV GOMEM_DB_PATH="surrealkv:///data/remembrances.db"
+ENV GOMEM_KNOWLEDGE_BASE="/knowledge-base"
+ENV GOMEM_GGUF_MODEL_PATH="/models/nomic-embed-text-v1.5.Q4_K_M.gguf"
+ENV GOMEM_GGUF_GPU_LAYERS="99"
+ENV GOMEM_GGUF_THREADS="0"
+
+# Make binary executable
+RUN chmod +x /app/remembrances-mcp
+
+# Switch to non-root user
+USER remembrances
+
+# Expose HTTP API port
+# Use -p HOST_PORT:8080 when running to bind to a different port
+EXPOSE 8080
+
+# Health check - verify the HTTP API is responding
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -sf http://localhost:8080/health || exit 1
+
+# Volume mount points for persistent data
+# - /data: SurrealDB database storage (REQUIRED for persistence)
+# - /knowledge-base: Knowledge base documents (REQUIRED for persistence)
+# - /models: GGUF models (OPTIONAL, built-in model included)
+# - /config: Configuration files (OPTIONAL, built-in config included)
+VOLUME ["/data", "/knowledge-base"]
+
+# Default command - use config file
+# Override with: docker run ... ghcr.io/madeindigio/remembrances-mcp:cuda --sse --sse-addr :3000
+ENTRYPOINT ["/app/remembrances-mcp"]
+CMD ["--config", "/config/config.yaml"]
