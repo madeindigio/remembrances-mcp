@@ -64,7 +64,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary {
   background-color: var(--digio-mint);
   border: none;
-  color: var(--digio-black);
+  color: var(--digio-black) !important;
   font-weight: 500;
   padding: 0.75rem 1.5rem;
   border-radius: 4px;
@@ -74,12 +74,13 @@ h1, h2, h3, h4, h5, h6 {
 .btn-primary:hover,
 .btn-primary:focus {
   background-color: #9FEAD0;
-  color: var(--digio-black);
+  color: var(--digio-black) !important;
   transform: translateY(-1px);
 }
 
 .btn-primary:active {
   background-color: #8BDDC2;
+  color: var(--digio-black) !important;
   transform: translateY(0);
 }
 
@@ -99,6 +100,59 @@ h1, h2, h3, h4, h5, h6 {
   background-color: var(--digio-white);
   color: var(--digio-black);
   border-color: var(--digio-white);
+}
+
+/* Cover section buttons - ensure visibility in dark mode */
+.td-cover .btn-primary,
+.td-cover-block .btn-primary,
+.td-cover-block--primary .btn-primary {
+  background-color: var(--digio-mint) !important;
+  color: var(--digio-black) !important;
+  border: none !important;
+}
+
+.td-cover .btn-primary:hover,
+.td-cover-block .btn-primary:hover,
+.td-cover-block--primary .btn-primary:hover {
+  background-color: #9FEAD0 !important;
+  color: var(--digio-black) !important;
+}
+
+.td-cover .btn-secondary,
+.td-cover-block .btn-secondary,
+.td-cover-block--primary .btn-secondary {
+  background-color: transparent !important;
+  border: 1px solid var(--digio-white) !important;
+  color: var(--digio-white) !important;
+}
+
+.td-cover .btn-secondary:hover,
+.td-cover-block .btn-secondary:hover,
+.td-cover-block--primary .btn-secondary:hover {
+  background-color: var(--digio-white) !important;
+  color: var(--digio-black) !important;
+}
+
+/* Ensure button text is always visible - override any dark mode theme styles */
+[data-bs-theme="dark"] .btn-primary,
+.dark .btn-primary,
+body.dark .btn-primary {
+  background-color: var(--digio-mint) !important;
+  color: var(--digio-black) !important;
+}
+
+[data-bs-theme="dark"] .td-cover .btn-primary,
+.dark .td-cover .btn-primary,
+body.dark .td-cover .btn-primary {
+  background-color: var(--digio-mint) !important;
+  color: var(--digio-black) !important;
+}
+
+[data-bs-theme="dark"] .btn-secondary,
+.dark .btn-secondary,
+body.dark .btn-secondary {
+  border-color: var(--digio-white) !important;
+  color: var(--digio-white) !important;
 }
 
 /* Light button variant */
@@ -951,7 +1005,7 @@ tbody tr:hover {
   color: var(--digio-mint);
 }
 
-/* Secondary button in dark mode */
+/* Secondary button in dark mode (general) */
 [data-bs-theme="dark"] .btn-secondary {
   border-color: var(--digio-dark-text-muted);
   color: var(--digio-dark-text);
@@ -960,6 +1014,57 @@ tbody tr:hover {
 [data-bs-theme="dark"] .btn-secondary:hover {
   background-color: var(--digio-dark-text);
   color: var(--digio-dark-bg);
+}
+
+/* -----------------------------------------
+   Cover/Hero Buttons in Dark Mode
+   Must be more specific to override general dark mode styles
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .td-cover .btn-primary,
+[data-bs-theme="dark"] .td-cover-block .btn-primary {
+  background-color: var(--digio-mint) !important;
+  color: var(--digio-black) !important;
+  border: none !important;
+}
+
+[data-bs-theme="dark"] .td-cover .btn-primary:hover,
+[data-bs-theme="dark"] .td-cover-block .btn-primary:hover {
+  background-color: #9FEAD0 !important;
+  color: var(--digio-black) !important;
+}
+
+[data-bs-theme="dark"] .td-cover .btn-secondary,
+[data-bs-theme="dark"] .td-cover-block .btn-secondary {
+  background-color: transparent !important;
+  border: 1px solid var(--digio-white) !important;
+  color: var(--digio-white) !important;
+}
+
+[data-bs-theme="dark"] .td-cover .btn-secondary:hover,
+[data-bs-theme="dark"] .td-cover-block .btn-secondary:hover {
+  background-color: var(--digio-white) !important;
+  color: var(--digio-black) !important;
+  border-color: var(--digio-white) !important;
+}
+
+/* Ensure button icons inherit the correct color */
+[data-bs-theme="dark"] .td-cover .btn-primary i,
+[data-bs-theme="dark"] .td-cover .btn-primary .fas,
+[data-bs-theme="dark"] .td-cover .btn-primary .fab,
+[data-bs-theme="dark"] .td-cover-block .btn-primary i,
+[data-bs-theme="dark"] .td-cover-block .btn-primary .fas,
+[data-bs-theme="dark"] .td-cover-block .btn-primary .fab {
+  color: var(--digio-black) !important;
+}
+
+[data-bs-theme="dark"] .td-cover .btn-secondary i,
+[data-bs-theme="dark"] .td-cover .btn-secondary .fas,
+[data-bs-theme="dark"] .td-cover .btn-secondary .fab,
+[data-bs-theme="dark"] .td-cover-block .btn-secondary i,
+[data-bs-theme="dark"] .td-cover-block .btn-secondary .fas,
+[data-bs-theme="dark"] .td-cover-block .btn-secondary .fab {
+  color: inherit !important;
 }
 
 /* -----------------------------------------

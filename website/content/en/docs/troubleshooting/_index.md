@@ -3,18 +3,18 @@ title: "Troubleshooting"
 linkTitle: "Troubleshooting"
 weight: 6
 description: >
-  Common issues and solutions for Remembrances MCP
+  Common problems and solutions for Remembrances MCP
 ---
 
-## Installation Issues
+## Installation Problems
 
-### Build Fails with llama.cpp Errors
+### Compilation Fails with llama.cpp Errors
 
-**Problem**: The build process fails when compiling llama.cpp dependencies.
+**Problem**: The compilation process fails when compiling llama.cpp dependencies.
 
 **Solutions**:
 
-1. **Ensure you have the required build tools**:
+1. **Make sure you have the necessary compilation tools**:
    ```bash
    # Ubuntu/Debian
    sudo apt-get install build-essential cmake
@@ -26,12 +26,12 @@ description: >
    sudo dnf install gcc-c++ cmake
    ```
 
-2. **Check Go version** (requires Go 1.20+):
+2. **Check the Go version** (requires Go 1.20+):
    ```bash
    go version
    ```
 
-3. **Clean and rebuild**:
+3. **Clean and recompile**:
    ```bash
    make clean
    make build
@@ -39,7 +39,7 @@ description: >
 
 ### Missing GPU Support
 
-**Problem**: GPU acceleration is not working even though you have a compatible GPU.
+**Problem**: GPU acceleration doesn't work even though you have a compatible GPU.
 
 **Solutions**:
 
@@ -49,7 +49,7 @@ description: >
    nvidia-smi
    nvcc --version
    
-   # Ensure CUDA toolkit is installed
+   # Make sure CUDA toolkit is installed
    # Ubuntu/Debian
    sudo apt-get install nvidia-cuda-toolkit
    ```
@@ -64,9 +64,9 @@ description: >
    ```
 
 3. **Apple Silicon (Metal)**:
-   Metal should work automatically on macOS with Apple Silicon. Ensure you're running the native ARM64 build.
+   Metal should work automatically on macOS with Apple Silicon. Make sure you're running the native ARM64 compilation.
 
-## Runtime Issues
+## Runtime Problems
 
 ### Out of Memory (OOM) Errors
 
@@ -79,7 +79,7 @@ description: >
    # Use fewer GPU layers
    --gguf-gpu-layers 16  # instead of 32
    
-   # Or disable GPU entirely
+   # Or disable GPU completely
    --gguf-gpu-layers 0
    ```
 
@@ -92,9 +92,9 @@ description: >
    --gguf-batch-size 256  # default is usually higher
    ```
 
-### Model Not Loading
+### Model Won't Load
 
-**Problem**: The server fails to start with "model not found" or similar errors.
+**Problem**: The server won't start with "model not found" errors or similar.
 
 **Solutions**:
 
@@ -106,7 +106,7 @@ description: >
 
 2. **Verify the model file is not corrupted**:
    ```bash
-   # Check file size matches expected
+   # Check that file size matches expected
    ls -lh ./model.gguf
    
    # Re-download if necessary
@@ -115,7 +115,7 @@ description: >
 
 3. **Use absolute path**:
    ```bash
-   --gguf-model-path /full/path/to/model.gguf
+   --gguf-model-path /complete/path/to/model.gguf
    ```
 
 ### Slow Performance
@@ -131,13 +131,13 @@ description: >
 
 2. **Increase thread count**:
    ```bash
-   --gguf-threads 8  # match your CPU core count
+   --gguf-threads 8  # adjust according to your CPU cores
    ```
 
 3. **Use a faster model**:
    - `all-MiniLM-L6-v2` is significantly faster than `nomic-embed-text-v1.5`
 
-4. **Check for thermal throttling**:
+4. **Check thermal throttling**:
    ```bash
    # Monitor CPU/GPU temperatures
    # NVIDIA
@@ -147,7 +147,7 @@ description: >
    sensors  # Linux
    ```
 
-## Database Issues
+## Database Problems
 
 ### Database Connection Fails
 
@@ -160,7 +160,7 @@ description: >
    # Check file permissions
    ls -la ./remembrances.db
    
-   # Ensure directory exists and is writable
+   # Make sure directory exists and has write permissions
    mkdir -p ./data
    chmod 755 ./data
    --db-path ./data/remembrances.db
@@ -179,7 +179,7 @@ description: >
 
 ### Database Corruption
 
-**Problem**: Database errors or inconsistent data after crash.
+**Problem**: Database errors or inconsistent data after a crash.
 
 **Solutions**:
 
@@ -191,7 +191,7 @@ description: >
    # Remove corrupted database
    rm ./remembrances.db
    
-   # Restart - will create fresh database
+   # Restart - will create new database
    ./remembrances-mcp --gguf-model-path ./model.gguf
    ```
 
@@ -200,19 +200,19 @@ description: >
    --log-level debug
    ```
 
-## MCP Connection Issues
+## MCP Connection Problems
 
-### Claude Desktop Not Connecting
+### Claude Desktop Won't Connect
 
 **Problem**: Claude Desktop doesn't recognize or connect to Remembrances MCP.
 
 **Solutions**:
 
-1. **Verify configuration file location**:
+1. **Check configuration file location**:
    - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - Linux: `~/.config/claude/claude_desktop_config.json`
 
-2. **Check JSON syntax**:
+2. **Verify JSON syntax**:
    ```bash
    # Validate JSON
    cat ~/.config/claude/claude_desktop_config.json | python -m json.tool
@@ -235,7 +235,7 @@ description: >
 
 4. **Restart Claude Desktop** after configuration changes.
 
-### SSE/HTTP Transport Issues
+### SSE/HTTP Transport Problems
 
 **Problem**: Cannot connect via SSE or HTTP transport.
 
@@ -248,19 +248,19 @@ description: >
    lsof -i :8080  # HTTP default
    ```
 
-2. **Use different port**:
+2. **Use a different port**:
    ```bash
    --sse --sse-addr ":3001"
    --http --http-addr ":8081"
    ```
 
-3. **Check firewall settings**:
+3. **Check firewall configuration**:
    ```bash
    # Allow port (Linux with ufw)
    sudo ufw allow 8080/tcp
    ```
 
-## Embedding Issues
+## Embedding Problems
 
 ### Inconsistent Search Results
 
@@ -270,13 +270,13 @@ description: >
 
 1. **Ensure consistent embedding model** - don't mix embeddings from different models
 
-2. **Check embedding dimensions match**:
+2. **Verify embedding dimensions match**:
    - `nomic-embed-text-v1.5`: 768 dimensions
    - `all-MiniLM-L6-v2`: 384 dimensions
 
 3. **Re-index after model change**:
    ```bash
-   # You may need to re-embed all content if you change models
+   # You may need to re-generate embeddings for all content if you change models
    ```
 
 ### Embeddings Not Generated
@@ -289,9 +289,9 @@ description: >
    ```bash
    # Verify model is specified
    --gguf-model-path ./model.gguf
-   # OR
+   # Or
    --ollama-model nomic-embed-text
-   # OR
+   # Or
    --openai-key sk-xxx
    ```
 
@@ -302,14 +302,14 @@ description: >
 
 ## Getting Help
 
-If you're still experiencing issues:
+If you're still experiencing problems:
 
-1. **Check the logs** with debug mode:
+1. **Check logs** with debug mode:
    ```bash
    --log-level debug
    ```
 
-2. **Search existing issues** on [GitHub Issues](https://github.com/madeindigio/remembrances-mcp/issues)
+2. **Search existing issues** in [GitHub Issues](https://github.com/madeindigio/remembrances-mcp/issues)
 
 3. **Open a new issue** with:
    - Operating system and version
@@ -323,3 +323,4 @@ If you're still experiencing issues:
 - [Getting Started](../getting-started/) - Installation guide
 - [Configuration](../configuration/) - Configuration options
 - [GGUF Models](../gguf-models/) - Model selection and optimization
+```

@@ -3,18 +3,18 @@ title: "Configuration"
 linkTitle: "Configuration"
 weight: 2
 description: >
-  Configure Remembrances MCP for your needs
+  Configure Remembrances according to your needs
 ---
 
 ## Configuration Methods
 
-Remembrances MCP can be configured using:
+Remembrances can be configured using:
 
 1. **YAML configuration file** (recommended)
 2. **Environment variables**
-3. **Command-line flags**
+3. **Command line flags**
 
-Priority: CLI flags > Environment variables > YAML file > Defaults
+Priority: CLI flags > Environment variables > YAML file > Default values
 
 ## YAML Configuration
 
@@ -25,55 +25,103 @@ Create a configuration file at:
 Or specify a custom path with `--config`:
 
 ```yaml
-# Database configuration
+# Database configuration, only if using embedded SurrealDB, otherwise comment this line
 db-path: "./remembrances.db"
 
-# GGUF embeddings (recommended)
+# GGUF Embeddings (recommended for portability and privacy)
 gguf-model-path: "./nomic-embed-text-v1.5.Q4_K_M.gguf"
 gguf-threads: 8
 gguf-gpu-layers: 32
 
-# Alternative: Ollama
+# Alternative: Ollama, if you prefer to use Ollama for embeddings (uncomment the following lines, you will need to comment the previous GGUF ones)
 # ollama-url: "http://localhost:11434"
 # ollama-model: "nomic-embed-text"
 
-# Alternative: OpenAI
+# Alternative: OpenAI (if you prefer to use OpenAI embeddings API - less privacy, but easier to use and doesn't require powerful hardware)
 # openai-key: "sk-..."
 # openai-model: "text-embedding-3-large"
 
 # Transport options
+# By default SSE is disabled, allows enabling it for agents that support SSE and use it remotely (you can share the same Remembrances instance with several agents and users of a work team)
 sse: false
 sse-addr: ":3000"
+
+# JSON HTTP API (useful for integration with other systems or agents that don't natively support MCP)
 http: false
 http-addr: ":8080"
 
-# Knowledge base
+# Knowledge base, path to the folder with markdown files to index and use as knowledge base, markdown files will also be generated for each web that Remembrances is required to save information in the knowledge base
 knowledge-base: "./kb"
 ```
 
 ## Environment Variables
 
-All options can be set via environment variables with `GOMEM_` prefix:
+All options can be configured through environment variables with the `GOMEM_` prefix:
 
 ```bash
-export GOMEM_GGUF_MODEL_PATH="./model.gguf"
-export GOMEM_GGUF_THREADS=8
-export GOMEM_GGUF_GPU_LAYERS=32
+# GOMEM_DB_PATH: Path to the embedded SurrealDB database (default: ./remembrances.db)
 export GOMEM_DB_PATH="./data.db"
+
+# GOMEM_GGUF_MODEL_PATH: Path to the GGUF model file for embeddings (recommended for portability and privacy)
+export GOMEM_GGUF_MODEL_PATH="./model.gguf"
+
+# GOMEM_GGUF_THREADS: Number of threads to use for GGUF processing (0 = auto-detect)
+export GOMEM_GGUF_THREADS=8
+
+# GOMEM_GGUF_GPU_LAYERS: Number of GPU layers to offload for accelerated processing (0 = CPU only)
+export GOMEM_GGUF_GPU_LAYERS=32
+
+# GOMEM_OLLAMA_URL: Ollama server URL for embeddings (alternative to GGUF)
+export GOMEM_OLLAMA_URL="http://localhost:11434"
+
+# GOMEM_OLLAMA_MODEL: Ollama model to use for embeddings (e.g. nomic-embed-text)
+export GOMEM_OLLAMA_MODEL="nomic-embed-text"
+
+# GOMEM_OPENAI_KEY: OpenAI API key for embeddings (less privacy, but easier to use)
+export GOMEM_OPENAI_KEY="sk-..."
+
+# GOMEM_OPENAI_MODEL: OpenAI model for embeddings (e.g. text-embedding-3-large)
+export GOMEM_OPENAI_MODEL="text-embedding-3-large"
+
+# GOMEM_SSE: Enable SSE transport (default: false)
+export GOMEM_SSE=false
+
+# GOMEM_SSE_ADDR: SSE server address (default: :3000)
+export GOMEM_SSE_ADDR=":3000"
+
+# GOMEM_HTTP: Enable JSON HTTP API for integration with other systems (default: false)
+export GOMEM_HTTP=false
+
+# GOMEM_HTTP_ADDR: HTTP server address (default: :8080)
+export GOMEM_HTTP_ADDR=":8080"
+
+# GOMEM_KNOWLEDGE_BASE: Path to the folder with markdown files for the knowledge base
+export GOMEM_KNOWLEDGE_BASE="./kb"
+
+# GOMEM_SURREALDB_URL: URL for remote SurrealDB instance (if not using embedded)
+export GOMEM_SURREALDB_URL=""
+
+# GOMEM_SURREALDB_USER: User for remote SurrealDB (default: root)
+export GOMEM_SURREALDB_USER="root"
+
+# GOMEM_SURREALDB_PASS: Password for remote SurrealDB (default: root)
+export GOMEM_SURREALDB_PASS="root"
 ```
 
 ## Key Configuration Options
 
-### Database
+### Database (embedded or remote, you will need a SurrealDB server if using remote mode)
 
 - `db-path`: Path to embedded SurrealDB (default: `./remembrances.db`)
+
+And to access a remote SurrealDB instance:
 - `surrealdb-url`: URL for remote SurrealDB instance
 - `surrealdb-user`: Username (default: `root`)
 - `surrealdb-pass`: Password (default: `root`)
 
 ### GGUF Embeddings
 
-- `gguf-model-path`: Path to GGUF model file
+- `gguf-model-path`: Path to the GGUF model file
 - `gguf-threads`: Number of threads (0 = auto-detect)
 - `gguf-gpu-layers`: GPU layers to offload (0 = CPU only)
 
@@ -81,8 +129,6 @@ export GOMEM_DB_PATH="./data.db"
 
 - `sse`: Enable SSE transport
 - `sse-addr`: SSE server address (default: `:3000`)
-- `http`: Enable HTTP JSON API
-- `http-addr`: HTTP server address (default: `:8080`)
 
 ## Example Configurations
 
@@ -108,11 +154,16 @@ db-path: "./remembrances.db"
 ```yaml
 http: true
 http-addr: ":8080"
-gguf-model-path: "./model.gguf"
-gguf-gpu-layers: 32
 ```
 
-## See Also
+### Configuration through CLI parameters
 
-- [GGUF Models](../gguf-models/) - Model selection and optimization
-- [MCP API](../mcp-api/) - Available tools and endpoints
+You have all the above configuration available through command line flags. Check the help with:
+
+```bash
+remembrances-mcp --help
+```
+```
+<file_path>
+remembrances-mcp/website/content/en/docs/configuration/_index.md
+</file_path>

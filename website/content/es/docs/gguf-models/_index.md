@@ -1,10 +1,12 @@
 ---
 title: "Modelos GGUF"
 linkTitle: "Modelos GGUF"
-weight: 3
+weight: 5
 description: >
   Descarga y optimiza modelos de embeddings GGUF
 ---
+
+Esta sección sólo es relevante si estás usando modelos GGUF locales para generación de embeddings. Si estás usando Ollama o una API externa de embeddings (como OpenAI), no necesitas esta sección.
 
 ## Modelos Recomendados
 
@@ -20,16 +22,16 @@ description: >
 wget https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf
 ```
 
-### all-MiniLM-L6-v2
+### Qwen3-Embedding-0.6B-Q8_0
 
-**Mejor para**: Inferencia rápida, menor uso de memoria
+**Mejor para**: Alta calidad de embeddings cuando el tamaño no es un problema
 
-- **Dimensiones**: 384
-- **Tamaño**: ~23MB (cuantización Q4_K_M)
-- **Descarga**: [Hugging Face](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2-GGUF)
+- **Dimensiones**: 1024
+- **Tamaño**: ~1.2GB (cuantización Q8_0)
+- **Descarga**: [Hugging Face](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF)
 
 ```bash
-wget https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2-GGUF/resolve/main/all-MiniLM-L6-v2.Q4_K_M.gguf
+wget https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/Qwen3-Embedding-0.6B-Q8_0.gguf
 ```
 
 ## Niveles de Cuantización

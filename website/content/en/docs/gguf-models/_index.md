@@ -1,10 +1,12 @@
 ---
 title: "GGUF Models"
 linkTitle: "GGUF Models"
-weight: 3
+weight: 5
 description: >
   Download and optimize GGUF embedding models
 ---
+
+This section is only relevant if you're using local GGUF models for embedding generation. If you're using Ollama or an external embedding API (like OpenAI), you don't need this section.
 
 ## Recommended Models
 
@@ -20,16 +22,16 @@ description: >
 wget https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf
 ```
 
-### all-MiniLM-L6-v2
+### Qwen3-Embedding-0.6B-Q8_0
 
-**Best for**: Fast inference, lower memory usage
+**Best for**: High-quality embeddings when size is not an issue
 
-- **Dimensions**: 384
-- **Size**: ~23MB (Q4_K_M quantization)
-- **Download**: [Hugging Face](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2-GGUF)
+- **Dimensions**: 1024
+- **Size**: ~1.2GB (Q8_0 quantization)
+- **Download**: [Hugging Face](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF)
 
 ```bash
-wget https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2-GGUF/resolve/main/all-MiniLM-L6-v2.Q4_K_M.gguf
+wget https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF/resolve/main/Qwen3-Embedding-0.6B-Q8_0.gguf
 ```
 
 ## Quantization Levels
@@ -40,8 +42,8 @@ GGUF models come in different quantization levels:
 |--------------|------|---------|-------|-----------------|
 | **Q4_K_M** | Small | Good | Fast | ⭐ General use |
 | **Q5_K_M** | Medium | Better | Medium | High quality |
-| **Q8_0** | Large | Best | Slower | Maximum quality |
-| **F16** | Largest | Perfect | Slowest | Benchmarking |
+| **Q8_0** | Large | Optimal | Slow | Maximum quality |
+| **F16** | Very large | Perfect | Very slow | Benchmarking |
 
 **Recommendation**: Use **Q4_K_M** for the best balance of size, speed, and quality.
 
@@ -64,7 +66,7 @@ The `--gguf-gpu-layers` parameter controls how many layers are offloaded to GPU:
 
 **Finding the right value**:
 1. Start with `--gguf-gpu-layers 32`
-2. If you get OOM errors, reduce by 8
+2. If you get OOM errors, reduce by 8s
 3. Monitor GPU memory usage with `nvidia-smi` (NVIDIA) or `rocm-smi` (AMD)
 
 ### Platform-Specific Tips
@@ -98,7 +100,7 @@ rocm-smi
 #### Apple Silicon (Metal)
 
 ```bash
-# Metal is automatically detected
+# Metal is detected automatically
 ./run-remembrances.sh \
   --gguf-model-path ./model.gguf \
   --gguf-gpu-layers 32 \
@@ -113,7 +115,7 @@ rocm-smi
 # Auto-detect (recommended)
 --gguf-threads 0
 
-# Manual (use CPU core count)
+# Manual (use your CPU core count)
 --gguf-threads 8
 ```
 
@@ -151,7 +153,7 @@ Increase GPU layers and threads:
 --gguf-threads 8
 ```
 
-### Model Not Loading
+### Model Won't Load
 
 Check file path and permissions:
 ```bash
@@ -163,3 +165,11 @@ chmod +r ./model.gguf
 
 - [Configuration](../configuration/) - Server configuration options
 - [Getting Started](../getting-started/) - Installation guide
+```
+<file_path>
+remembrances-mcp/website/content/en/docs/gguf-models/_index.md
+</file_path>
+
+<edit_description>
+Translate GGUF models documentation from Spanish to English
+</edit_description>

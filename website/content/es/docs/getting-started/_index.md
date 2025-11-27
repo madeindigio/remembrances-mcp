@@ -8,31 +8,39 @@ description: >
 
 ## Requisitos Previos
 
-- Go 1.20 o posterior
-- Git
-- (Opcional) CUDA/ROCm para aceleración GPU
+- Linux, MacOSX o Windows (con WSL), alternativamente usa Docker en Windows si no tienes Windows Subsystem for Linux.
+- Recomendable gener GPU Nvidia con drivers configurados en Linux, o Mac con chip M1..M4 para aceleración gráfica. En el caso de Windows, usa Docker con soporte aceleración gráfica de Nvidia.
+
+Aunque será posible compilando la aplicación, no hay binarios disponibles por el momento para Windows nativo y Linux con soporte para GPU AMD (ROCm). Necesitarás compilar el proyecto manualmente en estos casos.
 
 ## Instalación
 
-### 1. Clonar el Repositorio
+### En Linux o MacOSX (Windows con WSL)
 
 ```bash
-git clone https://github.com/madeindigio/remembrances-mcp.git
-cd remembrances-mcp
+curl -fsSL https://raw.githubusercontent.com/madeindigio/remembrances-mcp/main/scripts/install.sh | bash
 ```
 
-### 2. Compilar el Proyecto
+Esto instalará el binario para tu sistema operativo, optimizado para CPU (MacOSX, con soporte aceleración gráfica M1..M4, y Linux para GPU NVidia -CUDA-)
+
+### Compilar el Proyecto (si tienes una GPU AMD o quieres soporte GPU personalizado)
+
+Esto sólo es necesario si no estás usando el script de instalación anterior, o si tienes una GPU AMD (ROCm) y quieres soporte para ella.
 
 ```bash
-make build
+make surrealdb-embedded
+make build-libs-hipblas
+make BUILD_TYPE=hipblas build
 ```
 
 Esto:
-- Instalará las dependencias de Go
-- Compilará llama.cpp con soporte GPU (si está disponible)
-- Construirá el binario `remembrances-mcp`
+- Se compilará la librería SurrealDB embebida
+- Compilará llama.cpp para soporte GPU AMD (ROCm)
+- Construirá el binario `remembrances-mcp` con soporte para GPU AMD (ROCm)
 
-### 3. Descargar un Modelo GGUF
+### Descargar un Modelo GGUF
+
+Este paso sólo es necesario si no tienes ya un modelo GGUF descargado (el script de instalación descarga el modelo recomendado)
 
 Descarga el modelo recomendado nomic-embed-text-v1.5:
 
@@ -42,30 +50,13 @@ wget https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nom
 
 Otros modelos recomendados:
 - **nomic-embed-text-v1.5** (768 dimensiones) - Mejor balance
-- **all-MiniLM-L6-v2** (384 dimensiones) - Más rápido, más pequeño
+- **nomic-embed-text-v2-moe** (768 dimensiones) - Más rápido, mejor calidad
+- **Qwen3-Embedding-0.6B-Q8_0** (1024 dimensiones) - Alta calidad, mayor uso de memoria
 
-### 4. Ejecutar el Servidor
+Búscalos en HuggingFace: https://huggingface.co/nomic-ai y en https://huggingface.co/Qwen
 
-```bash
-./run-remembrances.sh \
-  --gguf-model-path ./nomic-embed-text-v1.5.Q4_K_M.gguf \
-  --gguf-threads 8 \
-  --gguf-gpu-layers 32
-```
+### Alternativas para uso de modelos de embeddings
 
-El servidor se iniciará en modo stdio, listo para aceptar conexiones MCP.
+Si te gusta usar ollama y quieres configurar diferentes modelos de embeddings puedes alternativamente usar ollama. Remembrances soporta paso de parámetros de múltiples formas, ver el apartado de Configuración para más detalles.
 
-## Prueba Rápida
-
-Prueba el servidor con un hecho simple:
-
-```bash
-# En otra terminal, usa el cliente MCP
-echo '{"method":"tools/call","params":{"name":"remembrance_save_fact","arguments":{"key":"test","value":"Hola Mundo"}}}' | ./remembrances-mcp --gguf-model-path ./nomic-embed-text-v1.5.Q4_K_M.gguf
-```
-
-## Próximos Pasos
-
-- [Configura el servidor](../configuration/) según tus necesidades
-- [Aprende sobre modelos GGUF](../gguf-models/) y optimización
-- [Explora la API MCP](../mcp-api/) y herramientas disponibles
+Alternativamente si no tienes GPU soportada (Intel i7 Ultra o procesadores sin una GPU dedicada) puedes usar modelos de embeddings en la nube como los de OpenAI o cualquiera compatible con la API de OpenAI (Azure OpenAI, OpenRouter, etc). Ver Configuración para más detalles. La generación de embeddings en la nube puede tener costes asociados pero no requiere hardware específico y no impacta en el rendimiento de la aplicación.
