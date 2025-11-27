@@ -374,8 +374,72 @@ tbody tr:hover {
 .td-box--primary .td-icon,
 .td-box--primary .blocks-feature i,
 .td-box--dark .td-icon,
-.td-box--dark .blocks-feature i {
+.td-box--dark .blocks-feature i,
+.td-box--0 .td-icon,
+.td-box--0 .blocks-feature i {
   color: var(--digio-mint);
+}
+
+/* td-box--0 has dark background - needs light text */
+.td-box--0 {
+  color: var(--digio-white);
+}
+
+.td-box--0 h1,
+.td-box--0 h2,
+.td-box--0 h3,
+.td-box--0 h4,
+.td-box--0 h5,
+.td-box--0 h6,
+.td-box--0 .h1,
+.td-box--0 .h2,
+.td-box--0 .h3,
+.td-box--0 .h4,
+.td-box--0 .h5,
+.td-box--0 .h6 {
+  color: var(--digio-white) !important;
+}
+
+.td-box--0 p,
+.td-box--0 a {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.td-box--0 a:hover {
+  color: var(--digio-mint);
+}
+
+/* Icons in primary/dark sections - more specific selectors for Docsy structure */
+.td-box--primary i,
+.td-box--primary .fas,
+.td-box--primary .fab,
+.td-box--primary .far,
+.td-box--primary .h1 i,
+.td-box--primary .col-lg-4 i,
+.td-box--dark i,
+.td-box--dark .fas,
+.td-box--dark .fab,
+.td-box--dark .far,
+.td-box--dark .h1 i,
+.td-box--dark .col-lg-4 i,
+.td-box--0 i,
+.td-box--0 .fas,
+.td-box--0 .fab,
+.td-box--0 .far,
+.td-box--0 .h1 i,
+.td-box--0 .col-lg-4 i {
+  color: var(--digio-mint) !important;
+}
+
+/* Docs section feature icons */
+.td-content .row .fas,
+.td-content .row .fab,
+.td-content .row .far,
+.td-content .col-lg-4 .fas,
+.td-content .col-lg-4 .fab,
+.td-content .col-lg-4 .far,
+.td-content .h1 i {
+  color: var(--digio-mint) !important;
 }
 
 /* Feature blocks */
@@ -543,4 +607,594 @@ tbody tr:hover {
 .row-cols-1 > *,
 .row-cols-md-3 > * {
   margin-bottom: 1.5rem;
+}
+
+/* ===========================================
+   DARK MODE STYLES
+   Docsy/Bootstrap 5 uses [data-bs-theme="dark"]
+   =========================================== */
+
+[data-bs-theme="dark"] {
+  /* Base dark mode colors */
+  --digio-dark-bg: #0d1117;
+  --digio-dark-surface: #161b22;
+  --digio-dark-surface-alt: #21262d;
+  --digio-dark-border: #30363d;
+  --digio-dark-text: #e6edf3;
+  --digio-dark-text-muted: #8b949e;
+  --digio-dark-text-secondary: #c9d1d9;
+
+  /* Body background and text */
+  background-color: var(--digio-dark-bg);
+  color: var(--digio-dark-text);
+}
+
+/* HTML/Body dark mode */
+[data-bs-theme="dark"] body {
+  background-color: var(--digio-dark-bg);
+  color: var(--digio-dark-text);
+}
+
+/* Headings in dark mode */
+[data-bs-theme="dark"] h1,
+[data-bs-theme="dark"] h2,
+[data-bs-theme="dark"] h3,
+[data-bs-theme="dark"] h4,
+[data-bs-theme="dark"] h5,
+[data-bs-theme="dark"] h6 {
+  color: var(--digio-dark-text);
+}
+
+/* Links in dark mode */
+[data-bs-theme="dark"] a {
+  color: var(--digio-mint);
+}
+
+[data-bs-theme="dark"] a:hover {
+  color: #9FEAD0;
+}
+
+/* -----------------------------------------
+   Section Boxes in Dark Mode
+   ----------------------------------------- */
+
+/* White sections become dark surface */
+[data-bs-theme="dark"] .td-box--white,
+[data-bs-theme="dark"] .td-block--white {
+  background-color: var(--digio-dark-surface) !important;
+  color: var(--digio-dark-text) !important;
+}
+
+[data-bs-theme="dark"] .td-box--white h2,
+[data-bs-theme="dark"] .td-box--white h3,
+[data-bs-theme="dark"] .td-box--white h4,
+[data-bs-theme="dark"] .td-box--white p,
+[data-bs-theme="dark"] .td-block--white h2,
+[data-bs-theme="dark"] .td-block--white h3,
+[data-bs-theme="dark"] .td-block--white h4,
+[data-bs-theme="dark"] .td-block--white p {
+  color: var(--digio-dark-text) !important;
+}
+
+/* Gray sections in dark mode */
+[data-bs-theme="dark"] .td-box--gray {
+  background-color: var(--digio-dark-surface-alt) !important;
+  color: var(--digio-dark-text) !important;
+}
+
+[data-bs-theme="dark"] .td-box--gray h2,
+[data-bs-theme="dark"] .td-box--gray h3,
+[data-bs-theme="dark"] .td-box--gray h4,
+[data-bs-theme="dark"] .td-box--gray p {
+  color: var(--digio-dark-text) !important;
+}
+
+/* Secondary (mint) sections in dark mode - keep mint but ensure text contrast */
+[data-bs-theme="dark"] .td-box--secondary {
+  background-color: #1a3d32 !important; /* Darker mint-tinted background */
+  color: var(--digio-dark-text) !important;
+}
+
+[data-bs-theme="dark"] .td-box--secondary h2,
+[data-bs-theme="dark"] .td-box--secondary h3,
+[data-bs-theme="dark"] .td-box--secondary h4,
+[data-bs-theme="dark"] .td-box--secondary p {
+  color: var(--digio-dark-text) !important;
+}
+
+[data-bs-theme="dark"] .td-box--secondary a {
+  color: var(--digio-mint) !important;
+}
+
+/* -----------------------------------------
+   Icons in Dark Mode (FontAwesome & SVG)
+   ----------------------------------------- */
+
+/* Feature icons */
+[data-bs-theme="dark"] .td-icon,
+[data-bs-theme="dark"] .blocks-feature i,
+[data-bs-theme="dark"] .fa-lock,
+[data-bs-theme="dark"] .fa-bolt,
+[data-bs-theme="dark"] .fa-database,
+[data-bs-theme="dark"] .fa-book,
+[data-bs-theme="dark"] .fa-plug,
+[data-bs-theme="dark"] .fa-shield-alt,
+[data-bs-theme="dark"] .fa-brain,
+[data-bs-theme="dark"] .fa-search,
+[data-bs-theme="dark"] .fa-project-diagram,
+[data-bs-theme="dark"] .fa-info-circle,
+[data-bs-theme="dark"] .fa-blog,
+[data-bs-theme="dark"] .fa-robot,
+[data-bs-theme="dark"] .fa-book-atlas,
+[data-bs-theme="dark"] .fa-user,
+[data-bs-theme="dark"] .fa-code,
+[data-bs-theme="dark"] .fa-building,
+[data-bs-theme="dark"] .fa-rocket,
+[data-bs-theme="dark"] .fa-cog,
+[data-bs-theme="dark"] .fa-download,
+[data-bs-theme="dark"] .fa-question-circle,
+[data-bs-theme="dark"] .fa-arrow-right,
+[data-bs-theme="dark"] .fa-arrow-alt-circle-right,
+[data-bs-theme="dark"] .fa-github,
+[data-bs-theme="dark"] .fa-external-link-alt,
+[data-bs-theme="dark"] .fas,
+[data-bs-theme="dark"] .fab,
+[data-bs-theme="dark"] .far {
+  color: var(--digio-mint) !important;
+}
+
+/* Exceptions: Icons inside buttons should inherit button text color */
+[data-bs-theme="dark"] .btn i,
+[data-bs-theme="dark"] .btn .fas,
+[data-bs-theme="dark"] .btn .fab,
+[data-bs-theme="dark"] .btn .far {
+  color: inherit !important;
+}
+
+/* Icons in navbar should be white */
+[data-bs-theme="dark"] .td-navbar i,
+[data-bs-theme="dark"] .navbar i {
+  color: var(--digio-white) !important;
+}
+
+/* Icons in white/light sections need different treatment */
+[data-bs-theme="dark"] .td-box--white .blocks-feature i,
+[data-bs-theme="dark"] .td-block--white .blocks-feature i {
+  color: var(--digio-mint) !important;
+}
+
+/* SVG icons */
+[data-bs-theme="dark"] svg {
+  fill: currentColor;
+}
+
+[data-bs-theme="dark"] .td-navbar svg,
+[data-bs-theme="dark"] .navbar svg {
+  fill: var(--digio-white);
+}
+
+/* -----------------------------------------
+   Lead/Cover Blocks in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .td-block--lead,
+[data-bs-theme="dark"] .blocks-lead {
+  background-color: var(--digio-dark-surface) !important;
+  color: var(--digio-dark-text) !important;
+}
+
+[data-bs-theme="dark"] .td-block--lead h2,
+[data-bs-theme="dark"] .td-block--lead p,
+[data-bs-theme="dark"] .blocks-lead h2,
+[data-bs-theme="dark"] .blocks-lead p {
+  color: var(--digio-dark-text) !important;
+}
+
+[data-bs-theme="dark"] .td-block--lead strong,
+[data-bs-theme="dark"] .blocks-lead strong {
+  color: var(--digio-mint) !important;
+}
+
+/* -----------------------------------------
+   Feature Blocks in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .blocks-feature {
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .blocks-feature h3,
+[data-bs-theme="dark"] .blocks-feature h4 {
+  color: var(--digio-dark-text) !important;
+}
+
+[data-bs-theme="dark"] .blocks-feature p {
+  color: var(--digio-dark-text-secondary) !important;
+}
+
+/* -----------------------------------------
+   Content Area in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .td-content {
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .td-content h1,
+[data-bs-theme="dark"] .td-content h2,
+[data-bs-theme="dark"] .td-content h3,
+[data-bs-theme="dark"] .td-content h4 {
+  color: var(--digio-dark-text) !important;
+}
+
+[data-bs-theme="dark"] .td-content h2 {
+  border-bottom-color: var(--digio-mint);
+}
+
+[data-bs-theme="dark"] .td-content p,
+[data-bs-theme="dark"] .td-content li {
+  color: var(--digio-dark-text-secondary);
+}
+
+/* -----------------------------------------
+   Sidebar in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .td-sidebar,
+[data-bs-theme="dark"] .td-sidebar-nav {
+  background-color: var(--digio-dark-bg);
+}
+
+[data-bs-theme="dark"] .td-sidebar-nav .td-sidebar-link {
+  color: var(--digio-dark-text-secondary) !important;
+}
+
+[data-bs-theme="dark"] .td-sidebar-nav .td-sidebar-link:hover {
+  color: var(--digio-dark-text) !important;
+  background-color: var(--digio-dark-surface-alt);
+}
+
+[data-bs-theme="dark"] .td-sidebar-nav .td-sidebar-link.active {
+  color: var(--digio-mint) !important;
+  border-left-color: var(--digio-mint);
+  background-color: var(--digio-dark-surface);
+}
+
+[data-bs-theme="dark"] .td-sidebar-nav__section-title {
+  color: var(--digio-dark-text) !important;
+}
+
+/* -----------------------------------------
+   Code Blocks in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] code {
+  color: var(--digio-mint);
+  background-color: var(--digio-dark-surface-alt);
+}
+
+[data-bs-theme="dark"] pre {
+  background-color: var(--digio-dark-surface) !important;
+  border-left-color: var(--digio-mint);
+}
+
+[data-bs-theme="dark"] pre code {
+  color: var(--digio-dark-text);
+  background-color: transparent;
+}
+
+/* -----------------------------------------
+   Tables in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] table {
+  color: var(--digio-dark-text);
+  background-color: var(--digio-dark-surface);
+}
+
+[data-bs-theme="dark"] thead {
+  background-color: var(--digio-black);
+  color: var(--digio-white);
+}
+
+[data-bs-theme="dark"] tbody tr {
+  border-color: var(--digio-dark-border);
+}
+
+[data-bs-theme="dark"] tbody tr:hover {
+  background-color: var(--digio-dark-surface-alt);
+}
+
+[data-bs-theme="dark"] td,
+[data-bs-theme="dark"] th {
+  border-color: var(--digio-dark-border);
+}
+
+/* -----------------------------------------
+   Alerts in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .alert-primary,
+[data-bs-theme="dark"] .alert-info {
+  background-color: rgba(187, 255, 232, 0.1);
+  color: var(--digio-dark-text);
+  border-left-color: var(--digio-mint);
+}
+
+[data-bs-theme="dark"] .alert-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .alert-warning {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .alert-danger {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: var(--digio-dark-text);
+}
+
+/* -----------------------------------------
+   Buttons in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .btn-light {
+  background-color: var(--digio-dark-surface-alt);
+  border-color: var(--digio-dark-border);
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .btn-light:hover {
+  background-color: var(--digio-dark-surface);
+  color: var(--digio-mint);
+}
+
+/* Secondary button in dark mode */
+[data-bs-theme="dark"] .btn-secondary {
+  border-color: var(--digio-dark-text-muted);
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .btn-secondary:hover {
+  background-color: var(--digio-dark-text);
+  color: var(--digio-dark-bg);
+}
+
+/* -----------------------------------------
+   Breadcrumbs in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .breadcrumb {
+  background-color: transparent;
+}
+
+[data-bs-theme="dark"] .breadcrumb-item a {
+  color: var(--digio-mint);
+}
+
+[data-bs-theme="dark"] .breadcrumb-item.active {
+  color: var(--digio-dark-text-muted);
+}
+
+/* -----------------------------------------
+   Blog Cards in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .td-blog .card,
+[data-bs-theme="dark"] .card {
+  background-color: var(--digio-dark-surface);
+  border-color: var(--digio-dark-border);
+}
+
+[data-bs-theme="dark"] .card-title {
+  color: var(--digio-dark-text) !important;
+}
+
+[data-bs-theme="dark"] .card-text {
+  color: var(--digio-dark-text-secondary) !important;
+}
+
+[data-bs-theme="dark"] .card-footer {
+  background-color: var(--digio-dark-surface-alt);
+  border-top-color: var(--digio-dark-border);
+}
+
+/* -----------------------------------------
+   TOC (Table of Contents) in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .td-toc {
+  background-color: var(--digio-dark-bg);
+}
+
+[data-bs-theme="dark"] .td-toc a {
+  color: var(--digio-dark-text-secondary);
+}
+
+[data-bs-theme="dark"] .td-toc a:hover {
+  color: var(--digio-mint);
+}
+
+[data-bs-theme="dark"] .td-toc .active a {
+  color: var(--digio-mint);
+}
+
+/* -----------------------------------------
+   Pagination in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .pagination .page-link {
+  background-color: var(--digio-dark-surface);
+  border-color: var(--digio-dark-border);
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .pagination .page-link:hover {
+  background-color: var(--digio-dark-surface-alt);
+  color: var(--digio-mint);
+}
+
+[data-bs-theme="dark"] .pagination .page-item.active .page-link {
+  background-color: var(--digio-mint);
+  border-color: var(--digio-mint);
+  color: var(--digio-black);
+}
+
+/* -----------------------------------------
+   Scrollbar in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] ::-webkit-scrollbar-track {
+  background: var(--digio-dark-surface);
+}
+
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--digio-dark-surface-alt);
+}
+
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--digio-dark-text-muted);
+}
+
+/* -----------------------------------------
+   Misc Elements in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] hr {
+  border-color: var(--digio-dark-border);
+}
+
+[data-bs-theme="dark"] blockquote {
+  border-left-color: var(--digio-mint);
+  color: var(--digio-dark-text-secondary);
+}
+
+[data-bs-theme="dark"] .text-muted {
+  color: var(--digio-dark-text-muted) !important;
+}
+
+/* Main content wrapper */
+[data-bs-theme="dark"] .td-main main,
+[data-bs-theme="dark"] main {
+  background-color: var(--digio-dark-bg);
+}
+
+/* Ensure all paragraphs are visible */
+[data-bs-theme="dark"] p {
+  color: var(--digio-dark-text-secondary);
+}
+
+/* Strong/bold text stands out */
+[data-bs-theme="dark"] strong,
+[data-bs-theme="dark"] b {
+  color: var(--digio-dark-text);
+}
+
+/* -----------------------------------------
+   Form Inputs & Search Box in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] input,
+[data-bs-theme="dark"] textarea,
+[data-bs-theme="dark"] select {
+  background-color: var(--digio-dark-surface);
+  border-color: var(--digio-dark-border);
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] input:focus,
+[data-bs-theme="dark"] textarea:focus,
+[data-bs-theme="dark"] select:focus {
+  background-color: var(--digio-dark-surface-alt);
+  border-color: var(--digio-mint);
+  color: var(--digio-dark-text);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(187, 255, 232, 0.2);
+}
+
+[data-bs-theme="dark"] input::placeholder,
+[data-bs-theme="dark"] textarea::placeholder {
+  color: var(--digio-dark-text-muted);
+}
+
+[data-bs-theme="dark"] .form-control {
+  background-color: var(--digio-dark-surface);
+  border-color: var(--digio-dark-border);
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .form-control:focus {
+  background-color: var(--digio-dark-surface-alt);
+  border-color: var(--digio-mint);
+  color: var(--digio-dark-text);
+  box-shadow: 0 0 0 2px rgba(187, 255, 232, 0.2);
+}
+
+/* Search box */
+[data-bs-theme="dark"] .td-search-box input,
+[data-bs-theme="dark"] .td-search input {
+  background-color: var(--digio-dark-surface);
+  border-color: var(--digio-dark-border);
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .td-search-box input:focus,
+[data-bs-theme="dark"] .td-search input:focus {
+  background-color: var(--digio-dark-surface-alt);
+  border-color: var(--digio-mint);
+}
+
+/* Search results dropdown */
+[data-bs-theme="dark"] .td-search-box .dropdown-menu,
+[data-bs-theme="dark"] .td-search .dropdown-menu {
+  background-color: var(--digio-dark-surface);
+  border-color: var(--digio-dark-border);
+}
+
+[data-bs-theme="dark"] .td-search-box .dropdown-item,
+[data-bs-theme="dark"] .td-search .dropdown-item {
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .td-search-box .dropdown-item:hover,
+[data-bs-theme="dark"] .td-search .dropdown-item:hover {
+  background-color: var(--digio-dark-surface-alt);
+  color: var(--digio-mint);
+}
+
+/* -----------------------------------------
+   Dropdown Menus in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] .dropdown-menu {
+  background-color: var(--digio-dark-surface);
+  border-color: var(--digio-dark-border);
+}
+
+[data-bs-theme="dark"] .dropdown-item {
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .dropdown-item:hover,
+[data-bs-theme="dark"] .dropdown-item:focus {
+  background-color: var(--digio-dark-surface-alt);
+  color: var(--digio-mint);
+}
+
+[data-bs-theme="dark"] .dropdown-divider {
+  border-color: var(--digio-dark-border);
+}
+
+/* -----------------------------------------
+   Labels in Dark Mode
+   ----------------------------------------- */
+
+[data-bs-theme="dark"] label {
+  color: var(--digio-dark-text);
+}
+
+[data-bs-theme="dark"] .form-label {
+  color: var(--digio-dark-text);
 }

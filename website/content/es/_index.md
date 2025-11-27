@@ -5,7 +5,7 @@ linkTitle: "Remembrances MCP"
 
 {{< blocks/cover title="Remembrances MCP" image_anchor="center" height="full" color="dark" >}}
 <div class="mx-auto">
-  <p class="lead mt-5">Memoria a largo plazo para agentes IA con embeddings locales que priorizan la privacidad</p>
+  <p class="lead mt-5">Memoria a largo plazo para agentes IA con embeddings locales que priorizan la privacidad y opcionalmente base de datos compartida self-hosted</p>
   <div class="mx-auto mt-5">
     <a class="btn btn-lg btn-primary mr-3 mb-4" href="{{< relref "/docs" >}}">
       Comenzar <i class="fas fa-arrow-alt-circle-right ml-2"></i>
