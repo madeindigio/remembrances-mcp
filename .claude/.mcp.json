@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "remembrances-mcp": {
+      "type": "stdio",
+      "command": "remembrances-mcp",
+      "args": ["--config", "/www/MCP/remembrances-mcp/config.sample.gguf.yaml"],
+      "env": {}
+    }
+  }
+}

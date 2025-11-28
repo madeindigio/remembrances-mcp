@@ -26,7 +26,7 @@
 #rest-api-serve: false
 
 # Path to the knowledge base directory (default: "")
-knowledge-base: "~/www/MCP/remembrances-mcp/.serena/memories"
+knowledge-base: "/www/MCP/remembrances-mcp/.serena/memories"
 
 # ========== SurrealDB Configuration ==========
 # Path to the embedded SurrealDB database (default: "./remembrances.db")
@@ -92,4 +92,4 @@ ollama-model: "nomic-embed-text:latest"
 
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
-log: "~/www/MCP/remembrances-mcp/remembrances-mcp.externalsurreal.log"
+log: "/www/MCP/remembrances-mcp/remembrances-mcp.externalsurreal.log"
