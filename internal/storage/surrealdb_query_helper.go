@@ -59,13 +59,21 @@ func (s *SurrealDBStorage) queryEmbedded(ctx context.Context, query string, para
 
 	// The embedded DB returns []interface{}, we need to convert to the expected format
 	if len(results) > 0 {
-		// Try to determine if this is a single result or array of results
-		switch v := results[0].(type) {
-		case []interface{}:
-			// Array of results
-			maps := make([]map[string]interface{}, 0, len(v))
-			for _, item := range v {
-				if m, ok := item.(map[string]interface{}); ok {
+		// First, check if we have multiple results that are all maps
+		// This is the common case for SELECT queries returning multiple rows
+		allMaps := true
+		for _, r := range results {
+			if _, ok := r.(map[string]interface{}); !ok {
+				allMaps = false
+				break
+			}
+		}
+
+		if allMaps && len(results) > 0 {
+			// All results are maps - collect them all into one QueryResult
+			maps := make([]map[string]interface{}, 0, len(results))
+			for _, r := range results {
+				if m, ok := r.(map[string]interface{}); ok {
 					maps = append(maps, m)
 				}
 			}
@@ -73,30 +81,40 @@ func (s *SurrealDBStorage) queryEmbedded(ctx context.Context, query string, para
 				Status: "OK",
 				Result: maps,
 			})
-		case map[string]interface{}:
-			// Single result
-			queryResults = append(queryResults, QueryResult{
-				Status: "OK",
-				Result: []map[string]interface{}{v},
-			})
-		default:
-			// Try to convert all results
-			maps := make([]map[string]interface{}, 0)
-			for _, result := range results {
-				if m, ok := result.(map[string]interface{}); ok {
-					maps = append(maps, m)
-				} else if arr, ok := result.([]interface{}); ok {
-					for _, item := range arr {
-						if m, ok := item.(map[string]interface{}); ok {
-							maps = append(maps, m)
+		} else {
+			// Try to determine if this is a single result or array of results
+			switch v := results[0].(type) {
+			case []interface{}:
+				// Array of results (e.g., from a single SELECT that returns an array)
+				maps := make([]map[string]interface{}, 0, len(v))
+				for _, item := range v {
+					if m, ok := item.(map[string]interface{}); ok {
+						maps = append(maps, m)
+					}
+				}
+				queryResults = append(queryResults, QueryResult{
+					Status: "OK",
+					Result: maps,
+				})
+			default:
+				// Try to convert all results
+				maps := make([]map[string]interface{}, 0)
+				for _, result := range results {
+					if m, ok := result.(map[string]interface{}); ok {
+						maps = append(maps, m)
+					} else if arr, ok := result.([]interface{}); ok {
+						for _, item := range arr {
+							if m, ok := item.(map[string]interface{}); ok {
+								maps = append(maps, m)
+							}
 						}
 					}
 				}
+				queryResults = append(queryResults, QueryResult{
+					Status: "OK",
+					Result: maps,
+				})
 			}
-			queryResults = append(queryResults, QueryResult{
-				Status: "OK",
-				Result: maps,
-			})
 		}
 	} else {
 		// Empty result
