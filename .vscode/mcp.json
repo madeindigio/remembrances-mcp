@@ -3,12 +3,18 @@
     "hyper-mcp": {
       "type": "stdio",
       "command": "hyper-mcp",
-      "args": ["--config-file", ".ai/hyper-mcp.yaml"]
+      "args": [
+        "--config-file",
+        ".ai/hyper-mcp.yaml"
+      ]
     },
     "mycommandmcp": {
       "type": "stdio",
       "command": "mycommandmcp",
-      "args": ["--config", ".ai/mycommand-mcp.yaml"]
+      "args": [
+        "--config",
+        ".ai/mycommand-mcp.yaml"
+      ]
     },
     "serena": {
       "type": "stdio",
@@ -27,8 +33,11 @@
     },
     "remembrances": {
       "type": "stdio",
-      "command": "./build/remembrances-mcp",
-      "args": ["--config", "./config.sample.gguf.yaml"]
+      "command": "remembrances-mcp",
+      "args": [
+        "--config",
+        "./config.sample.gguf.yaml"
+      ]
     }
   },
   "inputs": []

@@ -30,7 +30,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 8 // v8: fix kv_memories value field to allow strings with newlines
+	targetVersion := 10 // v10: code_chunks table for large symbol chunking
 	if currentVersion < targetVersion {
 		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -180,6 +180,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewV8FlexibleKVValue(s.db)
 	case 9:
 		migration = migrations.NewV9CodeIndexing(s.db)
+	case 10:
+		migration = migrations.NewV10CodeChunks(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}
@@ -362,6 +364,31 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 			`DEFINE INDEX idx_code_job_status ON code_indexing_jobs FIELDS status;`,
 		}
 		log.Println("Migration V9: Creating code indexing schema (code_projects, code_files, code_symbols, code_indexing_jobs)")
+	case 10:
+		// V10: code_chunks table for large symbol chunking
+		statements = []string{
+			// code_chunks table
+			`DEFINE TABLE code_chunks SCHEMAFULL;`,
+			`DEFINE FIELD symbol_id ON code_chunks TYPE string;`,
+			`DEFINE FIELD project_id ON code_chunks TYPE string;`,
+			`DEFINE FIELD file_path ON code_chunks TYPE string;`,
+			`DEFINE FIELD chunk_index ON code_chunks TYPE int;`,
+			`DEFINE FIELD chunk_count ON code_chunks TYPE int;`,
+			`DEFINE FIELD content ON code_chunks TYPE string;`,
+			`DEFINE FIELD start_offset ON code_chunks TYPE int;`,
+			`DEFINE FIELD end_offset ON code_chunks TYPE int;`,
+			fmt.Sprintf(`DEFINE FIELD embedding ON code_chunks TYPE option<array<float, %d>>;`, defaultMtreeDim),
+			`DEFINE FIELD symbol_name ON code_chunks TYPE string;`,
+			`DEFINE FIELD symbol_type ON code_chunks TYPE string;`,
+			`DEFINE FIELD language ON code_chunks TYPE string;`,
+			`DEFINE FIELD created_at ON code_chunks TYPE datetime DEFAULT time::now();`,
+			`DEFINE INDEX idx_code_chunk_symbol ON code_chunks FIELDS symbol_id;`,
+			`DEFINE INDEX idx_code_chunk_project ON code_chunks FIELDS project_id;`,
+			`DEFINE INDEX idx_code_chunk_file ON code_chunks FIELDS project_id, file_path;`,
+			`DEFINE INDEX idx_code_chunk_unique ON code_chunks FIELDS symbol_id, chunk_index UNIQUE;`,
+			fmt.Sprintf(`DEFINE INDEX idx_code_chunk_embedding ON code_chunks FIELDS embedding MTREE DIMENSION %d;`, defaultMtreeDim),
+		}
+		log.Println("Migration V10: Creating code_chunks table for large symbol chunking")
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}

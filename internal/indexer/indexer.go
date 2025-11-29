@@ -286,6 +286,12 @@ func (idx *Indexer) processFile(ctx context.Context, projectID, rootPath string,
 		return fmt.Errorf("failed to save file record: %w", err)
 	}
 
+	// Process large symbols for chunking
+	if err := idx.processLargeSymbols(ctx, projectID, file.RelPath, symbols); err != nil {
+		log.Printf("Warning: failed to process large symbols for chunking: %v", err)
+		// Continue even if chunking fails
+	}
+
 	idx.updateProgress(projectID, func(p *IndexingProgress) {
 		p.FilesIndexed++
 		p.SymbolsFound += len(symbols)
@@ -496,4 +502,137 @@ func (idx *Indexer) ReindexFile(ctx context.Context, projectID, filePath string)
 // DeleteProject removes a project and all its data
 func (idx *Indexer) DeleteProject(ctx context.Context, projectID string) error {
 	return idx.storage.DeleteCodeProject(ctx, projectID)
+}
+
+// ===== LARGE SYMBOL CHUNKING =====
+
+const (
+	// ChunkThreshold is the minimum source code length to trigger chunking
+	ChunkThreshold = 1500
+
+	// ChunkSize is the maximum size of each chunk
+	ChunkSize = 1500
+
+	// ChunkOverlap is the overlap between consecutive chunks
+	ChunkOverlap = 200
+)
+
+// processLargeSymbols creates chunks for symbols larger than the threshold
+func (idx *Indexer) processLargeSymbols(ctx context.Context, projectID, filePath string, symbols []*treesitter.CodeSymbol) error {
+	// First, delete existing chunks for this file
+	if err := idx.storage.DeleteChunksByFile(ctx, projectID, filePath); err != nil {
+		log.Printf("Warning: failed to delete existing chunks: %v", err)
+	}
+
+	var allChunks []*storage.CodeChunk
+
+	for _, sym := range symbols {
+		if sym.SourceCode == "" || len(sym.SourceCode) < ChunkThreshold {
+			continue
+		}
+
+		// Create chunks for this symbol
+		chunks := idx.createSymbolChunks(sym, projectID, filePath)
+		allChunks = append(allChunks, chunks...)
+	}
+
+	if len(allChunks) == 0 {
+		return nil
+	}
+
+	// Generate embeddings for chunks
+	if err := idx.generateChunkEmbeddings(ctx, allChunks); err != nil {
+		return fmt.Errorf("failed to generate chunk embeddings: %w", err)
+	}
+
+	// Save chunks
+	if err := idx.storage.SaveCodeChunks(ctx, allChunks); err != nil {
+		return fmt.Errorf("failed to save chunks: %w", err)
+	}
+
+	log.Printf("Created %d chunks for large symbols in %s", len(allChunks), filePath)
+	return nil
+}
+
+// createSymbolChunks splits a large symbol into chunks
+func (idx *Indexer) createSymbolChunks(sym *treesitter.CodeSymbol, projectID, filePath string) []*storage.CodeChunk {
+	sourceCode := sym.SourceCode
+	chunks := embedder.ChunkText(sourceCode, ChunkSize, ChunkOverlap)
+
+	if len(chunks) <= 1 {
+		return nil // No need to chunk if only one piece
+	}
+
+	// Generate a unique symbol ID (project:file:name_path)
+	symbolID := fmt.Sprintf("%s:%s:%s", projectID, filePath, sym.NamePath)
+
+	result := make([]*storage.CodeChunk, len(chunks))
+	offset := 0
+
+	for i, chunkContent := range chunks {
+		// Find actual offset in source
+		startOffset := strings.Index(sourceCode[offset:], chunkContent)
+		if startOffset == -1 {
+			startOffset = offset
+		} else {
+			startOffset += offset
+		}
+		endOffset := startOffset + len(chunkContent)
+
+		result[i] = &storage.CodeChunk{
+			SymbolID:    symbolID,
+			ProjectID:   projectID,
+			FilePath:    filePath,
+			ChunkIndex:  i,
+			ChunkCount:  len(chunks),
+			Content:     chunkContent,
+			StartOffset: startOffset,
+			EndOffset:   endOffset,
+			SymbolName:  sym.Name,
+			SymbolType:  string(sym.SymbolType),
+			Language:    string(sym.Language),
+		}
+
+		offset = endOffset - ChunkOverlap
+		if offset < 0 {
+			offset = 0
+		}
+	}
+
+	return result
+}
+
+// generateChunkEmbeddings generates embeddings for chunks in batches
+func (idx *Indexer) generateChunkEmbeddings(ctx context.Context, chunks []*storage.CodeChunk) error {
+	if len(chunks) == 0 {
+		return nil
+	}
+
+	// Prepare texts with context
+	texts := make([]string, len(chunks))
+	for i, chunk := range chunks {
+		// Add symbol context to the chunk
+		texts[i] = fmt.Sprintf("%s %s:\n%s", chunk.SymbolType, chunk.SymbolName, chunk.Content)
+	}
+
+	// Generate embeddings in batches
+	for i := 0; i < len(texts); i += idx.config.EmbeddingBatchSize {
+		end := i + idx.config.EmbeddingBatchSize
+		if end > len(texts) {
+			end = len(texts)
+		}
+
+		batch := texts[i:end]
+		embeddings, err := idx.embedder.EmbedDocuments(ctx, batch)
+		if err != nil {
+			return fmt.Errorf("failed to generate embeddings: %w", err)
+		}
+
+		// Assign embeddings to chunks
+		for j, embedding := range embeddings {
+			chunks[i+j].Embedding = embedding
+		}
+	}
+
+	return nil
 }

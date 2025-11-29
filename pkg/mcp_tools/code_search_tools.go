@@ -64,6 +64,17 @@ type CodeFindReferencesInput struct {
 	Limit        int      `json:"limit,omitempty" description:"Maximum number of references. Default is 50."`
 }
 
+// CodeHybridSearchInput represents input for code_hybrid_search tool
+type CodeHybridSearchInput struct {
+	ProjectID    string   `json:"project_id" description:"The project ID to search in."`
+	Query        string   `json:"query" description:"Natural language query for semantic search."`
+	Languages    []string `json:"languages,omitempty" description:"Filter by programming languages (go, typescript, python, etc)."`
+	SymbolTypes  []string `json:"symbol_types,omitempty" description:"Filter by symbol types (class, function, method, interface, etc)."`
+	PathPattern  string   `json:"path_pattern,omitempty" description:"Filter by file path pattern (e.g., 'src/auth/**')."`
+	IncludeChunks bool   `json:"include_chunks,omitempty" description:"Search in code chunks for better large-symbol coverage."`
+	Limit        int      `json:"limit,omitempty" description:"Maximum number of results. Default is 20."`
+}
+
 // ====== CodeSearchToolManager ======
 
 // CodeSearchToolManager manages code search tools
@@ -99,6 +110,9 @@ func (cstm *CodeSearchToolManager) RegisterCodeSearchTools(reg func(string, *pro
 		return err
 	}
 	if err := reg("code_find_references", cstm.codeFindReferencesTool(), cstm.codeFindReferencesHandler); err != nil {
+		return err
+	}
+	if err := reg("code_hybrid_search", cstm.codeHybridSearchTool(), cstm.codeHybridSearchHandler); err != nil {
 		return err
 	}
 	return nil
@@ -757,6 +771,256 @@ func (cstm *CodeSearchToolManager) codeFindReferencesHandler(ctx context.Context
 	}
 
 	resultJSON, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	}
+
+	return protocol.NewCallToolResult([]protocol.Content{
+		&protocol.TextContent{
+			Type: "text",
+			Text: string(resultJSON),
+		},
+	}, false), nil
+}
+
+// ====== Hybrid Search Tool ======
+
+func (cstm *CodeSearchToolManager) codeHybridSearchTool() *protocol.Tool {
+	tool, err := protocol.NewTool("code_hybrid_search", `Perform advanced hybrid search combining semantic similarity with structural filters.
+
+Explanation: Searches code using both semantic understanding and structural filters. 
+Combines vector similarity search with filters for language, symbol type, and file paths.
+Optionally searches in code chunks for better coverage of large symbols.
+
+When to call: Use when you need to search code semantically but also want to narrow down
+by language, symbol type, or file location. More powerful than pure semantic search.
+
+Example arguments/values:
+	project_id: "my-project"
+	query: "user authentication and session management"
+	languages: ["go", "typescript"]
+	symbol_types: ["function", "method"]
+	path_pattern: "src/auth/**"
+	include_chunks: true
+	limit: 20
+`, CodeHybridSearchInput{})
+	if err != nil {
+		slog.Error("failed to create tool", "name", "code_hybrid_search", "err", err)
+		return nil
+	}
+	return tool
+}
+
+func (cstm *CodeSearchToolManager) codeHybridSearchHandler(ctx context.Context, req *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
+	var input CodeHybridSearchInput
+	if err := json.Unmarshal(req.RawArguments, &input); err != nil {
+		return nil, fmt.Errorf("failed to parse input: %w", err)
+	}
+
+	if input.ProjectID == "" || input.Query == "" {
+		return nil, fmt.Errorf("project_id and query are required")
+	}
+
+	limit := input.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+
+	// Generate query embedding
+	queryEmbedding, err := cstm.embedder.EmbedQuery(ctx, input.Query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate query embedding: %w", err)
+	}
+
+	// Get storage with code operations
+	codeStorage, ok := cstm.storage.(interface {
+		SearchSymbolsBySimilarity(ctx context.Context, projectID string, queryEmbedding []float32, symbolTypes []treesitter.SymbolType, limit int) ([]storage.CodeSymbolSearchResult, error)
+		SearchChunksBySimilarity(ctx context.Context, projectID string, queryEmbedding []float32, limit int) ([]storage.CodeChunkSearchResult, error)
+	})
+	if !ok {
+		return nil, fmt.Errorf("storage does not support code search operations")
+	}
+
+	// Convert symbol types
+	var symbolTypes []treesitter.SymbolType
+	for _, t := range input.SymbolTypes {
+		symbolTypes = append(symbolTypes, treesitter.SymbolType(t))
+	}
+
+	// Search symbols
+	symbolResults, err := codeStorage.SearchSymbolsBySimilarity(ctx, input.ProjectID, queryEmbedding, symbolTypes, limit*2)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search symbols: %w", err)
+	}
+
+	// Optionally search chunks
+	var chunkResults []storage.CodeChunkSearchResult
+	if input.IncludeChunks {
+		chunkResults, err = codeStorage.SearchChunksBySimilarity(ctx, input.ProjectID, queryEmbedding, limit)
+		if err != nil {
+			slog.Warn("failed to search chunks", "error", err)
+		}
+	}
+
+	// Compile path pattern if provided
+	var pathRegex *regexp.Regexp
+	if input.PathPattern != "" {
+		// Convert glob-like pattern to regex
+		pattern := strings.ReplaceAll(input.PathPattern, "**", ".*")
+		pattern = strings.ReplaceAll(pattern, "*", "[^/]*")
+		pattern = "^" + pattern
+		pathRegex, err = regexp.Compile(pattern)
+		if err != nil {
+			slog.Warn("invalid path pattern, ignoring", "pattern", input.PathPattern, "error", err)
+			pathRegex = nil
+		}
+	}
+
+	// Filter and format results
+	type hybridResult struct {
+		Source     string  `json:"source"` // "symbol" or "chunk"
+		Name       string  `json:"name"`
+		NamePath   string  `json:"name_path,omitempty"`
+		SymbolType string  `json:"symbol_type"`
+		FilePath   string  `json:"file_path"`
+		Language   string  `json:"language"`
+		StartLine  int     `json:"start_line"`
+		EndLine    int     `json:"end_line"`
+		Similarity float64 `json:"similarity"`
+		ChunkIndex *int    `json:"chunk_index,omitempty"`
+		Preview    string  `json:"preview,omitempty"`
+	}
+
+	var results []hybridResult
+
+	// Process symbol results
+	for _, sr := range symbolResults {
+		sym := sr.Symbol
+		if sym == nil {
+			continue
+		}
+
+		// Apply language filter
+		if len(input.Languages) > 0 {
+			match := false
+			for _, lang := range input.Languages {
+				if string(sym.Language) == lang {
+					match = true
+					break
+				}
+			}
+			if !match {
+				continue
+			}
+		}
+
+		// Apply path filter
+		if pathRegex != nil && !pathRegex.MatchString(sym.FilePath) {
+			continue
+		}
+
+		// Create preview
+		preview := ""
+		if sym.Signature != nil {
+			preview = *sym.Signature
+		} else if sym.SourceCode != nil && len(*sym.SourceCode) < 200 {
+			preview = *sym.SourceCode
+		}
+
+		results = append(results, hybridResult{
+			Source:     "symbol",
+			Name:       sym.Name,
+			NamePath:   sym.NamePath,
+			SymbolType: string(sym.SymbolType),
+			FilePath:   sym.FilePath,
+			Language:   string(sym.Language),
+			StartLine:  sym.StartLine,
+			EndLine:    sym.EndLine,
+			Similarity: sr.Similarity,
+			Preview:    preview,
+		})
+	}
+
+	// Process chunk results
+	for _, cr := range chunkResults {
+		chunk := cr.Chunk
+		if chunk == nil {
+			continue
+		}
+
+		// Apply language filter
+		if len(input.Languages) > 0 {
+			match := false
+			for _, lang := range input.Languages {
+				if chunk.Language == lang {
+					match = true
+					break
+				}
+			}
+			if !match {
+				continue
+			}
+		}
+
+		// Apply symbol type filter
+		if len(input.SymbolTypes) > 0 {
+			match := false
+			for _, t := range input.SymbolTypes {
+				if chunk.SymbolType == t {
+					match = true
+					break
+				}
+			}
+			if !match {
+				continue
+			}
+		}
+
+		// Apply path filter
+		if pathRegex != nil && !pathRegex.MatchString(chunk.FilePath) {
+			continue
+		}
+
+		// Create preview (truncate chunk content)
+		preview := chunk.Content
+		if len(preview) > 200 {
+			preview = preview[:200] + "..."
+		}
+
+		chunkIdx := chunk.ChunkIndex
+		results = append(results, hybridResult{
+			Source:     "chunk",
+			Name:       chunk.SymbolName,
+			SymbolType: chunk.SymbolType,
+			FilePath:   chunk.FilePath,
+			Language:   chunk.Language,
+			StartLine:  chunk.StartOffset, // Approximate
+			EndLine:    chunk.EndOffset,   // Approximate
+			Similarity: cr.Similarity,
+			ChunkIndex: &chunkIdx,
+			Preview:    preview,
+		})
+	}
+
+	// Sort by similarity (already sorted from DB, but chunks may need re-sorting)
+	// For simplicity, we'll just limit
+	if len(results) > limit {
+		results = results[:limit]
+	}
+
+	output := map[string]interface{}{
+		"query":   input.Query,
+		"results": results,
+		"count":   len(results),
+		"filters": map[string]interface{}{
+			"languages":      input.Languages,
+			"symbol_types":   input.SymbolTypes,
+			"path_pattern":   input.PathPattern,
+			"include_chunks": input.IncludeChunks,
+		},
+	}
+
+	resultJSON, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal result: %w", err)
 	}

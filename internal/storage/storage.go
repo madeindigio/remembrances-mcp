@@ -182,6 +182,14 @@ type CodeStorage interface {
 	GetIndexingJob(ctx context.Context, jobID string) (*CodeIndexingJob, error)
 	ListActiveIndexingJobs(ctx context.Context) ([]CodeIndexingJob, error)
 	GetCodeProjectStats(ctx context.Context, projectID string) (map[string]interface{}, error)
+
+	// Chunk operations (for large symbol semantic search)
+	SaveCodeChunk(ctx context.Context, chunk *CodeChunk) error
+	SaveCodeChunks(ctx context.Context, chunks []*CodeChunk) error
+	DeleteChunksBySymbol(ctx context.Context, symbolID string) error
+	DeleteChunksByFile(ctx context.Context, projectID, filePath string) error
+	GetChunksBySymbol(ctx context.Context, symbolID string) ([]CodeChunk, error)
+	SearchChunksBySimilarity(ctx context.Context, projectID string, queryEmbedding []float32, limit int) ([]CodeChunkSearchResult, error)
 }
 
 // Combined interface that includes stats

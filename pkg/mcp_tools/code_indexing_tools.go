@@ -9,6 +9,7 @@ import (
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	"github.com/madeindigio/remembrances-mcp/internal/indexer"
+	"github.com/madeindigio/remembrances-mcp/internal/storage"
 )
 
 // ====== Input Types ======
@@ -37,6 +38,18 @@ type CodeDeleteProjectInput struct {
 type CodeReindexFileInput struct {
 	ProjectID string `json:"project_id" description:"The project ID containing the file."`
 	FilePath  string `json:"file_path" description:"Relative path to the file within the project."`
+}
+
+// CodeGetProjectStatsInput represents input for code_get_project_stats tool
+type CodeGetProjectStatsInput struct {
+	ProjectID string `json:"project_id" description:"The project ID to get statistics for."`
+}
+
+// CodeGetFileSymbolsInput represents input for code_get_file_symbols tool
+type CodeGetFileSymbolsInput struct {
+	ProjectID    string `json:"project_id" description:"The project ID containing the file."`
+	RelativePath string `json:"relative_path" description:"Relative path to the file within the project."`
+	IncludeBody  bool   `json:"include_body,omitempty" description:"Whether to include the source code body of each symbol."`
 }
 
 // ====== Tool Manager Extension ======
@@ -70,6 +83,12 @@ func (ctm *CodeToolManager) RegisterCodeTools(reg func(string, *protocol.Tool, f
 		return err
 	}
 	if err := reg("code_reindex_file", ctm.codeReindexFileTool(), ctm.codeReindexFileHandler); err != nil {
+		return err
+	}
+	if err := reg("code_get_project_stats", ctm.codeGetProjectStatsTool(), ctm.codeGetProjectStatsHandler); err != nil {
+		return err
+	}
+	if err := reg("code_get_file_symbols", ctm.codeGetFileSymbolsTool(), ctm.codeGetFileSymbolsHandler); err != nil {
 		return err
 	}
 	return nil
@@ -165,6 +184,52 @@ Example arguments/values:
 `, CodeReindexFileInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_reindex_file", "err", err)
+		return nil
+	}
+	return tool
+}
+
+func (ctm *CodeToolManager) codeGetProjectStatsTool() *protocol.Tool {
+	tool, err := protocol.NewTool("code_get_project_stats", `Get detailed statistics for an indexed code project.
+
+Explanation: Returns comprehensive statistics about an indexed project including file counts,
+symbol counts, language breakdown, and symbol type distribution.
+
+When to call: Use to get an overview of a project's codebase structure and size,
+or to verify indexing completeness.
+
+Example arguments/values:
+	project_id: "www_projects_my-app"
+
+Returns statistics like:
+- Total files and symbols
+- Files by programming language
+- Symbols by type (class, function, method, etc.)
+- Project indexing status
+`, CodeGetProjectStatsInput{})
+	if err != nil {
+		slog.Error("failed to create tool", "name", "code_get_project_stats", "err", err)
+		return nil
+	}
+	return tool
+}
+
+func (ctm *CodeToolManager) codeGetFileSymbolsTool() *protocol.Tool {
+	tool, err := protocol.NewTool("code_get_file_symbols", `Get all symbols from a specific file with hierarchical structure.
+
+Explanation: Returns all code symbols (classes, functions, methods, etc.) found in a specific file,
+organized in a hierarchical tree structure showing parent-child relationships.
+
+When to call: Use to get a complete overview of a file's structure, similar to an IDE's outline view.
+Set include_body to true if you need the actual source code for each symbol.
+
+Example arguments/values:
+	project_id: "www_projects_my-app"
+	relative_path: "src/services/user_service.go"
+	include_body: false
+`, CodeGetFileSymbolsInput{})
+	if err != nil {
+		slog.Error("failed to create tool", "name", "code_get_file_symbols", "err", err)
 		return nil
 	}
 	return tool
@@ -351,6 +416,166 @@ func (ctm *CodeToolManager) codeReindexFileHandler(ctx context.Context, req *pro
 		"message":    fmt.Sprintf("File %s reindexed successfully", input.FilePath),
 		"project_id": input.ProjectID,
 		"file_path":  input.FilePath,
+	}
+
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	}
+
+	return protocol.NewCallToolResult([]protocol.Content{
+		&protocol.TextContent{
+			Type: "text",
+			Text: string(resultJSON),
+		},
+	}, false), nil
+}
+
+func (ctm *CodeToolManager) codeGetProjectStatsHandler(ctx context.Context, req *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
+	var input CodeGetProjectStatsInput
+	if err := json.Unmarshal(req.RawArguments, &input); err != nil {
+		return nil, fmt.Errorf("failed to parse input: %w", err)
+	}
+
+	if input.ProjectID == "" {
+		return nil, fmt.Errorf("project_id is required")
+	}
+
+	// Get the code storage interface
+	codeStorage, ok := ctm.storage.(interface {
+		GetCodeProjectStats(ctx context.Context, projectID string) (map[string]interface{}, error)
+		GetCodeProject(ctx context.Context, projectID string) (*storage.CodeProject, error)
+	})
+	if !ok {
+		return nil, fmt.Errorf("storage does not support code operations")
+	}
+
+	// Get project info
+	project, err := codeStorage.GetCodeProject(ctx, input.ProjectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project: %w", err)
+	}
+	if project == nil {
+		return nil, fmt.Errorf("project not found: %s", input.ProjectID)
+	}
+
+	// Get stats
+	stats, err := codeStorage.GetCodeProjectStats(ctx, input.ProjectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get project stats: %w", err)
+	}
+
+	// Combine project info with stats
+	result := map[string]interface{}{
+		"project_id":      project.ProjectID,
+		"name":            project.Name,
+		"root_path":       project.RootPath,
+		"indexing_status": project.IndexingStatus,
+		"language_stats":  project.LanguageStats,
+	}
+	if project.LastIndexedAt != nil {
+		result["last_indexed_at"] = project.LastIndexedAt.Format("2006-01-02T15:04:05Z07:00")
+	}
+
+	// Merge stats
+	for k, v := range stats {
+		result[k] = v
+	}
+
+	resultJSON, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	}
+
+	return protocol.NewCallToolResult([]protocol.Content{
+		&protocol.TextContent{
+			Type: "text",
+			Text: string(resultJSON),
+		},
+	}, false), nil
+}
+
+// SymbolNode represents a symbol in the hierarchical tree
+type SymbolNode struct {
+	ID         string        `json:"id"`
+	Name       string        `json:"name"`
+	NamePath   string        `json:"name_path"`
+	SymbolType string        `json:"symbol_type"`
+	StartLine  int           `json:"start_line"`
+	EndLine    int           `json:"end_line"`
+	Signature  *string       `json:"signature,omitempty"`
+	DocString  *string       `json:"doc_string,omitempty"`
+	SourceCode *string       `json:"source_code,omitempty"`
+	Children   []*SymbolNode `json:"children,omitempty"`
+}
+
+func (ctm *CodeToolManager) codeGetFileSymbolsHandler(ctx context.Context, req *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
+	var input CodeGetFileSymbolsInput
+	if err := json.Unmarshal(req.RawArguments, &input); err != nil {
+		return nil, fmt.Errorf("failed to parse input: %w", err)
+	}
+
+	if input.ProjectID == "" || input.RelativePath == "" {
+		return nil, fmt.Errorf("project_id and relative_path are required")
+	}
+
+	// Get the code storage interface
+	codeStorage, ok := ctm.storage.(interface {
+		FindSymbolsByFile(ctx context.Context, projectID, filePath string) ([]storage.CodeSymbol, error)
+	})
+	if !ok {
+		return nil, fmt.Errorf("storage does not support code operations")
+	}
+
+	// Get all symbols in the file
+	symbols, err := codeStorage.FindSymbolsByFile(ctx, input.ProjectID, input.RelativePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file symbols: %w", err)
+	}
+
+	// Build hierarchical structure
+	symbolMap := make(map[string]*SymbolNode)
+	var roots []*SymbolNode
+
+	// First pass: create all nodes
+	for _, sym := range symbols {
+		node := &SymbolNode{
+			ID:         sym.ID,
+			Name:       sym.Name,
+			NamePath:   sym.NamePath,
+			SymbolType: string(sym.SymbolType),
+			StartLine:  sym.StartLine,
+			EndLine:    sym.EndLine,
+			Signature:  sym.Signature,
+			DocString:  sym.DocString,
+			Children:   []*SymbolNode{},
+		}
+		if input.IncludeBody {
+			node.SourceCode = sym.SourceCode
+		}
+		symbolMap[sym.ID] = node
+	}
+
+	// Second pass: build hierarchy
+	for _, sym := range symbols {
+		node := symbolMap[sym.ID]
+		if sym.ParentID != nil && *sym.ParentID != "" {
+			if parent, ok := symbolMap[*sym.ParentID]; ok {
+				parent.Children = append(parent.Children, node)
+			} else {
+				// Parent not found, treat as root
+				roots = append(roots, node)
+			}
+		} else {
+			roots = append(roots, node)
+		}
+	}
+
+	result := map[string]interface{}{
+		"project_id":    input.ProjectID,
+		"relative_path": input.RelativePath,
+		"symbols":       roots,
+		"total_count":   len(symbols),
 	}
 
 	resultJSON, err := json.Marshal(result)
