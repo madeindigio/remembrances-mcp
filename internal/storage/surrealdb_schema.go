@@ -178,6 +178,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewV7FlexibleMetadataFix(s.db)
 	case 8:
 		migration = migrations.NewV8FlexibleKVValue(s.db)
+	case 9:
+		migration = migrations.NewV9CodeIndexing(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}
@@ -286,6 +288,80 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 			`DEFINE FIELD value ON kv_memories FLEXIBLE TYPE option<string | int | float | bool | object | array>;`,
 		}
 		log.Println("Migration V8: Fixed kv_memories value field to be FLEXIBLE (allows strings with newlines)")
+	case 9:
+		// V9: Code indexing schema
+		statements = []string{
+			// code_projects table
+			`DEFINE TABLE code_projects SCHEMAFULL;`,
+			`DEFINE FIELD project_id ON code_projects TYPE string;`,
+			`DEFINE FIELD name ON code_projects TYPE string;`,
+			`DEFINE FIELD root_path ON code_projects TYPE string;`,
+			`DEFINE FIELD language_stats ON code_projects FLEXIBLE TYPE option<object>;`,
+			`DEFINE FIELD last_indexed_at ON code_projects TYPE option<datetime>;`,
+			`DEFINE FIELD indexing_status ON code_projects TYPE string DEFAULT 'pending';`,
+			`DEFINE FIELD created_at ON code_projects TYPE datetime DEFAULT time::now();`,
+			`DEFINE FIELD updated_at ON code_projects TYPE datetime DEFAULT time::now();`,
+			`DEFINE INDEX idx_code_project_id ON code_projects FIELDS project_id UNIQUE;`,
+			`DEFINE INDEX idx_code_project_name ON code_projects FIELDS name;`,
+			`DEFINE INDEX idx_code_project_status ON code_projects FIELDS indexing_status;`,
+
+			// code_files table
+			`DEFINE TABLE code_files SCHEMAFULL;`,
+			`DEFINE FIELD project_id ON code_files TYPE string;`,
+			`DEFINE FIELD file_path ON code_files TYPE string;`,
+			`DEFINE FIELD language ON code_files TYPE string;`,
+			`DEFINE FIELD file_hash ON code_files TYPE string;`,
+			`DEFINE FIELD symbols_count ON code_files TYPE int DEFAULT 0;`,
+			`DEFINE FIELD indexed_at ON code_files TYPE datetime DEFAULT time::now();`,
+			`DEFINE INDEX idx_code_file_project_path ON code_files FIELDS project_id, file_path UNIQUE;`,
+			`DEFINE INDEX idx_code_file_project ON code_files FIELDS project_id;`,
+			`DEFINE INDEX idx_code_file_language ON code_files FIELDS language;`,
+			`DEFINE INDEX idx_code_file_hash ON code_files FIELDS file_hash;`,
+
+			// code_symbols table
+			`DEFINE TABLE code_symbols SCHEMAFULL;`,
+			`DEFINE FIELD project_id ON code_symbols TYPE string;`,
+			`DEFINE FIELD file_path ON code_symbols TYPE string;`,
+			`DEFINE FIELD language ON code_symbols TYPE string;`,
+			`DEFINE FIELD symbol_type ON code_symbols TYPE string;`,
+			`DEFINE FIELD name ON code_symbols TYPE string;`,
+			`DEFINE FIELD name_path ON code_symbols TYPE string;`,
+			`DEFINE FIELD start_line ON code_symbols TYPE int;`,
+			`DEFINE FIELD end_line ON code_symbols TYPE int;`,
+			`DEFINE FIELD start_byte ON code_symbols TYPE int;`,
+			`DEFINE FIELD end_byte ON code_symbols TYPE int;`,
+			`DEFINE FIELD source_code ON code_symbols TYPE option<string>;`,
+			`DEFINE FIELD signature ON code_symbols TYPE option<string>;`,
+			`DEFINE FIELD doc_string ON code_symbols TYPE option<string>;`,
+			fmt.Sprintf(`DEFINE FIELD embedding ON code_symbols TYPE option<array<float, %d>>;`, defaultMtreeDim),
+			`DEFINE FIELD parent_id ON code_symbols TYPE option<string>;`,
+			`DEFINE FIELD metadata ON code_symbols FLEXIBLE TYPE option<object>;`,
+			`DEFINE FIELD created_at ON code_symbols TYPE datetime DEFAULT time::now();`,
+			`DEFINE FIELD updated_at ON code_symbols TYPE datetime DEFAULT time::now();`,
+			`DEFINE INDEX idx_code_symbol_project ON code_symbols FIELDS project_id;`,
+			`DEFINE INDEX idx_code_symbol_file ON code_symbols FIELDS project_id, file_path;`,
+			`DEFINE INDEX idx_code_symbol_name_path ON code_symbols FIELDS project_id, name_path UNIQUE;`,
+			`DEFINE INDEX idx_code_symbol_type ON code_symbols FIELDS symbol_type;`,
+			`DEFINE INDEX idx_code_symbol_language ON code_symbols FIELDS language;`,
+			`DEFINE INDEX idx_code_symbol_name ON code_symbols FIELDS name;`,
+			`DEFINE INDEX idx_code_symbol_parent ON code_symbols FIELDS parent_id;`,
+			fmt.Sprintf(`DEFINE INDEX idx_code_symbol_embedding ON code_symbols FIELDS embedding MTREE DIMENSION %d;`, defaultMtreeDim),
+
+			// code_indexing_jobs table
+			`DEFINE TABLE code_indexing_jobs SCHEMAFULL;`,
+			`DEFINE FIELD project_id ON code_indexing_jobs TYPE string;`,
+			`DEFINE FIELD project_path ON code_indexing_jobs TYPE string;`,
+			`DEFINE FIELD status ON code_indexing_jobs TYPE string DEFAULT 'pending';`,
+			`DEFINE FIELD progress ON code_indexing_jobs TYPE float DEFAULT 0.0;`,
+			`DEFINE FIELD files_total ON code_indexing_jobs TYPE int DEFAULT 0;`,
+			`DEFINE FIELD files_indexed ON code_indexing_jobs TYPE int DEFAULT 0;`,
+			`DEFINE FIELD started_at ON code_indexing_jobs TYPE datetime DEFAULT time::now();`,
+			`DEFINE FIELD completed_at ON code_indexing_jobs TYPE option<datetime>;`,
+			`DEFINE FIELD error ON code_indexing_jobs TYPE option<string>;`,
+			`DEFINE INDEX idx_code_job_project ON code_indexing_jobs FIELDS project_id;`,
+			`DEFINE INDEX idx_code_job_status ON code_indexing_jobs FIELDS status;`,
+		}
+		log.Println("Migration V9: Creating code indexing schema (code_projects, code_files, code_symbols, code_indexing_jobs)")
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}

@@ -4,6 +4,8 @@ package storage
 import (
 	"context"
 	"time"
+
+	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
 )
 
 // Storage provides a unified interface for all database operations
@@ -14,6 +16,9 @@ type Storage interface {
 	Close() error
 	Ping(ctx context.Context) error
 	InitializeSchema(ctx context.Context) error
+
+	// Raw query support
+	Query(ctx context.Context, query string, params map[string]interface{}) ([]map[string]interface{}, error)
 
 	// Key-Value operations for discrete facts and preferences
 	SaveFact(ctx context.Context, userID, key string, value interface{}) error
@@ -146,8 +151,48 @@ type StatsProvider interface {
 	GetStats(ctx context.Context, userID string) (*MemoryStats, error)
 }
 
+// CodeStorage provides code indexing storage operations
+type CodeStorage interface {
+	// Project operations
+	CreateCodeProject(ctx context.Context, project *treesitter.CodeProject) error
+	GetCodeProject(ctx context.Context, projectID string) (*CodeProject, error)
+	ListCodeProjects(ctx context.Context) ([]CodeProject, error)
+	UpdateProjectStatus(ctx context.Context, projectID string, status treesitter.IndexingStatus) error
+	DeleteCodeProject(ctx context.Context, projectID string) error
+
+	// File operations
+	SaveCodeFile(ctx context.Context, file *treesitter.CodeFile) error
+	GetCodeFile(ctx context.Context, projectID, filePath string) (*CodeFile, error)
+	ListCodeFiles(ctx context.Context, projectID string) ([]CodeFile, error)
+	DeleteCodeFile(ctx context.Context, projectID, filePath string) error
+
+	// Symbol operations
+	SaveCodeSymbol(ctx context.Context, symbol *treesitter.CodeSymbol) error
+	SaveCodeSymbols(ctx context.Context, symbols []*treesitter.CodeSymbol) error
+	GetCodeSymbol(ctx context.Context, projectID, namePath string) (*CodeSymbol, error)
+	FindSymbolsByName(ctx context.Context, projectID, name string, symbolTypes []treesitter.SymbolType, limit int) ([]CodeSymbol, error)
+	FindSymbolsByFile(ctx context.Context, projectID, filePath string) ([]CodeSymbol, error)
+	FindChildSymbols(ctx context.Context, projectID, parentID string) ([]CodeSymbol, error)
+	SearchSymbolsBySimilarity(ctx context.Context, projectID string, queryEmbedding []float32, symbolTypes []treesitter.SymbolType, limit int) ([]CodeSymbolSearchResult, error)
+	DeleteSymbolsByFile(ctx context.Context, projectID, filePath string) error
+
+	// Indexing job operations
+	CreateIndexingJob(ctx context.Context, job *treesitter.IndexingJob) (string, error)
+	UpdateIndexingJob(ctx context.Context, jobID string, status treesitter.IndexingStatus, progress float64, filesIndexed int, err *string) error
+	GetIndexingJob(ctx context.Context, jobID string) (*CodeIndexingJob, error)
+	ListActiveIndexingJobs(ctx context.Context) ([]CodeIndexingJob, error)
+	GetCodeProjectStats(ctx context.Context, projectID string) (map[string]interface{}, error)
+}
+
 // Combined interface that includes stats
 type StorageWithStats interface {
 	Storage
 	StatsProvider
+}
+
+// Combined interface that includes stats and code storage
+type FullStorage interface {
+	Storage
+	StatsProvider
+	CodeStorage
 }
