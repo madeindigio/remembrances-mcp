@@ -49,6 +49,58 @@ export LD_LIBRARY_PATH=~/www/MCP/Remembrances/go-llama.cpp/build/bin:$LD_LIBRARY
 
 **📖 Full Documentation**: See [docs/GGUF_EMBEDDINGS.md](docs/GGUF_EMBEDDINGS.md) for detailed instructions, performance tips, and troubleshooting.
 
+## 🔍 Code Indexing System (NEW)
+
+Remembrances-MCP includes a powerful **Code Indexing System** that uses Tree-sitter for multi-language AST parsing with semantic embeddings. This allows AI agents to:
+
+- **Index codebases** across 14+ languages (Go, TypeScript, JavaScript, Python, Rust, Java, C/C++, PHP, Ruby, Swift, Kotlin, and more)
+- **Search semantically** for code symbols using natural language queries
+- **Navigate code** by finding definitions, references, and call hierarchies
+- **Manipulate code** by renaming symbols across entire codebases
+
+### Quick Start
+
+```bash
+# 1. Index a project
+# Use the MCP tool: code_index_project
+{
+  "project_name": "my-project",
+  "root_path": "/path/to/project",
+  "languages": ["go", "typescript"]
+}
+
+# 2. Search for code
+# Use: code_semantic_search
+{
+  "project_name": "my-project",
+  "query": "function that handles user authentication"
+}
+
+# 3. Find symbol definitions
+# Use: code_find_symbol
+{
+  "project_name": "my-project",
+  "name": "UserService"
+}
+```
+
+### Available Tools
+
+| Category | Tools |
+|----------|-------|
+| **Indexing** | `code_index_project`, `code_index_status`, `code_list_projects`, `code_delete_project`, `code_reindex_file`, `code_get_project_stats`, `code_get_file_symbols` |
+| **Search** | `code_semantic_search`, `code_find_symbol`, `code_find_references`, `code_find_implementations`, `code_get_call_hierarchy`, `code_hybrid_search` |
+| **Manipulation** | `code_rename_symbol`, `code_get_symbol_body`, `code_replace_symbol_body`, `code_insert_symbol` |
+
+### Supported Languages
+
+Go, TypeScript, JavaScript, TSX, Python, Rust, Java, Kotlin, Swift, C, C++, Objective-C, PHP, Ruby, C#, Scala, Bash, YAML
+
+**📖 Full Documentation**: 
+- [docs/CODE_INDEXING.md](docs/CODE_INDEXING.md) - User Guide
+- [docs/CODE_INDEXING_API.md](docs/CODE_INDEXING_API.md) - API Reference
+- [docs/TREE_SITTER_LANGUAGES.md](docs/TREE_SITTER_LANGUAGES.md) - Language Support
+
 ## Usage
 
 Run the server with CLI flags or environment variables:

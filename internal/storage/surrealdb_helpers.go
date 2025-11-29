@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
@@ -8,6 +9,35 @@ import (
 	"strings"
 	"time"
 )
+
+// decodeResult is a generic function to decode query results into typed slices
+func decodeResult[T any](result *[]QueryResult) ([]T, error) {
+	if result == nil || len(*result) == 0 {
+		return nil, nil
+	}
+
+	queryResult := (*result)[0]
+	if queryResult.Status != "OK" {
+		return nil, fmt.Errorf("query failed: %s", queryResult.Status)
+	}
+
+	if queryResult.Result == nil || len(queryResult.Result) == 0 {
+		return nil, nil
+	}
+
+	// Marshal to JSON and unmarshal to typed slice
+	jsonData, err := json.Marshal(queryResult.Result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	}
+
+	var items []T
+	if err := json.Unmarshal(jsonData, &items); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal result: %w", err)
+	}
+
+	return items, nil
+}
 
 // convertToInt safely converts various numeric types to int
 func convertToInt(value interface{}) int {

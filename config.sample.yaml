@@ -26,7 +26,7 @@
 #rest-api-serve: false
 
 # Path to the knowledge base directory (default: "")
-knowledge-base: "~/www/MCP/remembrances-mcp/.serena/memories"
+knowledge-base: "/www/MCP/remembrances-mcp/.serena/memories"
 
 # ========== SurrealDB Configuration ==========
 # Path to the embedded SurrealDB database (default: "./remembrances.db")
@@ -90,6 +90,34 @@ ollama-model: "nomic-embed-text:latest"
 # Typical values are 10-20% of chunk-size
 #chunk-overlap: 200
 
+# ========== Code Indexing Configuration ==========
+# The Code Indexing System uses Tree-sitter for AST parsing
+# and generates semantic embeddings for code symbols
+
+# Enable automatic project indexing on startup (default: false)
+# When enabled, previously indexed projects will be re-indexed
+#code-indexing-auto-reindex: false
+
+# Maximum number of concurrent indexing workers (default: 4)
+# Higher values speed up indexing but use more CPU
+#code-indexing-workers: 4
+
+# Maximum symbol size before chunking (default: 1500 characters)
+# Symbols larger than this are split into chunks for embedding
+#code-indexing-max-symbol-size: 1500
+
+# File patterns to exclude from indexing (comma-separated)
+# Default excludes: vendor, node_modules, .git, build, dist, __pycache__
+#code-indexing-exclude-patterns: "vendor,node_modules,.git,build,dist,__pycache__,*.min.js,*.bundle.js"
+
+# Maximum file size to index in bytes (default: 1048576 = 1MB)
+# Files larger than this are skipped
+#code-indexing-max-file-size: 1048576
+
+# Supported languages for code indexing:
+# go, typescript, javascript, tsx, python, rust, java, kotlin,
+# swift, c, cpp, objc, php, ruby, csharp, scala, bash, yaml
+
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
-log: "~/www/MCP/remembrances-mcp/remembrances-mcp.externalsurreal.log"
+log: "/www/MCP/remembrances-mcp/remembrances-mcp.externalsurreal.log"

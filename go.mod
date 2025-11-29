@@ -5,12 +5,14 @@ go 1.23.4
 require (
 	github.com/ThinkInAIXYZ/go-mcp v0.2.21
 	github.com/fsnotify/fsnotify v1.9.0
+	github.com/google/uuid v1.6.0
 	github.com/madeindigio/go-llama.cpp v0.0.0-00010101000000-000000000000
+	github.com/madeindigio/surrealdb-embedded-golang v0.0.0-00010101000000-000000000000
+	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
 	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.20.1
 	github.com/surrealdb/surrealdb.go v0.5.0
 	github.com/tmc/langchaingo v0.1.13
-	github.com/madeindigio/surrealdb-embedded-golang v0.0.0-00010101000000-000000000000
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -21,7 +23,6 @@ require (
 	github.com/go-skynet/go-llama.cpp v0.0.0-20240314183750-6a8041ef6b46 // indirect
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/orcaman/concurrent-map/v2 v2.0.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect

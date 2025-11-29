@@ -36,6 +36,22 @@
         "--isolated=true",
         "--acceptInsecureCerts=true"
       ]
+    },
+    "serena": {
+      "env": {},
+      "enabled": true,
+      "command": "pkgx",
+      "args": [
+        "uvx",
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "~/www/MCP/remembrances-mcp"
+      ]
     }
   }
 }
