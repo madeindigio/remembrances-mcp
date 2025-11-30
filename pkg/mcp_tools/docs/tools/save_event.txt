@@ -1,0 +1,81 @@
+TOOL: save_event
+================
+
+Store a temporal event with semantic search support.
+
+DESCRIPTION
+-----------
+Saves an event with automatic timestamp and embedding generation.
+Events are categorized by subject and can be searched using hybrid
+text+vector search or filtered by time.
+
+WHEN TO CALL
+------------
+Use when you need to store temporal information like:
+- Conversation messages or chat history
+- Activity logs and audit trails
+- Build or deployment events
+- Milestones and achievements
+- Error events for debugging
+
+ARGUMENTS
+---------
+user_id: string (required)
+    The project or user identifier.
+
+subject: string (required)
+    Semantic subject/category for the event.
+    Pattern: "category:identifier" (e.g., "conversation:session_1", "log:build")
+
+content: string (required)
+    The event content or message.
+
+metadata: object (optional)
+    Additional metadata to store with the event.
+
+RETURN VALUE
+------------
+Returns a JSON object with:
+- id: The event's unique ID
+- user_id: The user/project ID
+- subject: The event subject
+- created_at: Timestamp in RFC3339 format
+- status: "saved"
+
+EXAMPLES
+--------
+1. Save a conversation message:
+{
+    "user_id": "my-project",
+    "subject": "conversation:chat_001",
+    "content": "User asked about deployment options"
+}
+
+2. Save a build log:
+{
+    "user_id": "my-project",
+    "subject": "log:build",
+    "content": "Build completed successfully in 45 seconds",
+    "metadata": {"build_number": 123, "branch": "main"}
+}
+
+3. Save an error event:
+{
+    "user_id": "my-project",
+    "subject": "error:runtime",
+    "content": "Connection timeout to database after 30s",
+    "metadata": {"error_code": "E_TIMEOUT", "service": "postgres"}
+}
+
+SUBJECT PATTERNS
+----------------
+- conversation:session_id  - Conversation logs
+- log:category            - Application logs
+- audit:action            - Audit trail
+- milestone:name          - Project milestones
+- error:type              - Error events
+
+RELATED TOOLS
+-------------
+- search_events: Search and filter events
+- how_to_use("events"): Full events documentation

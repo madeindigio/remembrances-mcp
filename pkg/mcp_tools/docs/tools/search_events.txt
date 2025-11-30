@@ -1,0 +1,116 @@
+TOOL: search_events
+===================
+
+Search events with hybrid text+vector search and time filters.
+
+DESCRIPTION
+-----------
+Performs hybrid search on events combining BM25 text matching
+and vector similarity. Supports filtering by subject and time range.
+
+WHEN TO CALL
+------------
+Use when you need to:
+- Retrieve conversation history by session
+- Search for specific events by content
+- Find events within a time range
+- Query recent events (last N hours/days/months)
+- Combine subject, text, and time filters
+
+ARGUMENTS
+---------
+user_id: string (required)
+    The project or user identifier.
+
+subject: string (optional)
+    Filter by exact subject match.
+
+query: string (optional)
+    Text or semantic query. Triggers hybrid search.
+
+from_date: string (optional)
+    Start date in RFC3339 format (e.g., "2025-01-01T00:00:00Z").
+
+to_date: string (optional)
+    End date in RFC3339 format.
+
+last_hours: int (optional)
+    Get events from the last N hours.
+
+last_days: int (optional)
+    Get events from the last N days.
+
+last_months: int (optional)
+    Get events from the last N months.
+
+limit: int (optional, default 50)
+    Maximum number of results to return.
+
+RETURN VALUE
+------------
+Returns a JSON object with:
+- count: Number of events found
+- events: Array of event objects, each containing:
+  - id, user_id, subject, content, metadata, created_at
+  - relevance: Search relevance score (1.0 if no query)
+
+EXAMPLES
+--------
+1. Get all events for a subject (conversation history):
+{
+    "user_id": "my-project",
+    "subject": "conversation:chat_001"
+}
+
+2. Search with text query:
+{
+    "user_id": "my-project",
+    "query": "deployment error"
+}
+
+3. Get recent events (last 24 hours):
+{
+    "user_id": "my-project",
+    "last_hours": 24
+}
+
+4. Combine subject and time filter:
+{
+    "user_id": "my-project",
+    "subject": "log:build",
+    "last_days": 7
+}
+
+5. Full hybrid search with all filters:
+{
+    "user_id": "my-project",
+    "subject": "error:runtime",
+    "query": "database connection",
+    "last_days": 30,
+    "limit": 20
+}
+
+6. Date range query:
+{
+    "user_id": "my-project",
+    "from_date": "2025-01-01T00:00:00Z",
+    "to_date": "2025-01-31T23:59:59Z"
+}
+
+TIME FILTER PRIORITY
+--------------------
+Relative time filters (last_hours, last_days, last_months) are mutually exclusive.
+If multiple are provided, priority is: last_hours > last_days > last_months.
+Absolute dates (from_date, to_date) can override relative filters.
+
+SEARCH MODES
+------------
+1. No query: Returns events ordered by created_at (most recent first)
+2. Text query: Hybrid search with BM25 + vector similarity
+3. Subject filter: Exact match on subject field
+4. Time filters: Filter by timestamp
+
+RELATED TOOLS
+-------------
+- save_event: Store new events
+- how_to_use("events"): Full events documentation

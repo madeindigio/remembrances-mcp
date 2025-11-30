@@ -30,7 +30,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 10 // v10: code_chunks table for large symbol chunking
+	targetVersion := 11 // v11: events table for temporal event storage
 	if currentVersion < targetVersion {
 		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -182,6 +182,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewV9CodeIndexing(s.db)
 	case 10:
 		migration = migrations.NewV10CodeChunks(s.db)
+	case 11:
+		migration = migrations.NewV11Events(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}
@@ -389,6 +391,28 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 			fmt.Sprintf(`DEFINE INDEX idx_code_chunk_embedding ON code_chunks FIELDS embedding MTREE DIMENSION %d;`, defaultMtreeDim),
 		}
 		log.Println("Migration V10: Creating code_chunks table for large symbol chunking")
+	case 11:
+		// V11: events table for temporal event storage
+		statements = []string{
+			// events table
+			`DEFINE TABLE events SCHEMAFULL;`,
+			`DEFINE FIELD user_id ON events TYPE string;`,
+			`DEFINE FIELD subject ON events TYPE string;`,
+			`DEFINE FIELD content ON events TYPE string;`,
+			fmt.Sprintf(`DEFINE FIELD embedding ON events TYPE array<float, %d>;`, defaultMtreeDim),
+			`DEFINE FIELD metadata ON events FLEXIBLE TYPE option<object>;`,
+			`DEFINE FIELD created_at ON events TYPE datetime DEFAULT time::now();`,
+			// Indexes
+			`DEFINE INDEX idx_events_user ON events FIELDS user_id;`,
+			`DEFINE INDEX idx_events_subject ON events FIELDS subject;`,
+			`DEFINE INDEX idx_events_created ON events FIELDS created_at;`,
+			`DEFINE INDEX idx_events_user_subject ON events FIELDS user_id, subject;`,
+			fmt.Sprintf(`DEFINE INDEX idx_events_embedding ON events FIELDS embedding MTREE DIMENSION %d DIST COSINE;`, defaultMtreeDim),
+			// Full-text search with BM25
+			`DEFINE ANALYZER events_analyzer TOKENIZERS blank, class FILTERS lowercase, snowball(english);`,
+			`DEFINE INDEX idx_events_content ON events FIELDS content SEARCH ANALYZER events_analyzer BM25;`,
+		}
+		log.Println("Migration V11: Creating events table for temporal event storage")
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}

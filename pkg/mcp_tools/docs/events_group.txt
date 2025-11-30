@@ -1,0 +1,71 @@
+=== EVENTS TOOLS GROUP ===
+
+Temporal event storage for logs, conversations, and historical data.
+
+OVERVIEW
+--------
+The events system provides a way to store and retrieve temporal events with:
+- Automatic timestamps
+- Semantic subject categorization
+- Hybrid search (BM25 text + vector similarity)
+- Time-based filtering
+
+TOOLS
+-----
+1. save_event - Store an event with timestamp and semantic subject
+2. search_events - Query events with hybrid text+vector search
+
+SUBJECT PATTERNS
+----------------
+Use descriptive subject patterns to categorize events:
+
+- conversation:session_id  - Conversation logs (e.g., "conversation:chat_001")
+- log:category            - Application logs (e.g., "log:build", "log:deploy")
+- audit:action            - Audit trail events (e.g., "audit:file_modified")
+- milestone:name          - Project milestones (e.g., "milestone:v1.0_released")
+- error:type              - Error events (e.g., "error:runtime", "error:validation")
+
+TIME QUERIES
+------------
+You can filter events by time using:
+
+Absolute dates (RFC3339 format):
+- from_date: "2025-01-01T00:00:00Z"
+- to_date: "2025-12-31T23:59:59Z"
+
+Relative offsets (mutually exclusive, pick one):
+- last_hours: 24    - Get events from the last 24 hours
+- last_days: 7      - Get events from the last 7 days
+- last_months: 3    - Get events from the last 3 months
+
+HYBRID SEARCH
+-------------
+When you provide a query, the system performs hybrid search:
+1. BM25 text matching (50% weight) - Finds events containing query terms
+2. Vector similarity (50% weight) - Finds semantically related events
+
+This ensures you find both exact matches and related content.
+
+USE CASES
+---------
+1. Conversation History:
+   Save each message with subject="conversation:session_123"
+   Later, search with subject filter to get full history
+
+2. Build Logs:
+   Save build events with subject="log:build"
+   Query with time filter to see recent builds
+
+3. Audit Trail:
+   Save user actions with subject="audit:user_action"
+   Search with query to find specific activities
+
+4. Error Tracking:
+   Save errors with subject="error:type" and metadata
+   Use time filters to find recent issues
+
+EXAMPLES
+--------
+See individual tool documentation for detailed examples:
+- how_to_use("save_event")
+- how_to_use("search_events")

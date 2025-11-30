@@ -18,7 +18,12 @@ TOOL CATEGORIES
    Document storage and semantic search capabilities.
    - kb_add_document, kb_search_documents, kb_get_document, kb_delete_document
 
-3. CODE TOOLS (topic: "code")
+3. EVENTS TOOLS (topic: "events")
+   Temporal event storage for logs, conversations, and historical data.
+   - save_event: Store events with timestamps and semantic subjects
+   - search_events: Query events with hybrid search and time filters
+
+4. CODE TOOLS (topic: "code")
    Code indexing, search, and manipulation operations.
    
    Indexing:
@@ -40,5 +45,6 @@ Call how_to_use("tool_name") for specific tool documentation.
 Examples:
   how_to_use("memory")     - Get all memory tools documentation
   how_to_use("kb")         - Get knowledge base tools documentation
+  how_to_use("events")     - Get events tools documentation
   how_to_use("code")       - Get code tools documentation
   how_to_use("remembrance_save_fact") - Get specific tool details

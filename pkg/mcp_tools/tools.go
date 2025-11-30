@@ -59,6 +59,9 @@ func (tm *ToolManager) RegisterTools(srv *mcpserver.Server) error {
 	if err := tm.registerMiscTools(reg); err != nil {
 		return err
 	}
+	if err := tm.registerEventTools(reg); err != nil {
+		return err
+	}
 
 	slog.Info("Successfully registered all MCP tools")
 	return nil
@@ -147,6 +150,16 @@ func (tm *ToolManager) registerMiscTools(reg func(string, *protocol.Tool, func(c
 		return err
 	}
 	if err := reg("how_to_use", tm.howToUseTool(), tm.howToUseHandler); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (tm *ToolManager) registerEventTools(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	if err := reg("save_event", tm.saveEventTool(), tm.saveEventHandler); err != nil {
+		return err
+	}
+	if err := reg("search_events", tm.searchEventsTool(), tm.searchEventsHandler); err != nil {
 		return err
 	}
 	return nil

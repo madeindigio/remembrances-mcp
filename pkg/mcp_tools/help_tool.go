@@ -17,7 +17,7 @@ var docsFS embed.FS
 
 // HowToUseInput represents input for how_to_use tool
 type HowToUseInput struct {
-	Topic string `json:"topic,omitempty" description:"Optional topic: 'memory', 'kb', 'code', or a specific tool name. If omitted, returns overview."`
+	Topic string `json:"topic,omitempty" description:"Optional topic: 'memory', 'kb', 'events', 'code', or a specific tool name. If omitted, returns overview."`
 }
 
 // howToUseTool creates the how_to_use tool definition
@@ -49,6 +49,8 @@ func (tm *ToolManager) howToUseHandler(ctx context.Context, request *protocol.Ca
 		content, err = readDocFile("docs/memory_group.txt")
 	case "kb", "knowledge", "knowledge_base", "documents":
 		content, err = readDocFile("docs/kb_group.txt")
+	case "events", "event", "logs", "temporal":
+		content, err = readDocFile("docs/events_group.txt")
 	case "code", "indexing", "code_indexing":
 		content, err = readDocFile("docs/code_group.txt")
 	default:
@@ -61,8 +63,9 @@ func (tm *ToolManager) howToUseHandler(ctx context.Context, request *protocol.Ca
 Available topics:
   - "memory" or "remembrance": Memory tools (facts, vectors, graph)
   - "kb" or "knowledge_base": Knowledge base tools
+  - "events" or "logs": Events and temporal storage tools
   - "code" or "indexing": Code indexing and search tools
-  - Or specify a tool name like "remembrance_save_fact", "kb_add_document", etc.
+  - Or specify a tool name like "remembrance_save_fact", "save_event", etc.
 
 Call how_to_use() with no arguments for a complete overview.`, topic)
 			err = nil

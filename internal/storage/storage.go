@@ -49,6 +49,12 @@ type Storage interface {
 
 	// Hybrid search combining vector, key-value, and graph queries
 	HybridSearch(ctx context.Context, userID string, queryEmbedding []float32, entities []string, limit int) (*HybridSearchResult, error)
+
+	// Event operations for temporal event storage
+	SaveEvent(ctx context.Context, userID, subject, content string, embedding []float32, metadata map[string]interface{}) (string, time.Time, error)
+	SearchEvents(ctx context.Context, params EventSearchParams) ([]EventSearchResult, error)
+	DeleteEvent(ctx context.Context, eventID, userID string) error
+	GetEventsBySubject(ctx context.Context, userID, subject string, limit int) ([]Event, error)
 }
 
 // VectorResult represents a result from vector similarity search

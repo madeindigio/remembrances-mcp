@@ -151,6 +151,26 @@ type LastToRememberInput struct {
 	UserID string `json:"user_id"`
 }
 
+// Event tool input structs
+type SaveEventInput struct {
+	UserID   string         `json:"user_id" jsonschema:"required,description=Project or user identifier"`
+	Subject  string         `json:"subject" jsonschema:"required,description=Semantic subject/category for the event (e.g. 'conversation:session_1' or 'log:build')"`
+	Content  string         `json:"content" jsonschema:"required,description=Event content or message"`
+	Metadata FlexibleObject `json:"metadata,omitempty" jsonschema:"description=Optional additional metadata"`
+}
+
+type SearchEventsInput struct {
+	UserID     string `json:"user_id" jsonschema:"required,description=Project or user identifier"`
+	Subject    string `json:"subject,omitempty" jsonschema:"description=Filter by subject"`
+	Query      string `json:"query,omitempty" jsonschema:"description=Text or semantic query"`
+	FromDate   string `json:"from_date,omitempty" jsonschema:"description=Start date (RFC3339 format)"`
+	ToDate     string `json:"to_date,omitempty" jsonschema:"description=End date (RFC3339 format)"`
+	LastHours  int    `json:"last_hours,omitempty" jsonschema:"description=Get events from last N hours"`
+	LastDays   int    `json:"last_days,omitempty" jsonschema:"description=Get events from last N days"`
+	LastMonths int    `json:"last_months,omitempty" jsonschema:"description=Get events from last N months"`
+	Limit      int    `json:"limit,omitempty" jsonschema:"description=Maximum results (default 50)"`
+}
+
 const (
 	errParseArgs         = "failed to parse arguments: %w"
 	errGenEmbedding      = "failed to generate embedding: %w"
