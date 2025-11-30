@@ -79,6 +79,29 @@ ollama-model: "nomic-embed-text:latest"
 # OpenAI model to use for embeddings (default: "text-embedding-3-large")
 #openai-model: "text-embedding-3-large"
 
+# ========== Code-Specific Embedding Configuration ==========
+# These options allow using specialized code embedding models for code indexing
+# while using a different model for text/facts/vectors/events.
+# If not specified, the default embedder is used for code indexing as well.
+#
+# Recommended code embedding models:
+#   - GGUF: CodeRankEmbed (coderankembed.Q4_K_M.gguf)
+#   - Ollama: jina/jina-embeddings-v2-base-code
+#   - OpenAI: text-embedding-3-large (also works well for code)
+#
+# Priority: GGUF > Ollama > OpenAI (same as default embedder)
+
+# Path to GGUF model for code embeddings (default: uses default gguf-model-path)
+# Example: "/path/to/coderankembed.Q4_K_M.gguf"
+#code-gguf-model-path: ""
+
+# Ollama model for code embeddings (default: uses default ollama-model)
+# Example: "jina/jina-embeddings-v2-base-code" or "nomic-embed-text:latest"
+#code-ollama-model: ""
+
+# OpenAI model for code embeddings (default: uses default openai-model)
+#code-openai-model: ""
+
 # ========== Text Chunking Configuration ==========
 # Maximum chunk size in characters for text splitting (default: 1500)
 # This applies to all embedding providers (GGUF, Ollama, OpenAI)

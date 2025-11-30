@@ -197,10 +197,36 @@ All flags can be set via environment variables prefixed with `GOMEM_` and dashes
 - `GOMEM_OPENAI_KEY`
 - `GOMEM_OPENAI_URL`
 - `GOMEM_OPENAI_MODEL`
+- `GOMEM_CODE_GGUF_MODEL_PATH` - GGUF model for code embeddings
+- `GOMEM_CODE_OLLAMA_MODEL` - Ollama model for code embeddings
+- `GOMEM_CODE_OPENAI_MODEL` - OpenAI model for code embeddings
 
 Additionally, there is an optional environment variable/flag to help auto-start a local SurrealDB when the server cannot connect at startup:
 
 - `GOMEM_SURREALDB_START_CMD` / `--surrealdb-start-cmd`
+
+### Code-Specific Embedding Models (Optional)
+
+For code indexing, you can use specialized code embedding models that are optimized for source code semantics. If not configured, the default embedder is used for code indexing as well.
+
+**Recommended Code Embedding Models:**
+
+| Provider | Model | Notes |
+|----------|-------|-------|
+| GGUF | `coderankembed.Q4_K_M.gguf` | CodeRankEmbed - optimized for code |
+| Ollama | `jina/jina-embeddings-v2-base-code` | Jina Code Embeddings |
+| OpenAI | `text-embedding-3-large` | Also works well for code |
+
+**Configuration:**
+
+```bash
+# Use CodeRankEmbed for code, nomic-embed-text for general text
+export GOMEM_GGUF_MODEL_PATH="/path/to/nomic-embed-text-v1.5.Q4_K_M.gguf"
+export GOMEM_CODE_GGUF_MODEL_PATH="/path/to/coderankembed.Q4_K_M.gguf"
+
+# Or via CLI flags
+remembrances-mcp --gguf-model-path /path/to/nomic.gguf --code-gguf-model-path /path/to/coderank.gguf
+```
 
 ### YAML Configuration
 

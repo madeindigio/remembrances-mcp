@@ -186,6 +186,18 @@ type MainConfig interface {
 	GetOpenAIModel() string
 }
 
+// CodeMainConfig extends MainConfig with code-specific embedding model getters.
+// This interface allows specialized code embedding models (e.g., CodeRankEmbed,
+// Jina-code-embeddings) to be used for code indexing while using a different
+// model for text/facts/vectors/events.
+type CodeMainConfig interface {
+	MainConfig
+	GetCodeGGUFModelPath() string
+	GetCodeOllamaModel() string
+	GetCodeOpenAIModel() string
+	HasCodeSpecificEmbedder() bool
+}
+
 // NewEmbedderFromMainConfig crea un embedder usando la configuración principal de la aplicación.
 func NewEmbedderFromMainConfig(mainCfg MainConfig) (Embedder, error) {
 	if mainCfg == nil {
@@ -201,6 +213,41 @@ func NewEmbedderFromMainConfig(mainCfg MainConfig) (Embedder, error) {
 		OpenAIKey:     mainCfg.GetOpenAIKey(),
 		OpenAIBaseURL: mainCfg.GetOpenAIURL(),
 		OpenAIModel:   mainCfg.GetOpenAIModel(),
+	}
+
+	return NewEmbedderFromConfig(cfg)
+}
+
+// NewCodeEmbedderFromMainConfig creates an embedder specifically for code indexing.
+// If a code-specific model is configured (code-gguf-model-path, code-ollama-model,
+// or code-openai-model), it will use that model. Otherwise, it returns nil,
+// indicating that the default embedder should be used for code as well.
+//
+// Priority: GGUF > Ollama > OpenAI (same as default embedder)
+//
+// This function returns (nil, nil) if no code-specific configuration is found,
+// which signals to the caller that the default embedder should be reused.
+func NewCodeEmbedderFromMainConfig(mainCfg CodeMainConfig) (Embedder, error) {
+	if mainCfg == nil {
+		return nil, fmt.Errorf("main configuration is required")
+	}
+
+	// If no code-specific embedder is configured, return nil (use default)
+	if !mainCfg.HasCodeSpecificEmbedder() {
+		return nil, nil
+	}
+
+	// Build config with code-specific model overrides
+	// Use the same base config (threads, GPU layers, URLs, keys) as the default embedder
+	cfg := &Config{
+		GGUFModelPath: mainCfg.GetCodeGGUFModelPath(),
+		GGUFThreads:   mainCfg.GetGGUFThreads(),
+		GGUFGPULayers: mainCfg.GetGGUFGPULayers(),
+		OllamaURL:     mainCfg.GetOllamaURL(),
+		OllamaModel:   mainCfg.GetCodeOllamaModel(),
+		OpenAIKey:     mainCfg.GetOpenAIKey(),
+		OpenAIBaseURL: mainCfg.GetOpenAIURL(),
+		OpenAIModel:   mainCfg.GetCodeOpenAIModel(),
 	}
 
 	return NewEmbedderFromConfig(cfg)

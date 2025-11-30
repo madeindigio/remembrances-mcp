@@ -47,6 +47,12 @@ type Config struct {
 	OpenAIKey   string `mapstructure:"openai-key"`
 	OpenAIURL   string `mapstructure:"openai-url"`
 	OpenAIModel string `mapstructure:"openai-model"`
+	// Code-specific embedding model configuration
+	// These allow using specialized code embedding models (e.g., CodeRankEmbed, Jina-code-embeddings)
+	// for code indexing while using a different model for text/facts/vectors/events
+	CodeGGUFModelPath string `mapstructure:"code-gguf-model-path"`
+	CodeOllamaModel   string `mapstructure:"code-ollama-model"`
+	CodeOpenAIModel   string `mapstructure:"code-openai-model"`
 	// Chunking configuration for embeddings
 	ChunkSize    int    `mapstructure:"chunk-size"`
 	ChunkOverlap int    `mapstructure:"chunk-overlap"`
@@ -87,6 +93,10 @@ func Load() (*Config, error) {
 	pflag.String("openai-key", "", "OpenAI API key")
 	pflag.String("openai-url", "https://api.openai.com/v1", "OpenAI base URL")
 	pflag.String("openai-model", "text-embedding-3-large", "OpenAI model to use for embeddings")
+	// Code-specific embedding model flags (for code indexing)
+	pflag.String("code-gguf-model-path", "", "Path to GGUF model for code embeddings (e.g., CodeRankEmbed)")
+	pflag.String("code-ollama-model", "", "Ollama model to use for code embeddings (e.g., jina/jina-embeddings-v2-base-code)")
+	pflag.String("code-openai-model", "", "OpenAI model to use for code embeddings")
 	pflag.Int("chunk-size", 1500, "Maximum chunk size in characters for text splitting (default: 1500)")
 	pflag.Int("chunk-overlap", 200, "Overlap between chunks in characters (default: 200)")
 	pflag.String("log", "", "Path to the log file (logs will be written to both stdout and file)")
@@ -235,6 +245,38 @@ func (c *Config) GetOpenAIURL() string {
 // GetOpenAIModel returns the OpenAI model name.
 func (c *Config) GetOpenAIModel() string {
 	return c.OpenAIModel
+}
+
+// GetCodeGGUFModelPath returns the GGUF model path for code embeddings.
+// If not set, returns the default GGUF model path.
+func (c *Config) GetCodeGGUFModelPath() string {
+	if c.CodeGGUFModelPath != "" {
+		return c.CodeGGUFModelPath
+	}
+	return c.GGUFModelPath
+}
+
+// GetCodeOllamaModel returns the Ollama model for code embeddings.
+// If not set, returns the default Ollama model.
+func (c *Config) GetCodeOllamaModel() string {
+	if c.CodeOllamaModel != "" {
+		return c.CodeOllamaModel
+	}
+	return c.OllamaModel
+}
+
+// GetCodeOpenAIModel returns the OpenAI model for code embeddings.
+// If not set, returns the default OpenAI model.
+func (c *Config) GetCodeOpenAIModel() string {
+	if c.CodeOpenAIModel != "" {
+		return c.CodeOpenAIModel
+	}
+	return c.OpenAIModel
+}
+
+// HasCodeSpecificEmbedder returns true if a code-specific embedding model is configured.
+func (c *Config) HasCodeSpecificEmbedder() bool {
+	return c.CodeGGUFModelPath != "" || c.CodeOllamaModel != "" || c.CodeOpenAIModel != ""
 }
 
 // GetChunkSize returns the chunk size for text splitting.

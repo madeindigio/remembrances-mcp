@@ -208,6 +208,12 @@ surrealdb-embedded:
 		echo "surrealdb-embedded library already built"; \
 	fi
 	@echo "surrealdb-embedded library ready"
+	@# Copy library to build directory
+	@mkdir -p $(BUILD_DIR)
+	@echo "Copying SurrealDB embedded library to $(BUILD_DIR)/..."
+	@cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.$(LIB_EXT)" "$(BUILD_DIR)/" 2>/dev/null && \
+		echo "✓ SurrealDB embedded library copied to $(BUILD_DIR)/" || \
+		echo "⚠ Warning: Could not copy SurrealDB embedded library"
 
 # Build the main project
 build: llama-cpp surrealdb-embedded
