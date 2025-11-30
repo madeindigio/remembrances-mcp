@@ -257,8 +257,24 @@ Choose the right tool for your data:
 		os.Exit(1)
 	}
 
+	// Initialize code-specific embedder for code indexing
+	// If a code-specific model is configured, use it; otherwise, use the default embedder
+	var codeEmbedderInstance embedder.Embedder
+	codeEmbedderInstance, err = embedder.NewCodeEmbedderFromMainConfig(cfg)
+	if err != nil {
+		slog.Error("failed to create code embedder", "error", err)
+		os.Exit(1)
+	}
+	if codeEmbedderInstance == nil {
+		// No code-specific model configured, use default embedder
+		codeEmbedderInstance = embedderInstance
+		slog.Info("Using default embedder for code indexing (no code-specific model configured)")
+	} else {
+		slog.Info("Using specialized code embedder for code indexing")
+	}
+
 	// Register MCP tools
-	toolManager := mcp_tools.NewToolManager(storageInstance, embedderInstance, cfg.KnowledgeBase)
+	toolManager := mcp_tools.NewToolManagerWithCodeEmbedder(storageInstance, embedderInstance, codeEmbedderInstance, cfg.KnowledgeBase)
 	if err := toolManager.RegisterTools(srv); err != nil {
 		slog.Error("failed to register MCP tools", "error", err)
 		os.Exit(1)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/madeindigio/remembrances-mcp/internal/indexer"
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
 	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
 
@@ -17,7 +18,8 @@ import (
 type ToolManager struct {
 	storage           storage.StorageWithStats
 	embedder          embedder.Embedder
-	knowledgeBasePath string // Path to knowledge base directory for markdown files
+	codeEmbedder      embedder.Embedder // Embedder for code indexing (may be same as default)
+	knowledgeBasePath string            // Path to knowledge base directory for markdown files
 }
 
 // NewToolManager creates a new tool manager
@@ -25,8 +27,24 @@ func NewToolManager(storage storage.StorageWithStats, embedder embedder.Embedder
 	return &ToolManager{
 		storage:           storage,
 		embedder:          embedder,
+		codeEmbedder:      embedder, // Default to same embedder for backwards compatibility
 		knowledgeBasePath: knowledgeBasePath,
 	}
+}
+
+// NewToolManagerWithCodeEmbedder creates a new tool manager with a separate code embedder
+func NewToolManagerWithCodeEmbedder(storage storage.StorageWithStats, embedder embedder.Embedder, codeEmbedder embedder.Embedder, knowledgeBasePath string) *ToolManager {
+	return &ToolManager{
+		storage:           storage,
+		embedder:          embedder,
+		codeEmbedder:      codeEmbedder,
+		knowledgeBasePath: knowledgeBasePath,
+	}
+}
+
+// GetCodeEmbedder returns the embedder used for code indexing
+func (tm *ToolManager) GetCodeEmbedder() embedder.Embedder {
+	return tm.codeEmbedder
 }
 
 // RegisterTools registers all MCP tools with the server
@@ -163,4 +181,14 @@ func (tm *ToolManager) registerEventTools(reg func(string, *protocol.Tool, func(
 		return err
 	}
 	return nil
+}
+
+// CreateJobManager creates a JobManager for code indexing using the code embedder.
+// This uses the code-specific embedder (if configured) for generating embeddings
+// of code symbols, allowing specialized code embedding models to be used.
+//
+// The returned JobManager should be used with CodeToolManager to provide
+// code indexing capabilities.
+func (tm *ToolManager) CreateJobManager(fullStorage storage.FullStorage, indexerConfig indexer.IndexerConfig, jmConfig indexer.JobManagerConfig) *indexer.JobManager {
+	return indexer.NewJobManager(fullStorage, tm.codeEmbedder, indexerConfig, jmConfig)
 }
