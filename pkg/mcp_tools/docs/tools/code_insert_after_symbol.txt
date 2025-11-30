@@ -1,0 +1,45 @@
+TOOL: code_insert_after_symbol
+==============================
+
+Insert code after a symbol in the file.
+
+DESCRIPTION
+-----------
+Inserts new code immediately after the end of the specified symbol.
+Useful for adding new methods to a class, new functions to a module, etc.
+
+WHEN TO CALL
+------------
+Use when adding new code elements after an existing symbol.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID containing the symbol.
+
+symbol_id: string (optional)
+    ID of the symbol after which to insert.
+
+name_path: string (optional)
+    Name path of symbol (alternative to symbol_id).
+
+relative_path: string (optional)
+    File path (required if using name_path).
+
+body: string (required)
+    Code to insert after the symbol.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "name_path": "/UserService/createUser",
+    "relative_path": "src/services/user.ts",
+    "body": "\n\nasync deleteUser(id: string): Promise<void> {\n  await this.repo.delete(id);\n}"
+}
+
+RELATED TOOLS
+-------------
+- code_insert_before_symbol: Insert before instead
+- code_replace_symbol: Replace existing code
+- code_find_symbol: Find insertion point

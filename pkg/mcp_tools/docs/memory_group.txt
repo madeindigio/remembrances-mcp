@@ -1,0 +1,48 @@
+MEMORY TOOLS DOCUMENTATION
+==========================
+
+This group provides a 3-layer memory system: key-value facts, semantic vectors, and knowledge graph.
+
+USER_ID NOTE: If you are unsure which user_id to use, use the current project name as the user_id.
+
+KEY-VALUE FACTS
+---------------
+Store simple key-value pairs for exact retrieval.
+
+- remembrance_save_fact: Store a key-value fact
+- remembrance_get_fact: Retrieve a fact by exact key
+- remembrance_list_facts: List all facts for a user
+- remembrance_delete_fact: Delete a specific fact
+
+SEMANTIC VECTORS
+----------------
+Store content with embeddings for semantic similarity search.
+
+- remembrance_add_vector: Add content with automatic embedding
+- remembrance_search_vectors: Search by semantic similarity
+- remembrance_update_vector: Update content and re-embed
+- remembrance_delete_vector: Remove a vector entry
+
+KNOWLEDGE GRAPH
+---------------
+Create entities and relationships for structured data.
+
+- remembrance_create_entity: Create a typed entity (person, project, etc.)
+- remembrance_create_relationship: Link two entities
+- remembrance_traverse_graph: Explore entity connections
+- remembrance_get_entity: Get entity details by ID
+
+UTILITIES
+---------
+- remembrance_hybrid_search: Search across all three layers
+- remembrance_get_stats: Get memory usage statistics
+- to_remember: Store important context for future sessions
+- last_to_remember: Retrieve stored context and recent activity
+
+WHEN TO USE EACH LAYER
+----------------------
+- FACTS: Settings, preferences, structured data with known keys
+- VECTORS: Notes, ideas, content you'll search by meaning
+- GRAPH: Entities with relationships (people, projects, concepts)
+
+Use how_to_use("tool_name") for detailed documentation on any specific tool.

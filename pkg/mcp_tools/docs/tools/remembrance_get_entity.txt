@@ -1,0 +1,29 @@
+TOOL: remembrance_get_entity
+============================
+
+Get a graph entity by ID.
+
+DESCRIPTION
+-----------
+Returns the stored entity record including properties and metadata.
+
+WHEN TO CALL
+------------
+Use when you need the full data for a specific entity 
+(e.g., when rendering a contact card).
+
+ARGUMENTS
+---------
+entity_id: string (required)
+    The ID of the entity to retrieve.
+
+EXAMPLE
+-------
+{
+    "entity_id": "entity_alice"
+}
+
+RELATED TOOLS
+-------------
+- remembrance_create_entity: Create new entities
+- remembrance_traverse_graph: Find related entities

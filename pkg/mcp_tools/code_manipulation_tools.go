@@ -102,22 +102,7 @@ func (cmtm *CodeManipulationToolManager) RegisterCodeManipulationTools(reg func(
 // ====== Tool Definitions ======
 
 func (cmtm *CodeManipulationToolManager) codeReplaceSymbolTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_replace_symbol", `Replace a symbol's source code in the file.
-
-Explanation: Replaces the entire body of a symbol (function, class, method, etc.) with new code.
-The file is modified in place, and the database is updated with the new code and embeddings.
-
-IMPORTANT: The new_body should include the complete definition (signature + body), not just the body.
-For example, for a function: "func myFunc(x int) int { return x * 2 }"
-
-When to call: Use when you need to rewrite a function, method, or class implementation.
-
-Example arguments/values:
-	project_id: "my-project"
-	name_path: "/UserService/createUser"
-	relative_path: "src/services/user.ts"
-	new_body: "async createUser(data: CreateUserDTO): Promise<User> {\n  // New implementation\n}"
-`, CodeReplaceSymbolInput{})
+	tool, err := protocol.NewTool("code_replace_symbol", `Replace a symbol's source code. Use how_to_use("code_replace_symbol") for details.`, CodeReplaceSymbolInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_replace_symbol", "err", err)
 		return nil
@@ -126,19 +111,7 @@ Example arguments/values:
 }
 
 func (cmtm *CodeManipulationToolManager) codeInsertAfterSymbolTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_insert_after_symbol", `Insert code after a symbol in the file.
-
-Explanation: Inserts new code immediately after the end of the specified symbol.
-Useful for adding new methods to a class, new functions to a module, etc.
-
-When to call: Use when adding new code elements after an existing symbol.
-
-Example arguments/values:
-	project_id: "my-project"
-	name_path: "/UserService/createUser"
-	relative_path: "src/services/user.ts"
-	body: "\n\nasync deleteUser(id: string): Promise<void> {\n  // Implementation\n}"
-`, CodeInsertAfterSymbolInput{})
+	tool, err := protocol.NewTool("code_insert_after_symbol", `Insert code after a symbol. Use how_to_use("code_insert_after_symbol") for details.`, CodeInsertAfterSymbolInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_insert_after_symbol", "err", err)
 		return nil
@@ -147,19 +120,7 @@ Example arguments/values:
 }
 
 func (cmtm *CodeManipulationToolManager) codeInsertBeforeSymbolTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_insert_before_symbol", `Insert code before a symbol in the file.
-
-Explanation: Inserts new code immediately before the start of the specified symbol.
-Useful for adding imports, comments, decorators, or new code elements before an existing symbol.
-
-When to call: Use when adding code elements before an existing symbol, like imports or decorators.
-
-Example arguments/values:
-	project_id: "my-project"
-	name_path: "/UserService"
-	relative_path: "src/services/user.ts"
-	body: "import { Logger } from '../utils/logger';\n\n"
-`, CodeInsertBeforeSymbolInput{})
+	tool, err := protocol.NewTool("code_insert_before_symbol", `Insert code before a symbol. Use how_to_use("code_insert_before_symbol") for details.`, CodeInsertBeforeSymbolInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_insert_before_symbol", "err", err)
 		return nil
@@ -168,20 +129,7 @@ Example arguments/values:
 }
 
 func (cmtm *CodeManipulationToolManager) codeDeleteSymbolTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_delete_symbol", `Delete a symbol from the file.
-
-Explanation: Removes the specified symbol (function, class, method, etc.) from the source file.
-The symbol is also removed from the database.
-
-WARNING: This operation cannot be undone. Make sure you have backups or version control.
-
-When to call: Use when removing unused or obsolete code elements.
-
-Example arguments/values:
-	project_id: "my-project"
-	name_path: "/UserService/deprecatedMethod"
-	relative_path: "src/services/user.ts"
-`, CodeDeleteSymbolInput{})
+	tool, err := protocol.NewTool("code_delete_symbol", `Delete a symbol from the file. Use how_to_use("code_delete_symbol") for details.`, CodeDeleteSymbolInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_delete_symbol", "err", err)
 		return nil

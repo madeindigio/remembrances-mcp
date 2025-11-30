@@ -1,0 +1,46 @@
+TOOL: code_insert_before_symbol
+===============================
+
+Insert code before a symbol in the file.
+
+DESCRIPTION
+-----------
+Inserts new code immediately before the start of the specified symbol.
+Useful for adding imports, comments, decorators, or new code elements 
+before an existing symbol.
+
+WHEN TO CALL
+------------
+Use when adding code elements before an existing symbol, like imports or decorators.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID containing the symbol.
+
+symbol_id: string (optional)
+    ID of the symbol before which to insert.
+
+name_path: string (optional)
+    Name path of symbol (alternative to symbol_id).
+
+relative_path: string (optional)
+    File path (required if using name_path).
+
+body: string (required)
+    Code to insert before the symbol.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "name_path": "/UserService",
+    "relative_path": "src/services/user.ts",
+    "body": "import { Logger } from '../utils/logger';\n\n"
+}
+
+RELATED TOOLS
+-------------
+- code_insert_after_symbol: Insert after instead
+- code_replace_symbol: Replace existing code
+- code_find_symbol: Find insertion point

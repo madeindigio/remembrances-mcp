@@ -1,0 +1,42 @@
+KNOWLEDGE BASE TOOLS DOCUMENTATION
+===================================
+
+The Knowledge Base (KB) provides document storage with semantic search capabilities.
+
+AVAILABLE TOOLS
+---------------
+
+kb_add_document
+  Add a document with automatic embedding for semantic search.
+  
+kb_search_documents
+  Search documents by semantic similarity to a query.
+  
+kb_get_document
+  Retrieve a specific document by its file path.
+  
+kb_delete_document
+  Remove a document from the knowledge base.
+
+TYPICAL WORKFLOW
+----------------
+1. Add documents: kb_add_document with content and file_path
+2. Search: kb_search_documents with natural language query
+3. Retrieve: kb_get_document for full content when needed
+4. Maintain: kb_delete_document to remove outdated docs
+
+FEATURES
+--------
+- Automatic embedding generation for semantic search
+- File path as primary identifier
+- Optional metadata for filtering
+- Markdown file synchronization (if configured)
+
+BEST PRACTICES
+--------------
+- Use descriptive file paths (e.g., "guides/authentication.md")
+- Include relevant metadata for organization
+- Documents are automatically chunked for large content
+- Search returns relevance scores for ranking
+
+Use how_to_use("tool_name") for detailed documentation on any specific tool.

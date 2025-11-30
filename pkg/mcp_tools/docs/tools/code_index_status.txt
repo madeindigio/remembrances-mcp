@@ -1,0 +1,42 @@
+TOOL: code_index_status
+=======================
+
+Check the status of an indexing job or list all active jobs.
+
+DESCRIPTION
+-----------
+Returns information about indexing job progress, including files processed,
+symbols found, and any errors encountered.
+
+WHEN TO CALL
+------------
+Use after starting an indexing job with code_index_project to monitor progress,
+or call without job_id to see all active indexing jobs.
+
+ARGUMENTS
+---------
+job_id: string (optional)
+    The job ID returned by code_index_project. 
+    If omitted, lists all active jobs.
+
+EXAMPLE
+-------
+{
+    "job_id": "job_1234567890"
+}
+
+RETURNS
+-------
+{
+    "job_id": "job_1234567890",
+    "status": "running",
+    "files_processed": 42,
+    "files_total": 100,
+    "symbols_found": 350,
+    "errors": []
+}
+
+RELATED TOOLS
+-------------
+- code_index_project: Start indexing
+- code_list_projects: See completed projects

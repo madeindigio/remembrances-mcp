@@ -1,0 +1,41 @@
+TOOL: kb_search_documents
+=========================
+
+Search knowledge-base documents by semantic similarity.
+
+DESCRIPTION
+-----------
+Embeds the query and returns matching documents ranked by semantic relevance.
+
+WHEN TO CALL
+------------
+Use to find relevant reference documents or passages given a question or topic.
+
+ARGUMENTS
+---------
+query: string (required)
+    Natural language query describing what you're looking for.
+
+limit: integer (optional, default: 5)
+    Maximum number of results to return.
+
+EXAMPLE
+-------
+{
+    "query": "how to configure authentication",
+    "limit": 5
+}
+
+RETURNS
+-------
+List of documents with:
+- file_path
+- relevance score
+- content snippet
+- metadata
+
+RELATED TOOLS
+-------------
+- kb_get_document: Get full document content
+- kb_add_document: Add new documents
+- remembrance_hybrid_search: Search across all layers

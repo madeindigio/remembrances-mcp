@@ -11,19 +11,7 @@ import (
 
 // Vector tool definitions
 func (tm *ToolManager) addVectorTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_add_vector", `Add a semantic remembrance (text -> embedding).
-
-Explanation: Converts the provided text into an embedding and stores it with optional metadata for later semantic retrieval.
-
-When to call: Use for storing notes, messages, or any content you may later find by conceptual similarity (e.g., meeting notes, ideas, long-form content).
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	user_id: "user123"
-	content: "Met Alice about project X; action: follow up on budget."
-	metadata: { source: "meeting" }
-`, AddVectorInput{})
+	tool, err := protocol.NewTool("remembrance_add_vector", `Add a semantic remembrance (text -> embedding). Use how_to_use("remembrance_add_vector") for details.`, AddVectorInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_add_vector", "err", err)
 		return nil
@@ -32,19 +20,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) searchVectorsTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_search_vectors", `Search remembrances by semantic similarity.
-
-Explanation: Embeds the query and returns the closest stored vectors for the user.
-
-When to call: Use when you want results related by meaning (e.g., find notes about "budget" even if the note doesn't contain the word). Set "limit" to control result count.
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	user_id: "user123"
-	query: "follow up on project budget"
-	limit: 5
-`, SearchVectorsInput{})
+	tool, err := protocol.NewTool("remembrance_search_vectors", `Search remembrances by semantic similarity. Use how_to_use("remembrance_search_vectors") for details.`, SearchVectorsInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_search_vectors", "err", err)
 		return nil
@@ -53,20 +29,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) updateVectorTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_update_vector", `Update an existing semantic remembrance.
-
-Explanation: Recomputes embedding for the new content and updates metadata. Requires the vector's ID and the owning user.
-
-When to call: Use when correcting or improving previously stored content.
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	id: "vec_abc123"
-	user_id: "user123"
-	content: "Updated meeting notes..."
-	metadata: { edited_by: "user123" }
-`, UpdateVectorInput{})
+	tool, err := protocol.NewTool("remembrance_update_vector", `Update an existing semantic remembrance. Use how_to_use("remembrance_update_vector") for details.`, UpdateVectorInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_update_vector", "err", err)
 		return nil
@@ -75,18 +38,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) deleteVectorTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_delete_vector", `Delete a semantic remembrance by ID.
-
-Explanation: Removes the vector record and its embedding. Requires the vector ID and user for authorization/scoping.
-
-When to call: Use to remove obsolete or sensitive semantic items.
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	id: "vec_abc123"
-	user_id: "user123"
-`, DeleteVectorInput{})
+	tool, err := protocol.NewTool("remembrance_delete_vector", `Delete a semantic remembrance by ID. Use how_to_use("remembrance_delete_vector") for details.`, DeleteVectorInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_delete_vector", "err", err)
 		return nil

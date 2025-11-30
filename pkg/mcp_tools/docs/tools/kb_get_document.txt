@@ -1,0 +1,37 @@
+TOOL: kb_get_document
+=====================
+
+Retrieve a stored document by file path.
+
+DESCRIPTION
+-----------
+Returns the document metadata and content (embedding omitted in responses).
+
+WHEN TO CALL
+------------
+Use when you know the exact document path and need its contents or metadata.
+
+ARGUMENTS
+---------
+file_path: string (required)
+    The file path used when storing the document.
+
+EXAMPLE
+-------
+{
+    "file_path": "docs/authentication.md"
+}
+
+RETURNS
+-------
+{
+    "file_path": "docs/authentication.md",
+    "content": "# Authentication Guide...",
+    "metadata": { "source": "import" },
+    "created_at": "2025-01-15T10:30:00Z"
+}
+
+RELATED TOOLS
+-------------
+- kb_search_documents: Find documents by query
+- kb_delete_document: Remove the document

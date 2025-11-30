@@ -1,0 +1,38 @@
+TOOL: remembrance_traverse_graph
+=================================
+
+Traverse the knowledge graph from a start entity.
+
+DESCRIPTION
+-----------
+Performs breadth-limited traversal following relationships and returns 
+connected entities/edges.
+
+WHEN TO CALL
+------------
+Use when you want to discover related entities (e.g., find colleagues of a 
+person or projects linked to an org). "depth" controls traversal breadth.
+
+ARGUMENTS
+---------
+start_entity: string (required)
+    The entity ID to start traversal from.
+
+relationship_type: string (optional)
+    Filter by specific relationship type.
+
+depth: integer (optional, default: 2)
+    How many hops to traverse.
+
+EXAMPLE
+-------
+{
+    "start_entity": "entity_alice",
+    "relationship_type": "works_at",
+    "depth": 2
+}
+
+RELATED TOOLS
+-------------
+- remembrance_get_entity: Get single entity details
+- remembrance_create_relationship: Add connections

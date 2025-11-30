@@ -1,0 +1,37 @@
+TOOL: code_get_file_symbols
+===========================
+
+List symbols in a specific file.
+
+DESCRIPTION
+-----------
+Returns all code symbols (functions, classes, methods, etc.) defined in a file
+within an indexed project.
+
+WHEN TO CALL
+------------
+Use to understand the structure of a specific file or verify indexing results.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID containing the file.
+
+relative_path: string (required)
+    Relative path to the file within the project.
+
+include_body: boolean (optional, default: false)
+    Whether to include the source code body of each symbol.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "relative_path": "src/services/user.go",
+    "include_body": false
+}
+
+RELATED TOOLS
+-------------
+- code_get_symbols_overview: Similar but search-focused
+- code_find_symbol: Find specific symbols by name

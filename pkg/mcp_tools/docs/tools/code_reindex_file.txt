@@ -1,0 +1,33 @@
+TOOL: code_reindex_file
+=======================
+
+Re-index a single file in a project.
+
+DESCRIPTION
+-----------
+Updates the index for a specific file that may have changed.
+Useful for keeping the index up to date after file modifications.
+
+WHEN TO CALL
+------------
+Use after modifying a source file to update its symbols in the index.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID containing the file.
+
+file_path: string (required)
+    Relative path to the file within the project.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "file_path": "src/main.go"
+}
+
+RELATED TOOLS
+-------------
+- code_get_file_symbols: Verify the updated symbols
+- code_index_project: Full re-index if many files changed

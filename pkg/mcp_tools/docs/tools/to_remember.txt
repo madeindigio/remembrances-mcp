@@ -1,0 +1,36 @@
+TOOL: to_remember
+=================
+
+Store important information that should be remembered for future work.
+
+DESCRIPTION
+-----------
+Saves content as a fact associated with the user_id under a special key. 
+This is used to store important context, decisions, or information that 
+should be retained across sessions for ongoing work.
+
+WHEN TO CALL
+------------
+Use when the user explicitly asks to remember something, or when you identify 
+important context, decisions, or work-in-progress information that should be 
+persisted for future reference.
+
+ARGUMENTS
+---------
+user_id: string (required)
+    The user identifier. If unsure, use the current project name.
+
+content: string (required)
+    The important information to remember.
+
+EXAMPLE
+-------
+{
+    "user_id": "my-project",
+    "content": "Working on implementing new MCP tools. User prefers YAML format for responses. Next task: implement how_to_use tool."
+}
+
+RELATED TOOLS
+-------------
+- last_to_remember: Retrieve what was stored
+- remembrance_save_fact: For regular facts

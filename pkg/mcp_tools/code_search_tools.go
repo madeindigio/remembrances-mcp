@@ -121,19 +121,7 @@ func (cstm *CodeSearchToolManager) RegisterCodeSearchTools(reg func(string, *pro
 // ====== Tool Definitions ======
 
 func (cstm *CodeSearchToolManager) codeGetSymbolsOverviewTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_get_symbols_overview", `Get a high-level overview of code symbols in a file.
-
-Explanation: Lists top-level symbols (classes, functions, interfaces, etc.) in a specific file,
-showing their names, types, line numbers, and signatures. Does not include source code bodies.
-This should be your first tool when understanding a new file.
-
-When to call: Use when you want to understand the structure of a file before diving into specific symbols.
-
-Example arguments/values:
-	project_id: "my-project"
-	relative_path: "src/services/user.ts"
-	max_results: 50
-`, CodeGetSymbolsOverviewInput{})
+	tool, err := protocol.NewTool("code_get_symbols_overview", `Get high-level overview of symbols in a file. Use how_to_use("code_get_symbols_overview") for details.`, CodeGetSymbolsOverviewInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_get_symbols_overview", "err", err)
 		return nil
@@ -142,24 +130,7 @@ Example arguments/values:
 }
 
 func (cstm *CodeSearchToolManager) codeFindSymbolTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_find_symbol", `Find symbols by name or path pattern.
-
-Explanation: Searches for symbols matching a name pattern. Supports three pattern types:
-- Absolute: "/ClassName/methodName" - Exact match of full path
-- Suffix: "ClassName/methodName" - Match by path suffix
-- Simple: "methodName" - Match by name anywhere
-
-Use depth > 0 to also retrieve children (e.g., methods of a class).
-Use substring_matching for partial name matches.
-
-When to call: Use when you know the approximate name of a symbol and want to find its definition.
-
-Example arguments/values:
-	project_id: "my-project"
-	name_path_pattern: "UserService/createUser"
-	include_body: true
-	depth: 1
-`, CodeFindSymbolInput{})
+	tool, err := protocol.NewTool("code_find_symbol", `Find symbols by name or path pattern. Use how_to_use("code_find_symbol") for details.`, CodeFindSymbolInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_find_symbol", "err", err)
 		return nil
@@ -168,20 +139,7 @@ Example arguments/values:
 }
 
 func (cstm *CodeSearchToolManager) codeSearchSymbolsSemanticTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_search_symbols_semantic", `Search for code symbols using natural language.
-
-Explanation: Uses AI embeddings to find code semantically related to your query.
-The search understands meaning, so "function that validates email" will find 
-validateEmail, checkEmailFormat, isValidEmail, etc.
-
-When to call: Use when you don't know the exact name but can describe what you're looking for.
-
-Example arguments/values:
-	project_id: "my-project"
-	query: "function that handles user authentication"
-	limit: 10
-	symbol_types: ["function", "method"]
-`, CodeSearchSymbolsSemanticInput{})
+	tool, err := protocol.NewTool("code_search_symbols_semantic", `Search code using natural language. Use how_to_use("code_search_symbols_semantic") for details.`, CodeSearchSymbolsSemanticInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_search_symbols_semantic", "err", err)
 		return nil
@@ -190,20 +148,7 @@ Example arguments/values:
 }
 
 func (cstm *CodeSearchToolManager) codeSearchPatternTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_search_pattern", `Search for patterns in source code.
-
-Explanation: Searches for text patterns or regex within symbol source code.
-Useful for finding specific code constructs, API usages, or string literals.
-
-When to call: Use when you need to find specific text patterns in code,
-like TODO comments, specific function calls, or string values.
-
-Example arguments/values:
-	project_id: "my-project"
-	pattern: "TODO|FIXME|HACK"
-	is_regex: true
-	case_sensitive: false
-`, CodeSearchPatternInput{})
+	tool, err := protocol.NewTool("code_search_pattern", `Search for text patterns in code. Use how_to_use("code_search_pattern") for details.`, CodeSearchPatternInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_search_pattern", "err", err)
 		return nil
@@ -212,18 +157,7 @@ Example arguments/values:
 }
 
 func (cstm *CodeSearchToolManager) codeFindReferencesTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_find_references", `Find references to a symbol in the codebase.
-
-Explanation: Searches for usages of a symbol by looking for its name in other symbols' source code.
-Note: This is a text-based search, not a true LSP reference finder.
-
-When to call: Use when you want to find where a function, class, or variable is used.
-
-Example arguments/values:
-	project_id: "my-project"
-	symbol_name: "UserService"
-	include_kinds: ["method", "function"]
-`, CodeFindReferencesInput{})
+	tool, err := protocol.NewTool("code_find_references", `Find symbol usages in codebase. Use how_to_use("code_find_references") for details.`, CodeFindReferencesInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_find_references", "err", err)
 		return nil
@@ -786,24 +720,7 @@ func (cstm *CodeSearchToolManager) codeFindReferencesHandler(ctx context.Context
 // ====== Hybrid Search Tool ======
 
 func (cstm *CodeSearchToolManager) codeHybridSearchTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_hybrid_search", `Perform advanced hybrid search combining semantic similarity with structural filters.
-
-Explanation: Searches code using both semantic understanding and structural filters. 
-Combines vector similarity search with filters for language, symbol type, and file paths.
-Optionally searches in code chunks for better coverage of large symbols.
-
-When to call: Use when you need to search code semantically but also want to narrow down
-by language, symbol type, or file location. More powerful than pure semantic search.
-
-Example arguments/values:
-	project_id: "my-project"
-	query: "user authentication and session management"
-	languages: ["go", "typescript"]
-	symbol_types: ["function", "method"]
-	path_pattern: "src/auth/**"
-	include_chunks: true
-	limit: 20
-`, CodeHybridSearchInput{})
+	tool, err := protocol.NewTool("code_hybrid_search", `Combined semantic + filter search. Use how_to_use("code_hybrid_search") for details.`, CodeHybridSearchInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_hybrid_search", "err", err)
 		return nil

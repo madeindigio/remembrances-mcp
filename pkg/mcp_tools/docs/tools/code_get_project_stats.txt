@@ -1,0 +1,40 @@
+TOOL: code_get_project_stats
+============================
+
+Get detailed statistics for an indexed code project.
+
+DESCRIPTION
+-----------
+Returns comprehensive statistics about an indexed project including file counts,
+symbol counts, language breakdown, and symbol type distribution.
+
+WHEN TO CALL
+------------
+Use to get an overview of a project's codebase structure and size,
+or to verify indexing completeness.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID to get statistics for.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app"
+}
+
+RETURNS
+-------
+{
+    "project_id": "my-app",
+    "file_count": 150,
+    "symbol_count": 1200,
+    "languages": { "go": 80, "typescript": 70 },
+    "symbol_types": { "function": 450, "class": 80, "method": 350, "interface": 50 }
+}
+
+RELATED TOOLS
+-------------
+- code_list_projects: See all projects
+- code_get_file_symbols: File-level details

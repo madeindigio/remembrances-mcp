@@ -1,0 +1,50 @@
+CODE TOOLS DOCUMENTATION
+========================
+
+Code tools provide indexing, semantic search, and manipulation of source code projects.
+
+INDEXING TOOLS
+--------------
+Manage code project indexing:
+
+- code_index_project: Start indexing a project (runs async)
+- code_index_status: Check indexing job progress
+- code_list_projects: List all indexed projects
+- code_delete_project: Remove a project and its data
+- code_reindex_file: Update a single file's index
+- code_get_project_stats: Get project statistics
+- code_get_file_symbols: List symbols in a specific file
+
+SEARCH TOOLS
+------------
+Find code using various methods:
+
+- code_get_symbols_overview: Get high-level file structure (use first!)
+- code_find_symbol: Find by name or path pattern
+- code_search_symbols_semantic: Natural language search
+- code_search_pattern: Text/regex pattern search
+- code_find_references: Find symbol usages
+- code_hybrid_search: Combined semantic + pattern search
+
+MANIPULATION TOOLS
+------------------
+Modify source code:
+
+- code_replace_symbol: Replace a symbol's entire body
+- code_insert_after_symbol: Add code after a symbol
+- code_insert_before_symbol: Add code before a symbol
+- code_delete_symbol: Remove a symbol from file
+
+TYPICAL WORKFLOW
+----------------
+1. Index project: code_index_project
+2. Explore files: code_get_symbols_overview
+3. Find code: code_find_symbol or code_search_symbols_semantic
+4. Modify if needed: code_replace_symbol, code_insert_*, code_delete_symbol
+5. Update index: code_reindex_file after changes
+
+SUPPORTED LANGUAGES
+-------------------
+Go, TypeScript, JavaScript, Python, Rust, C, C++, Java, Ruby, and more.
+
+Use how_to_use("tool_name") for detailed documentation on any specific tool.

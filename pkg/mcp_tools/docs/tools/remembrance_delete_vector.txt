@@ -1,0 +1,33 @@
+TOOL: remembrance_delete_vector
+================================
+
+Delete a semantic remembrance by ID.
+
+DESCRIPTION
+-----------
+Removes the vector record and its embedding. 
+Requires the vector ID and user for authorization/scoping.
+
+WHEN TO CALL
+------------
+Use to remove obsolete or sensitive semantic items.
+
+ARGUMENTS
+---------
+id: string (required)
+    The vector ID to delete.
+
+user_id: string (required)
+    The user identifier. If unsure, use the current project name.
+
+EXAMPLE
+-------
+{
+    "id": "vec_abc123",
+    "user_id": "my-project"
+}
+
+RELATED TOOLS
+-------------
+- remembrance_search_vectors: Find vectors first
+- remembrance_update_vector: Consider updating instead

@@ -1,0 +1,39 @@
+TOOL: kb_add_document
+=====================
+
+Add a document to the knowledge base with automatic embedding.
+
+DESCRIPTION
+-----------
+Embeds the document content and stores it together with file path and metadata 
+for semantic document search.
+
+WHEN TO CALL
+------------
+Use when onboarding reference documents, manuals, or files you want to query 
+semantically.
+
+ARGUMENTS
+---------
+file_path: string (required)
+    Identifier for the document (e.g., "guide.md", "docs/api.md").
+
+content: string (required)
+    The full text of the document.
+
+metadata: object (optional)
+    Additional key-value pairs (source, author, version, etc.).
+
+EXAMPLE
+-------
+{
+    "file_path": "docs/authentication.md",
+    "content": "# Authentication Guide\n\nThis document explains...",
+    "metadata": { "source": "import", "version": "1.0" }
+}
+
+RELATED TOOLS
+-------------
+- kb_search_documents: Search stored documents
+- kb_get_document: Retrieve by path
+- kb_delete_document: Remove documents

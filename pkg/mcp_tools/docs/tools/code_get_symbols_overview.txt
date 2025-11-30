@@ -1,0 +1,39 @@
+TOOL: code_get_symbols_overview
+================================
+
+Get a high-level overview of code symbols in a file.
+
+DESCRIPTION
+-----------
+Lists top-level symbols (classes, functions, interfaces, etc.) in a specific file,
+showing their names, types, line numbers, and signatures. Does not include source 
+code bodies. This should be your first tool when understanding a new file.
+
+WHEN TO CALL
+------------
+Use when you want to understand the structure of a file before diving into 
+specific symbols.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID to search in.
+
+relative_path: string (required)
+    Relative path to the file within the project.
+
+max_results: integer (optional, default: 100)
+    Maximum number of symbols to return.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "relative_path": "src/services/user.ts",
+    "max_results": 50
+}
+
+RELATED TOOLS
+-------------
+- code_find_symbol: Find specific symbols by name
+- code_search_symbols_semantic: Search by description

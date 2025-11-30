@@ -13,18 +13,7 @@ import (
 
 // Remember tool definitions
 func (tm *ToolManager) toRememberTool() *protocol.Tool {
-	tool, err := protocol.NewTool("to_remember", `Store important information that should be remembered for future work.
-
-Explanation: Saves content as a fact associated with the user_id under the special key "__to_remember__". This is used to store important context, decisions, or information that should be retained across sessions for ongoing work.
-
-When to call: Use when the user explicitly asks to remember something, or when you identify important context, decisions, or work-in-progress information that should be persisted for future reference.
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	user_id: "remembrances-mcp"
-	content: "Working on implementing new MCP tools for memory management. User prefers YAML format for responses."
-`, ToRememberInput{})
+	tool, err := protocol.NewTool("to_remember", `Store important information for future sessions. Use how_to_use("to_remember") for details.`, ToRememberInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "to_remember", "err", err)
 		return nil
@@ -33,24 +22,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) lastToRememberTool() *protocol.Tool {
-	tool, err := protocol.NewTool("last_to_remember", `Retrieve the last stored information and recent work context for a user.
-
-Explanation: Returns a comprehensive YAML-formatted summary of the most recent and important information for the user, including:
-- The stored "to_remember" fact (important context to remember)
-- All key-value facts
-- Recent vectors (semantic memories)
-- Knowledge graph entities
-- The 5 most recently added/updated documents from the knowledge base
-
-This provides a snapshot of what has been stored and what might be important to remember for continuing work.
-
-When to call: Use at the start of a session to recall context, or when you need to understand what information has been stored recently for a user.
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	user_id: "remembrances-mcp"
-`, LastToRememberInput{})
+	tool, err := protocol.NewTool("last_to_remember", `Retrieve stored context and recent work for a user. Use how_to_use("last_to_remember") for details.`, LastToRememberInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "last_to_remember", "err", err)
 		return nil

@@ -1,0 +1,51 @@
+TOOL: code_search_pattern
+=========================
+
+Search for patterns in source code.
+
+DESCRIPTION
+-----------
+Searches for text patterns or regex within symbol source code.
+Useful for finding specific code constructs, API usages, or string literals.
+
+WHEN TO CALL
+------------
+Use when you need to find specific text patterns in code,
+like TODO comments, specific function calls, or string values.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID to search in.
+
+pattern: string (required)
+    Text pattern or regex to search for in source code.
+
+is_regex: boolean (optional, default: false)
+    Treat pattern as regular expression.
+
+languages: array of strings (optional)
+    Filter by programming languages.
+
+symbol_types: array of strings (optional)
+    Filter by symbol types.
+
+case_sensitive: boolean (optional, default: false)
+    Enable case-sensitive matching.
+
+limit: integer (optional, default: 50)
+    Maximum number of results.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "pattern": "TODO:",
+    "is_regex": false,
+    "limit": 20
+}
+
+RELATED TOOLS
+-------------
+- code_search_symbols_semantic: Semantic search
+- code_find_references: Find symbol usages

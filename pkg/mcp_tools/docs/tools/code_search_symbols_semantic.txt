@@ -1,0 +1,46 @@
+TOOL: code_search_symbols_semantic
+===================================
+
+Search for code symbols using natural language.
+
+DESCRIPTION
+-----------
+Uses AI embeddings to find code semantically related to your query.
+The search understands meaning, so "function that validates email" will find 
+validateEmail, checkEmailFormat, isValidEmail, etc.
+
+WHEN TO CALL
+------------
+Use when you don't know the exact name but can describe what you're looking for.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID to search in.
+
+query: string (required)
+    Natural language query describing what you're looking for.
+
+limit: integer (optional, default: 10)
+    Maximum number of results to return.
+
+languages: array of strings (optional)
+    Filter by programming languages (go, typescript, python, etc).
+
+symbol_types: array of strings (optional)
+    Filter by symbol types (class, function, method, etc).
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "query": "function that handles user authentication",
+    "limit": 10,
+    "symbol_types": ["function", "method"]
+}
+
+RELATED TOOLS
+-------------
+- code_find_symbol: Search by exact name
+- code_hybrid_search: Combined search
+- code_search_pattern: Text pattern search

@@ -1,0 +1,44 @@
+REMEMBRANCES-MCP TOOL OVERVIEW
+===============================
+
+This MCP server provides a comprehensive 3-layer memory system for AI agents.
+
+TOOL CATEGORIES
+---------------
+
+1. MEMORY TOOLS (topic: "memory")
+   Key-value facts, semantic vectors, and knowledge graph operations.
+   - remembrance_save_fact, remembrance_get_fact, remembrance_list_facts, remembrance_delete_fact
+   - remembrance_add_vector, remembrance_search_vectors, remembrance_update_vector, remembrance_delete_vector
+   - remembrance_create_entity, remembrance_create_relationship, remembrance_traverse_graph, remembrance_get_entity
+   - remembrance_hybrid_search, remembrance_get_stats
+   - to_remember, last_to_remember
+
+2. KNOWLEDGE BASE TOOLS (topic: "kb")
+   Document storage and semantic search capabilities.
+   - kb_add_document, kb_search_documents, kb_get_document, kb_delete_document
+
+3. CODE TOOLS (topic: "code")
+   Code indexing, search, and manipulation operations.
+   
+   Indexing:
+   - code_index_project, code_index_status, code_list_projects
+   - code_delete_project, code_reindex_file, code_get_project_stats, code_get_file_symbols
+   
+   Search:
+   - code_get_symbols_overview, code_find_symbol, code_search_symbols_semantic
+   - code_search_pattern, code_find_references, code_hybrid_search
+   
+   Manipulation:
+   - code_replace_symbol, code_insert_after_symbol, code_insert_before_symbol, code_delete_symbol
+
+USAGE
+-----
+Call how_to_use("topic") for detailed documentation on a category.
+Call how_to_use("tool_name") for specific tool documentation.
+
+Examples:
+  how_to_use("memory")     - Get all memory tools documentation
+  how_to_use("kb")         - Get knowledge base tools documentation
+  how_to_use("code")       - Get code tools documentation
+  how_to_use("remembrance_save_fact") - Get specific tool details

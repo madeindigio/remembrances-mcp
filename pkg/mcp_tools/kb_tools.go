@@ -15,17 +15,7 @@ import (
 
 // Knowledge Base tool definitions
 func (tm *ToolManager) addDocumentTool() *protocol.Tool {
-	tool, err := protocol.NewTool("kb_add_document", `Add a document to the knowledge base with automatic embedding.
-
-Explanation: Embeds the document content and stores it together with file path and metadata for semantic document search.
-
-When to call: Use when onboarding reference documents, manuals, or files you want to query semantically.
-
-Example arguments/values:
-	file_path: "guide.md"
-	content: "Full text of the document..."
-	metadata: { source: "import" }
-`, AddDocumentInput{})
+	tool, err := protocol.NewTool("kb_add_document", `Add a document to the knowledge base with automatic embedding. Use how_to_use("kb_add_document") for details.`, AddDocumentInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "kb_add_document", "err", err)
 		return nil
@@ -34,16 +24,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) searchDocumentsTool() *protocol.Tool {
-	tool, err := protocol.NewTool("kb_search_documents", `Search knowledge-base documents by semantic similarity.
-
-Explanation: Embeds the query and returns matching documents ranked by semantic relevance.
-
-When to call: Use to find relevant reference documents or passages given a question or topic.
-
-Example arguments/values:
-	query: "how to configure authentication"
-	limit: 5
-`, SearchDocumentsInput{})
+	tool, err := protocol.NewTool("kb_search_documents", `Search knowledge-base documents by semantic similarity. Use how_to_use("kb_search_documents") for details.`, SearchDocumentsInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "kb_search_documents", "err", err)
 		return nil
@@ -52,15 +33,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) getDocumentTool() *protocol.Tool {
-	tool, err := protocol.NewTool("kb_get_document", `Retrieve a stored document by file path.
-
-Explanation: Returns the document metadata and content (embedding omitted in responses).
-
-When to call: Use when you know the exact document path and need its contents or metadata.
-
-Example arguments/values:
-	file_path: "guide.md"
-`, GetDocumentInput{})
+	tool, err := protocol.NewTool("kb_get_document", `Retrieve a stored document by file path. Use how_to_use("kb_get_document") for details.`, GetDocumentInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "kb_get_document", "err", err)
 		return nil
@@ -69,15 +42,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) deleteDocumentTool() *protocol.Tool {
-	tool, err := protocol.NewTool("kb_delete_document", `Delete a document from the knowledge base by file path.
-
-Explanation: Removes the stored document and its embedding.
-
-When to call: Use to remove outdated or sensitive documents.
-
-Example arguments/values:
-	file_path: "guide.md"
-`, DeleteDocumentInput{})
+	tool, err := protocol.NewTool("kb_delete_document", `Delete a document from the knowledge base. Use how_to_use("kb_delete_document") for details.`, DeleteDocumentInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "kb_delete_document", "err", err)
 		return nil

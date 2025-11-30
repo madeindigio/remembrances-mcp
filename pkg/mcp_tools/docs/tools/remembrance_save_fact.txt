@@ -1,0 +1,40 @@
+TOOL: remembrance_save_fact
+===========================
+
+Save a key-value fact for a user.
+
+DESCRIPTION
+-----------
+Stores a simple key -> value pair scoped to a user. Values can be strings, 
+numbers, or objects. This is optimized for fast exact-key lookup, not semantic search.
+
+WHEN TO CALL
+------------
+Use when you need to persist small, structured facts or preferences 
+(e.g. contact info, settings, short user preferences) that will be retrieved 
+by exact key later.
+
+ARGUMENTS
+---------
+user_id: string (required)
+    The user identifier. If unsure, use the current project name.
+
+key: string (required)
+    The key to store the value under.
+
+value: string (required)
+    The value to store. Can be a JSON string for complex data.
+
+EXAMPLE
+-------
+{
+    "user_id": "my-project",
+    "key": "preferred_language",
+    "value": "typescript"
+}
+
+RELATED TOOLS
+-------------
+- remembrance_get_fact: Retrieve a fact by key
+- remembrance_list_facts: List all facts for a user
+- remembrance_delete_fact: Delete a fact

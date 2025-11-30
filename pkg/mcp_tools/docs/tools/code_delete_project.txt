@@ -1,0 +1,29 @@
+TOOL: code_delete_project
+=========================
+
+Delete an indexed project and all its data.
+
+DESCRIPTION
+-----------
+Removes a project and all its indexed files and symbols from the database.
+This cannot be undone.
+
+WHEN TO CALL
+------------
+Use when you no longer need a project indexed or want to free up space.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID to delete.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-old-project"
+}
+
+RELATED TOOLS
+-------------
+- code_list_projects: Find project IDs
+- code_index_project: Re-index if needed

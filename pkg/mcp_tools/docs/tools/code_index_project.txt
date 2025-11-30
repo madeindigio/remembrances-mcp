@@ -1,0 +1,42 @@
+TOOL: code_index_project
+========================
+
+Start indexing a code project for semantic search capabilities.
+
+DESCRIPTION
+-----------
+Scans the specified directory for source code files, parses them using tree-sitter 
+to extract symbols (classes, functions, methods, etc.), generates embeddings for 
+semantic search, and stores everything in the database. The indexing runs 
+asynchronously in the background.
+
+WHEN TO CALL
+------------
+Use when you want to enable semantic code search on a new project or codebase.
+The project path should be an absolute path to a directory containing source code.
+
+ARGUMENTS
+---------
+project_path: string (required)
+    Absolute path to the project directory to index.
+
+project_name: string (optional)
+    Human-readable name for the project. If omitted, uses the directory name.
+
+languages: array of strings (optional)
+    List of programming languages to index (e.g., ["go", "typescript"]).
+    If omitted, indexes all supported languages.
+
+EXAMPLE
+-------
+{
+    "project_path": "/home/user/projects/my-app",
+    "project_name": "My Application",
+    "languages": ["go", "typescript", "python"]
+}
+
+RELATED TOOLS
+-------------
+- code_index_status: Check indexing progress
+- code_list_projects: See indexed projects
+- code_get_project_stats: Get project statistics

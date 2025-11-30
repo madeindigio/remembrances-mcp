@@ -1,0 +1,53 @@
+TOOL: code_hybrid_search
+========================
+
+Combined semantic and pattern search for code.
+
+DESCRIPTION
+-----------
+Performs both semantic search (by meaning) and pattern matching in a single query.
+Returns results ranked by relevance across both search types.
+
+WHEN TO CALL
+------------
+Use when you want comprehensive search results that combine semantic understanding
+with exact pattern matching.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID to search in.
+
+query: string (required)
+    Natural language query for semantic search.
+
+languages: array of strings (optional)
+    Filter by programming languages (go, typescript, python, etc).
+
+symbol_types: array of strings (optional)
+    Filter by symbol types (class, function, method, interface, etc).
+
+path_pattern: string (optional)
+    Filter by file path pattern (e.g., "src/auth/**").
+
+include_chunks: boolean (optional, default: false)
+    Search in code chunks for better large-symbol coverage.
+
+limit: integer (optional, default: 20)
+    Maximum number of results.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "query": "authentication middleware",
+    "languages": ["go"],
+    "symbol_types": ["function", "method"],
+    "path_pattern": "src/middleware/**",
+    "limit": 15
+}
+
+RELATED TOOLS
+-------------
+- code_search_symbols_semantic: Semantic-only search
+- code_search_pattern: Pattern-only search

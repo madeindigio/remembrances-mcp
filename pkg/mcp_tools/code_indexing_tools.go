@@ -97,20 +97,7 @@ func (ctm *CodeToolManager) RegisterCodeTools(reg func(string, *protocol.Tool, f
 // ====== Tool Definitions ======
 
 func (ctm *CodeToolManager) codeIndexProjectTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_index_project", `Start indexing a code project for semantic search capabilities.
-
-Explanation: Scans the specified directory for source code files, parses them using tree-sitter to extract
-symbols (classes, functions, methods, etc.), generates embeddings for semantic search, and stores everything
-in the database. The indexing runs asynchronously in the background.
-
-When to call: Use when you want to enable semantic code search on a new project or codebase.
-The project path should be an absolute path to a directory containing source code.
-
-Example arguments/values:
-	project_path: "/home/user/projects/my-app"
-	project_name: "My Application"
-	languages: ["go", "typescript", "python"]
-`, CodeIndexProjectInput{})
+	tool, err := protocol.NewTool("code_index_project", `Start indexing a code project for semantic search. Use how_to_use("code_index_project") for details.`, CodeIndexProjectInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_index_project", "err", err)
 		return nil
@@ -119,17 +106,7 @@ Example arguments/values:
 }
 
 func (ctm *CodeToolManager) codeIndexStatusTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_index_status", `Check the status of an indexing job or list all active jobs.
-
-Explanation: Returns information about indexing job progress, including files processed,
-symbols found, and any errors encountered.
-
-When to call: Use after starting an indexing job with code_index_project to monitor progress,
-or call without job_id to see all active indexing jobs.
-
-Example arguments/values:
-	job_id: "job_1234567890"
-`, CodeIndexStatusInput{})
+	tool, err := protocol.NewTool("code_index_status", `Check indexing job status. Use how_to_use("code_index_status") for details.`, CodeIndexStatusInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_index_status", "err", err)
 		return nil
@@ -138,13 +115,7 @@ Example arguments/values:
 }
 
 func (ctm *CodeToolManager) codeListProjectsTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_list_projects", `List all indexed code projects.
-
-Explanation: Returns a list of all projects that have been indexed for code search,
-including their names, paths, and indexing status.
-
-When to call: Use to see what projects are available for code search queries.
-`, CodeListProjectsInput{})
+	tool, err := protocol.NewTool("code_list_projects", `List all indexed code projects. Use how_to_use("code_list_projects") for details.`, CodeListProjectsInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_list_projects", "err", err)
 		return nil
@@ -153,16 +124,7 @@ When to call: Use to see what projects are available for code search queries.
 }
 
 func (ctm *CodeToolManager) codeDeleteProjectTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_delete_project", `Delete an indexed project and all its data.
-
-Explanation: Removes a project and all its indexed files and symbols from the database.
-This cannot be undone.
-
-When to call: Use when you no longer need a project indexed or want to free up space.
-
-Example arguments/values:
-	project_id: "www_projects_my-app"
-`, CodeDeleteProjectInput{})
+	tool, err := protocol.NewTool("code_delete_project", `Delete an indexed project. Use how_to_use("code_delete_project") for details.`, CodeDeleteProjectInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_delete_project", "err", err)
 		return nil
@@ -171,17 +133,7 @@ Example arguments/values:
 }
 
 func (ctm *CodeToolManager) codeReindexFileTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_reindex_file", `Re-index a single file in a project.
-
-Explanation: Updates the index for a specific file that may have changed.
-Useful for keeping the index up to date after file modifications.
-
-When to call: Use after modifying a source file to update its symbols in the index.
-
-Example arguments/values:
-	project_id: "www_projects_my-app"
-	file_path: "src/main.go"
-`, CodeReindexFileInput{})
+	tool, err := protocol.NewTool("code_reindex_file", `Re-index a single file. Use how_to_use("code_reindex_file") for details.`, CodeReindexFileInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_reindex_file", "err", err)
 		return nil
@@ -190,23 +142,7 @@ Example arguments/values:
 }
 
 func (ctm *CodeToolManager) codeGetProjectStatsTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_get_project_stats", `Get detailed statistics for an indexed code project.
-
-Explanation: Returns comprehensive statistics about an indexed project including file counts,
-symbol counts, language breakdown, and symbol type distribution.
-
-When to call: Use to get an overview of a project's codebase structure and size,
-or to verify indexing completeness.
-
-Example arguments/values:
-	project_id: "www_projects_my-app"
-
-Returns statistics like:
-- Total files and symbols
-- Files by programming language
-- Symbols by type (class, function, method, etc.)
-- Project indexing status
-`, CodeGetProjectStatsInput{})
+	tool, err := protocol.NewTool("code_get_project_stats", `Get project statistics. Use how_to_use("code_get_project_stats") for details.`, CodeGetProjectStatsInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_get_project_stats", "err", err)
 		return nil
@@ -215,19 +151,7 @@ Returns statistics like:
 }
 
 func (ctm *CodeToolManager) codeGetFileSymbolsTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_get_file_symbols", `Get all symbols from a specific file with hierarchical structure.
-
-Explanation: Returns all code symbols (classes, functions, methods, etc.) found in a specific file,
-organized in a hierarchical tree structure showing parent-child relationships.
-
-When to call: Use to get a complete overview of a file's structure, similar to an IDE's outline view.
-Set include_body to true if you need the actual source code for each symbol.
-
-Example arguments/values:
-	project_id: "www_projects_my-app"
-	relative_path: "src/services/user_service.go"
-	include_body: false
-`, CodeGetFileSymbolsInput{})
+	tool, err := protocol.NewTool("code_get_file_symbols", `Get all symbols from a file. Use how_to_use("code_get_file_symbols") for details.`, CodeGetFileSymbolsInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "code_get_file_symbols", "err", err)
 		return nil

@@ -1,0 +1,49 @@
+TOOL: code_replace_symbol
+=========================
+
+Replace a symbol's source code in the file.
+
+DESCRIPTION
+-----------
+Replaces the entire body of a symbol (function, class, method, etc.) with new code.
+The file is modified in place, and the database is updated with the new code 
+and embeddings.
+
+IMPORTANT: The new_body should include the complete definition (signature + body), 
+not just the body. For example, for a function: "func myFunc(x int) int { return x * 2 }"
+
+WHEN TO CALL
+------------
+Use when you need to rewrite a function, method, or class implementation.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID containing the symbol.
+
+symbol_id: string (optional)
+    ID of the symbol to replace (from previous search).
+
+name_path: string (optional)
+    Name path of symbol (alternative to symbol_id).
+
+relative_path: string (optional)
+    File path (required if using name_path).
+
+new_body: string (required)
+    New source code for the symbol, including its definition/signature.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "name_path": "/UserService/createUser",
+    "relative_path": "src/services/user.ts",
+    "new_body": "async createUser(data: CreateUserDTO): Promise<User> {\n  // New implementation\n  return this.repo.create(data);\n}"
+}
+
+RELATED TOOLS
+-------------
+- code_find_symbol: Find the symbol first
+- code_reindex_file: Update index after changes
+- code_insert_after_symbol: Add new code instead

@@ -1,0 +1,38 @@
+TOOL: last_to_remember
+======================
+
+Retrieve the last stored information and recent work context for a user.
+
+DESCRIPTION
+-----------
+Returns a comprehensive YAML-formatted summary of the most recent and important 
+information for the user, including:
+- The stored "to_remember" fact (important context)
+- All key-value facts
+- Recent vectors (semantic memories count)
+- Knowledge graph entities
+- The 5 most recently added/updated documents from the knowledge base
+
+This provides a snapshot of what has been stored and what might be important 
+to remember for continuing work.
+
+WHEN TO CALL
+------------
+Use at the start of a session to recall context, or when you need to understand 
+what information has been stored recently for a user.
+
+ARGUMENTS
+---------
+user_id: string (required)
+    The user identifier. If unsure, use the current project name.
+
+EXAMPLE
+-------
+{
+    "user_id": "my-project"
+}
+
+RELATED TOOLS
+-------------
+- to_remember: Store information
+- remembrance_get_stats: Get numeric stats only

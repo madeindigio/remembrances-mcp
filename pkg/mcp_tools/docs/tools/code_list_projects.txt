@@ -1,0 +1,39 @@
+TOOL: code_list_projects
+========================
+
+List all indexed code projects.
+
+DESCRIPTION
+-----------
+Returns a list of all projects that have been indexed for code search,
+including their names, paths, and indexing status.
+
+WHEN TO CALL
+------------
+Use to see what projects are available for code search queries.
+
+ARGUMENTS
+---------
+None required.
+
+EXAMPLE
+-------
+{}
+
+RETURNS
+-------
+[
+    {
+        "project_id": "my-app",
+        "project_name": "My Application",
+        "project_path": "/home/user/projects/my-app",
+        "indexed_at": "2025-01-15T10:30:00Z",
+        "file_count": 150,
+        "symbol_count": 1200
+    }
+]
+
+RELATED TOOLS
+-------------
+- code_get_project_stats: Detailed project statistics
+- code_delete_project: Remove a project

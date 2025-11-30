@@ -1,0 +1,39 @@
+TOOL: remembrance_add_vector
+============================
+
+Add a semantic remembrance (text -> embedding).
+
+DESCRIPTION
+-----------
+Converts the provided text into an embedding and stores it with optional metadata 
+for later semantic retrieval.
+
+WHEN TO CALL
+------------
+Use for storing notes, messages, or any content you may later find by conceptual 
+similarity (e.g., meeting notes, ideas, long-form content).
+
+ARGUMENTS
+---------
+user_id: string (required)
+    The user identifier. If unsure, use the current project name.
+
+content: string (required)
+    The text content to embed and store.
+
+metadata: object (optional)
+    Additional key-value pairs to store with the vector.
+
+EXAMPLE
+-------
+{
+    "user_id": "my-project",
+    "content": "Met Alice about project X; action: follow up on budget.",
+    "metadata": { "source": "meeting", "date": "2025-01-15" }
+}
+
+RELATED TOOLS
+-------------
+- remembrance_search_vectors: Search by similarity
+- remembrance_update_vector: Update content
+- remembrance_delete_vector: Remove entry

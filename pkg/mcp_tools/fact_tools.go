@@ -11,19 +11,7 @@ import (
 
 // Fact tool definitions
 func (tm *ToolManager) saveFactTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_save_fact", `Save a key-value fact for a user.
-
-Explanation: Stores a simple key -> value pair scoped to a user. Values can be strings, numbers, or objects. This is optimized for fast exact-key lookup, not semantic search.
-
-When to call: Use when you need to persist small, structured facts or preferences (e.g. contact info, settings, short user preferences) that will be retrieved by exact key later.
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	user_id: "user123"
-	key: "favorite_color"
-	value: "blue"
-`, SaveFactInput{})
+	tool, err := protocol.NewTool("remembrance_save_fact", `Store a key-value fact for a user. Use how_to_use("remembrance_save_fact") for details.`, SaveFactInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_save_fact", "err", err)
 		return nil
@@ -32,18 +20,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) getFactTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_get_fact", `Retrieve a key-value fact for a user by key.
-
-Explanation: Returns the stored value for the given user/key. If not found, returns nil.
-
-When to call: Use when you know the exact key you stored and need the precise value back (no semantic matching).
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	user_id: "user123"
-	key: "favorite_color"
-`, GetFactInput{})
+	tool, err := protocol.NewTool("remembrance_get_fact", `Retrieve a fact by exact key. Use how_to_use("remembrance_get_fact") for details.`, GetFactInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_get_fact", "err", err)
 		return nil
@@ -52,17 +29,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) listFactsTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_list_facts", `List all key-value facts for a user.
-
-Explanation: Returns all facts previously saved for the specified user as a map of keys to values.
-
-When to call: Use when you need an overview of stored preferences or when initializing a user session.
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	user_id: "user123"
-`, ListFactsInput{})
+	tool, err := protocol.NewTool("remembrance_list_facts", `List all facts for a user. Use how_to_use("remembrance_list_facts") for details.`, ListFactsInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_list_facts", "err", err)
 		return nil
@@ -71,18 +38,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) deleteFactTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_delete_fact", `Delete a user-scoped key-value fact.
-
-Explanation: Permanently removes the specified key for the user.
-
-When to call: Use to correct mistakes or to forget outdated personal data (e.g., user requested deletion).
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	user_id: "user123"
-	key: "favorite_color"
-`, DeleteFactInput{})
+	tool, err := protocol.NewTool("remembrance_delete_fact", `Delete a fact by key. Use how_to_use("remembrance_delete_fact") for details.`, DeleteFactInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_delete_fact", "err", err)
 		return nil

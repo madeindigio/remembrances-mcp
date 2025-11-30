@@ -1,0 +1,28 @@
+TOOL: kb_delete_document
+========================
+
+Delete a document from the knowledge base by file path.
+
+DESCRIPTION
+-----------
+Removes the stored document and its embedding.
+
+WHEN TO CALL
+------------
+Use to remove outdated or sensitive documents.
+
+ARGUMENTS
+---------
+file_path: string (required)
+    The file path of the document to delete.
+
+EXAMPLE
+-------
+{
+    "file_path": "docs/old-guide.md"
+}
+
+RELATED TOOLS
+-------------
+- kb_get_document: Verify document exists first
+- kb_add_document: Add new documents

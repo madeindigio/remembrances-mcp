@@ -101,6 +101,35 @@ Go, TypeScript, JavaScript, TSX, Python, Rust, Java, Kotlin, Swift, C, C++, Obje
 - [docs/CODE_INDEXING_API.md](docs/CODE_INDEXING_API.md) - API Reference
 - [docs/TREE_SITTER_LANGUAGES.md](docs/TREE_SITTER_LANGUAGES.md) - Language Support
 
+## 💡 Tool Help System (how_to_use)
+
+Remembrances-MCP includes an intelligent help system that provides on-demand documentation while minimizing initial context token consumption.
+
+### Usage
+
+```bash
+# Get complete overview of all tools
+how_to_use()
+
+# Get documentation for a tool group
+how_to_use("memory")    # Memory tools (facts, vectors, graph)
+how_to_use("kb")        # Knowledge base tools
+how_to_use("code")      # Code indexing tools
+
+# Get documentation for a specific tool
+how_to_use("remembrance_save_fact")
+how_to_use("kb_add_document")
+how_to_use("search_code")
+```
+
+### Benefits
+
+- **~85% reduction** in initial context token consumption
+- **On-demand documentation** - load only what you need
+- **Comprehensive help** - full arguments, examples, and related tools
+
+**📖 Full Documentation**: See [docs/TOOL_HELP_SYSTEM.md](docs/TOOL_HELP_SYSTEM.md)
+
 ## Usage
 
 Run the server with CLI flags or environment variables:

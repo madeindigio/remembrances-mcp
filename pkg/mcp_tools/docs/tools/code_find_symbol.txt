@@ -1,0 +1,59 @@
+TOOL: code_find_symbol
+======================
+
+Find symbols by name or path pattern.
+
+DESCRIPTION
+-----------
+Searches for symbols matching a name pattern. Supports three pattern types:
+- Absolute: "/ClassName/methodName" - Exact match of full path
+- Suffix: "ClassName/methodName" - Match by path suffix
+- Simple: "methodName" - Match by name anywhere
+
+Use depth > 0 to also retrieve children (e.g., methods of a class).
+Use substring_matching for partial name matches.
+
+WHEN TO CALL
+------------
+Use when you know the approximate name of a symbol and want to find its definition.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID to search in.
+
+name_path_pattern: string (required)
+    Symbol name or path pattern to match.
+
+relative_path: string (optional)
+    Restrict search to this file or directory.
+
+depth: integer (optional, default: 0)
+    Include children up to this depth level (0=symbol only, 1=direct children).
+
+include_body: boolean (optional, default: false)
+    Include source code in results.
+
+include_kinds: array of strings (optional)
+    Filter by symbol types (class, function, method, interface).
+
+exclude_kinds: array of strings (optional)
+    Exclude these symbol types.
+
+substring_matching: boolean (optional, default: false)
+    Enable partial name matching.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "name_path_pattern": "UserService/createUser",
+    "include_body": true,
+    "depth": 1
+}
+
+RELATED TOOLS
+-------------
+- code_get_symbols_overview: Explore file first
+- code_search_symbols_semantic: Search by meaning
+- code_find_references: Find usages

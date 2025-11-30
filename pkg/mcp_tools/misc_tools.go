@@ -11,20 +11,7 @@ import (
 
 // Miscellaneous tool definitions
 func (tm *ToolManager) hybridSearchTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_hybrid_search", `Perform a hybrid search across vectors, graph, and key-value facts.
-
-Explanation: Combines semantic vector search, graph traversal (filtered by entities), and exact-fact lookup to produce a consolidated result set and timing stats.
-
-When to call: Use when you need the broadest coverage for a query that may be answered by facts, documents, graph links, or semantic memories.
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	user_id: "user123"
-	query: "Who worked on project X and what notes exist?"
-	entities: [ "person", "project" ]
-	limit: 10
-`, HybridSearchInput{})
+	tool, err := protocol.NewTool("remembrance_hybrid_search", `Search across vectors, graph, and facts. Use how_to_use("remembrance_hybrid_search") for details.`, HybridSearchInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_hybrid_search", "err", err)
 		return nil
@@ -33,17 +20,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) getStatsTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_get_stats", `Get memory statistics for a user.
-
-Explanation: Returns counts for facts, vectors, documents, entities, relationships and other usage metrics.
-
-When to call: Use for monitoring, quota checks, or to provide an overview dashboard for a user.
-
-Note: If you are unsure which user_id to use, you may use the current project name as the user_id.
-
-Example arguments/values:
-	user_id: "user123"
-`, GetStatsInput{})
+	tool, err := protocol.NewTool("remembrance_get_stats", `Get memory statistics for a user. Use how_to_use("remembrance_get_stats") for details.`, GetStatsInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_get_stats", "err", err)
 		return nil

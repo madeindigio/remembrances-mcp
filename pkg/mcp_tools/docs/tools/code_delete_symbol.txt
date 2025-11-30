@@ -1,0 +1,43 @@
+TOOL: code_delete_symbol
+========================
+
+Delete a symbol from the file.
+
+DESCRIPTION
+-----------
+Removes the specified symbol (function, class, method, etc.) from the source file.
+The symbol is also removed from the database.
+
+WARNING: This operation cannot be undone. Make sure you have backups or version control.
+
+WHEN TO CALL
+------------
+Use when removing unused or obsolete code elements.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID containing the symbol.
+
+symbol_id: string (optional)
+    ID of the symbol to delete.
+
+name_path: string (optional)
+    Name path of symbol (alternative to symbol_id).
+
+relative_path: string (optional)
+    File path (required if using name_path).
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "name_path": "/UserService/deprecatedMethod",
+    "relative_path": "src/services/user.ts"
+}
+
+RELATED TOOLS
+-------------
+- code_find_symbol: Find symbol to delete
+- code_find_references: Check usages before deleting
+- code_replace_symbol: Consider replacing instead

@@ -11,17 +11,7 @@ import (
 
 // Graph tool definitions
 func (tm *ToolManager) createEntityTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_create_entity", `Create an entity in the knowledge graph.
-
-Explanation: Adds a typed entity (person, place, concept) with properties to the graph store and returns its ID.
-
-When to call: Use when capturing structured objects you want to link (e.g., contacts, organizations, projects).
-
-Example arguments/values:
-	entity_type: "person"
-	name: "Alice"
-	properties: { email: "alice@example.com" }
-`, CreateEntityInput{})
+	tool, err := protocol.NewTool("remembrance_create_entity", `Create an entity in the knowledge graph. Use how_to_use("remembrance_create_entity") for details.`, CreateEntityInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_create_entity", "err", err)
 		return nil
@@ -30,18 +20,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) createRelationshipTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_create_relationship", `Create a relationship between two graph entities.
-
-Explanation: Links two existing entity IDs with a typed relationship and optional properties.
-
-When to call: Use to model connections (e.g., person->works_at->organization, person->knows->person).
-
-Example arguments/values:
-	from_entity: "entity_1"
-	to_entity: "entity_2"
-	relationship_type: "works_at"
-	properties: { since: "2023-01-01" }
-`, CreateRelationshipInput{})
+	tool, err := protocol.NewTool("remembrance_create_relationship", `Create a relationship between two entities. Use how_to_use("remembrance_create_relationship") for details.`, CreateRelationshipInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_create_relationship", "err", err)
 		return nil
@@ -50,17 +29,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) traverseGraphTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_traverse_graph", `Traverse the knowledge graph from a start entity.
-
-Explanation: Performs breadth-limited traversal following relationships and returns connected entities/edges.
-
-When to call: Use when you want to discover related entities (e.g., find colleagues of a person or projects linked to an org). "depth" controls traversal breadth.
-
-Example arguments/values:
-	start_entity: "entity_1"
-	relationship_type: "works_at"
-	depth: 2
-`, TraverseGraphInput{})
+	tool, err := protocol.NewTool("remembrance_traverse_graph", `Traverse the knowledge graph from a start entity. Use how_to_use("remembrance_traverse_graph") for details.`, TraverseGraphInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_traverse_graph", "err", err)
 		return nil
@@ -69,15 +38,7 @@ Example arguments/values:
 }
 
 func (tm *ToolManager) getEntityTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_get_entity", `Get a graph entity by ID.
-
-Explanation: Returns the stored entity record including properties and metadata.
-
-When to call: Use when you need the full data for a specific entity (e.g., when rendering a contact card).
-
-Example arguments/values:
-	entity_id: "entity_1"
-`, GetEntityInput{})
+	tool, err := protocol.NewTool("remembrance_get_entity", `Get a graph entity by ID. Use how_to_use("remembrance_get_entity") for details.`, GetEntityInput{})
 	if err != nil {
 		slog.Error("failed to create tool", "name", "remembrance_get_entity", "err", err)
 		return nil

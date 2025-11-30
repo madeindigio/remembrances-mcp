@@ -1,0 +1,44 @@
+TOOL: code_find_references
+==========================
+
+Find references to a symbol.
+
+DESCRIPTION
+-----------
+Finds all usages/references of a symbol throughout the codebase.
+Useful for understanding how a function, class, or method is used.
+
+WHEN TO CALL
+------------
+Use when you want to find where a symbol is called, imported, or referenced
+before making changes to it.
+
+ARGUMENTS
+---------
+project_id: string (required)
+    The project ID to search in.
+
+symbol_id: string (optional)
+    ID of the symbol to find references for.
+
+symbol_name: string (optional)
+    Name of the symbol (alternative to symbol_id).
+
+include_kinds: array of strings (optional)
+    Filter referencing symbols by type.
+
+limit: integer (optional, default: 50)
+    Maximum number of references.
+
+EXAMPLE
+-------
+{
+    "project_id": "my-app",
+    "symbol_name": "createUser",
+    "limit": 20
+}
+
+RELATED TOOLS
+-------------
+- code_find_symbol: Find the symbol first
+- code_replace_symbol: Modify the symbol

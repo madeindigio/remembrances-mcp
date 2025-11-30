@@ -146,5 +146,8 @@ func (tm *ToolManager) registerMiscTools(reg func(string, *protocol.Tool, func(c
 	if err := reg("remembrance_get_stats", tm.getStatsTool(), tm.getStatsHandler); err != nil {
 		return err
 	}
+	if err := reg("how_to_use", tm.howToUseTool(), tm.howToUseHandler); err != nil {
+		return err
+	}
 	return nil
 }
