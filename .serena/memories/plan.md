@@ -1,432 +1,272 @@
-# Plan: Code Project File Monitoring System
+# Plan: Code File Refactoring
 
-**Feature**: Automatic file monitoring and reindexing for code projects  
-**Status**: 🚧 IN PLANNING  
+**Feature**: Split large source files into smaller, more maintainable modules  
+**Status**: 📋 PLANNED  
 **Created**: December 1, 2025  
-**Branch**: `feature/code-project-monitoring`
+**Priority**: Medium
 
 ---
 
 ## Problem Statement
 
-Currently, the code indexing feature allows starting indexing or reindexing a project via explicit tool calls. However, there's no automatic detection of file changes within an indexed code project. This means:
+Several source files in the project have grown too large, making them difficult to navigate, understand, and maintain. The following files exceed 450+ lines and should be split into smaller, focused modules:
 
-- When source files are modified, the index becomes stale
-- Users must manually trigger reindexing after file changes
-- New files added to a project are not automatically indexed
-- Deleted files may still appear in search results
+| File | Current Lines | Concern |
+|------|--------------|---------|
+| `pkg/mcp_tools/code_search_tools.go` | 951 | Too many tools in one file |
+| `internal/storage/surrealdb_code.go` | 801 | Mixed concerns (projects, files, symbols, jobs, chunks) |
+| `pkg/mcp_tools/code_indexing_tools.go` | 717 | Project, file, and watcher tools mixed |
+| `internal/indexer/indexer.go` | 638 | Core indexing, embeddings, progress, chunking mixed |
+| `pkg/mcp_tools/code_manipulation_tools.go` | 583 | Types and handlers mixed |
+| `internal/storage/surrealdb_schema.go` | 477 | Schema management and migration definitions mixed |
 
-The system should support:
-- Activating file monitoring for a specific code project
-- Detecting file modifications, additions, and deletions
-- Automatically triggering reindexing for changed files
-- Ensuring only ONE project can be monitored at a time (resource constraint)
-- Similar implementation pattern to Knowledge Base watcher (`internal/kb/kb.go`)
+**Target**: No file should exceed 300-400 lines. Each file should have a single, clear responsibility.
 
 ---
 
 ## Phase Overview
 
-| Phase | Title | Description | Status |
-|-------|-------|-------------|--------|
-| 1 | Model Extension | Add WatcherEnabled field to CodeProject | 🔲 Not Started |
-| 2 | CodeWatcher Implementation | Create file watcher based on kb.Watcher pattern | 🔲 Not Started |
-| 3 | Outdated File Detection | Implement hash-based file change detection | 🔲 Not Started |
-| 4 | Single Watcher Management | WatcherManager for exclusive project monitoring | 🔲 Not Started |
-| 5 | Tool: code_activate_project_watch | Activate monitoring for a project | 🔲 Not Started |
-| 6 | Tool: code_deactivate_project_watch | Deactivate monitoring | 🔲 Not Started |
-| 7 | Tool: code_get_watch_status | Query monitoring status | 🔲 Not Started |
-| 8 | main.go Integration | Startup/shutdown wiring | 🔲 Not Started |
-| 9 | Documentation & Testing | Docs and Python tests | 🔲 Not Started |
+| Phase | Title | Files Affected | Status |
+|-------|-------|----------------|--------|
+| 1 | Split code_search_tools.go | 951 → 3 files | ☐ Not Started |
+| 2 | Split surrealdb_code.go | 801 → 6 files | ☐ Not Started |
+| 3 | Split code_indexing_tools.go | 717 → 3 files | ☐ Not Started |
+| 4 | Split indexer.go | 638 → 5 files | ☐ Not Started |
+| 5 | Split code_manipulation_tools.go | 583 → 2 files | ☐ Not Started |
+| 6 | Split surrealdb_schema.go | 477 → 2 files | ☐ Not Started |
+| 7 | Review and Consolidation | All | ☐ Not Started |
 
 ---
 
 ## Reference Facts
 
 Each phase is stored as a fact in remembrances:
-- `code_monitoring_phase_1` through `code_monitoring_phase_9`
+- `refactoring_phase_1` through `refactoring_phase_7`
 
-Use `remembrance_get_fact(user_id="remembrances-mcp", key="code_monitoring_phase_N")` to retrieve details.
+Use `remembrance_get_fact(user_id="remembrances-mcp", key="refactoring_phase_N")` to retrieve details.
 
 ---
 
-## PHASE 1: Model Extension
+## PHASE 1: Split code_search_tools.go (951 lines)
 
-**Objective**: Extend CodeProject model to track monitoring state
+**Current File**: `pkg/mcp_tools/code_search_tools.go`
+
+**Problem**: 6 different tools with input types, tool definitions, and handlers all in one file
+
+### New File Structure
+
+| New File | Lines | Contents |
+|----------|-------|----------|
+| `code_search_tools_types.go` | ~80 | Input type structs (CodeGetSymbolsOverviewInput, CodeFindSymbolInput, etc.) |
+| `code_search_tools_handlers.go` | ~600 | Handler methods with complex logic |
+| `code_search_tools.go` | ~250 | Tool definitions and helper functions |
+
+### Files to Create
+- `pkg/mcp_tools/code_search_tools_types.go`
+- `pkg/mcp_tools/code_search_tools_handlers.go`
+
+---
+
+## PHASE 2: Split surrealdb_code.go (801 lines)
+
+**Current File**: `internal/storage/surrealdb_code.go`
+
+**Problem**: Projects, files, symbols, jobs, and chunks all mixed together
+
+### New File Structure
+
+| New File | Lines | Contents |
+|----------|-------|----------|
+| `surrealdb_code_types.go` | ~100 | CodeProject, CodeFile, CodeSymbol, CodeChunk structs |
+| `surrealdb_code_projects.go` | ~150 | CreateCodeProject, GetCodeProject, ListCodeProjects, etc. |
+| `surrealdb_code_files.go` | ~100 | SaveCodeFile, GetCodeFile, ListCodeFiles, DeleteCodeFile |
+| `surrealdb_code_symbols.go` | ~250 | Symbol CRUD and search operations |
+| `surrealdb_code_jobs.go` | ~100 | Indexing job operations and project stats |
+| `surrealdb_code_chunks.go` | ~100 | Chunk save, delete, get, and search operations |
+
+### Files to Create
+- `internal/storage/surrealdb_code_types.go`
+- `internal/storage/surrealdb_code_projects.go`
+- `internal/storage/surrealdb_code_files.go`
+- `internal/storage/surrealdb_code_symbols.go`
+- `internal/storage/surrealdb_code_jobs.go`
+- `internal/storage/surrealdb_code_chunks.go`
+
+---
+
+## PHASE 3: Split code_indexing_tools.go (717 lines)
+
+**Current File**: `pkg/mcp_tools/code_indexing_tools.go`
+
+**Problem**: Project tools, file tools, and watcher tools all mixed
+
+### New File Structure
+
+| New File | Lines | Contents |
+|----------|-------|----------|
+| `code_indexing_tools_types.go` | ~70 | All input structs for indexing tools |
+| `code_indexing_tools.go` | ~350 | Core project and file operations |
+| `code_watch_tools.go` | ~200 | Watcher-specific tools (activate, deactivate, status) |
+
+### Files to Create
+- `pkg/mcp_tools/code_indexing_tools_types.go`
+- `pkg/mcp_tools/code_watch_tools.go`
+
+---
+
+## PHASE 4: Split indexer.go (638 lines)
+
+**Current File**: `internal/indexer/indexer.go`
+
+**Problem**: Core indexing, embedding generation, progress tracking, and chunking logic mixed
+
+### New File Structure
+
+| New File | Lines | Contents |
+|----------|-------|----------|
+| `indexer_types.go` | ~70 | IndexerConfig, IndexingProgress, DefaultIndexerConfig |
+| `indexer.go` | ~300 | Core Indexer struct, IndexProject, processFiles, processFile |
+| `indexer_embeddings.go` | ~120 | generateEmbeddings, prepareSymbolText |
+| `indexer_progress.go` | ~80 | Progress tracking functions |
+| `indexer_chunks.go` | ~100 | Large symbol chunking operations |
+
+### Files to Create
+- `internal/indexer/indexer_types.go`
+- `internal/indexer/indexer_embeddings.go`
+- `internal/indexer/indexer_progress.go`
+- `internal/indexer/indexer_chunks.go`
+
+---
+
+## PHASE 5: Split code_manipulation_tools.go (583 lines)
+
+**Current File**: `pkg/mcp_tools/code_manipulation_tools.go`
+
+**Problem**: Types mixed with handlers (less critical than other phases)
+
+### New File Structure
+
+| New File | Lines | Contents |
+|----------|-------|----------|
+| `code_manipulation_tools_types.go` | ~60 | Input structs and symbolInfo helper |
+| `code_manipulation_tools.go` | ~520 | Tool manager, definitions, and handlers |
+
+### Files to Create
+- `pkg/mcp_tools/code_manipulation_tools_types.go`
+
+---
+
+## PHASE 6: Split surrealdb_schema.go (477 lines)
+
+**Current File**: `internal/storage/surrealdb_schema.go`
+
+**Problem**: Schema management logic and embedded migration definitions mixed
+
+### New File Structure
+
+| New File | Lines | Contents |
+|----------|-------|----------|
+| `surrealdb_schema.go` | ~200 | Schema management functions (InitializeSchema, migrations runner) |
+| `surrealdb_schema_embedded.go` | ~280 | applyMigrationEmbedded and all V1-V12 migration statements |
+
+### Files to Create
+- `internal/storage/surrealdb_schema_embedded.go`
+
+---
+
+## PHASE 7: Review and Consolidation
 
 ### Tasks
 
-1. Add `WatcherEnabled` field to `CodeProject` struct
-2. Add `UpdateProjectWatcher(ctx, projectID, enabled bool)` method to storage interface
-3. Implement method in `SurrealDBStorage`
-4. Ensure schema migration if needed
+1. **Build Verification**
+   ```bash
+   make build  # or xc build
+   ```
 
-### Files to Modify
+2. **Test Execution**
+   - Run existing test suite
+   - Verify no regressions
 
-- `internal/storage/storage.go` - Add interface method
-- `internal/storage/surrealdb_code.go` - Add field and implement method
-- `internal/storage/surrealdb_schema.go` - Add field definition if needed
+3. **Documentation Updates**
+   - Update `AGENTS.md` with new file structure
+   - Add file header comments explaining purpose
 
-### CodeProject Struct Extension
+4. **Code Style**
+   ```bash
+   go fmt ./...
+   go vet ./...
+   ```
 
-```go
-type CodeProject struct {
-    // ... existing fields ...
-    WatcherEnabled bool `json:"watcher_enabled"` // NEW
-}
-```
-
----
-
-## PHASE 2: CodeWatcher Implementation
-
-**Objective**: Create file watcher for code projects based on kb.Watcher pattern
-
-### Reference: internal/kb/kb.go
-
-The Knowledge Base watcher uses:
-- `fsnotify.NewWatcher()` for filesystem events
-- Debounce mechanism to batch rapid changes
-- Initial scan to process existing files
-- Event loop for Create/Write/Remove/Rename events
-
-### Tasks
-
-1. Create `internal/indexer/code_watcher.go`
-2. Implement `CodeWatcher` struct
-3. Implement `StartCodeWatcher(ctx, projectID, storage, indexer)` function
-4. Implement event loop with debounce
-5. Integrate with `Indexer.ReindexFile` for processing changes
-
-### CodeWatcher Struct
-
-```go
-type CodeWatcher struct {
-    projectID    string
-    rootPath     string
-    indexer      *Indexer
-    storage      storage.FullStorage
-    watcher      *fsnotify.Watcher
-    cancel       context.CancelFunc
-    once         sync.Once
-}
-```
-
-### Key Methods
-
-- `StartCodeWatcher(ctx, project *storage.CodeProject, indexer *Indexer, storage storage.FullStorage) (*CodeWatcher, error)`
-- `(*CodeWatcher).Stop()`
-- `(*CodeWatcher).initialScan(ctx)`
-- `(*CodeWatcher).run(ctx)`
-- `(*CodeWatcher).processFile(ctx, filePath string)`
-- `(*CodeWatcher).isCodeFile(filePath string) bool`
+5. **Final Review**
+   - Verify no file exceeds 400 lines
+   - Ensure logical grouping is maintained
+   - Check all imports are correct
 
 ---
 
-## PHASE 3: Outdated File Detection
+## Expected Results
 
-**Objective**: Detect files that need reindexing at watcher activation
+### Before Refactoring
+- 6 large files averaging ~600 lines each
+- Difficult navigation and maintenance
+- Mixed concerns in single files
 
-### Detection Criteria
+### After Refactoring
+- 21 focused files averaging ~180 lines each
+- Clear separation of concerns
+- Easy to navigate and maintain
 
-1. **Modified files**: File hash differs from stored `CodeFile.FileHash`
-2. **New files**: Code files in project that don't exist in `code_files` table
-3. **Deleted files**: Entries in `code_files` with no corresponding file on disk
-
-### Tasks
-
-1. Add `(*CodeWatcher).scanOutdatedFiles(ctx) ([]OutdatedFile, error)` method
-2. Implement hash comparison logic using `FileScanner.calculateHash`
-3. Queue outdated files for reindexing during `initialScan`
-4. Handle deleted files by removing from index
-
-### OutdatedFile Struct
-
-```go
-type OutdatedFile struct {
-    FilePath string
-    Reason   string // "modified", "new", "deleted"
-}
-```
+| Category | Before | After |
+|----------|--------|-------|
+| Total Large Files | 6 | 0 |
+| Average File Size | ~600 lines | ~180 lines |
+| Max File Size | 951 lines | ~350 lines |
+| Total New Files Created | - | 15 |
 
 ---
 
-## PHASE 4: Single Active Watcher Management
+## Implementation Notes
 
-**Objective**: Ensure only ONE code project can have active monitoring
+### Go Package Considerations
+- All new files within the same directory belong to the same package
+- No import changes needed for internal refactoring
+- Receiver types (e.g., `*SurrealDBStorage`, `*CodeSearchToolManager`) work across files
 
-### Rationale
+### Naming Conventions
+- Type files: `*_types.go`
+- Handler files: `*_handlers.go`
+- Feature-specific files: `*_feature.go` (e.g., `indexer_embeddings.go`)
 
-- File watchers consume system resources (file handles, memory)
-- Multiple project watchers could overwhelm the system
-- Resource constraint is intentional to maintain stability
-
-### Tasks
-
-1. Create `internal/indexer/watcher_manager.go`
-2. Implement `WatcherManager` struct with singleton pattern
-3. Track currently active watcher
-4. Handle graceful deactivation before new activation
-
-### WatcherManager Struct
-
-```go
-type WatcherManager struct {
-    mu            sync.RWMutex
-    activeWatcher *CodeWatcher
-    activeProject string
-    indexer       *Indexer
-    storage       storage.FullStorage
-}
-```
-
-### Key Methods
-
-- `NewWatcherManager(indexer, storage) *WatcherManager`
-- `(*WatcherManager).ActivateProject(ctx, projectID string) error`
-- `(*WatcherManager).DeactivateProject(ctx, projectID string) error`
-- `(*WatcherManager).DeactivateCurrent(ctx) error`
-- `(*WatcherManager).GetActiveProject() string`
-- `(*WatcherManager).IsProjectActive(projectID string) bool`
-- `(*WatcherManager).Stop() error`
+### Testing Strategy
+- Run full build after each phase
+- Run existing tests after each phase
+- No new tests needed for pure refactoring
 
 ---
 
-## PHASE 5: MCP Tool - code_activate_project_watch
+## Priority Execution Order
 
-**Objective**: Create tool to activate monitoring for a code project
+1. **High Priority** (Most benefit, most complex):
+   - Phase 1: code_search_tools.go
+   - Phase 2: surrealdb_code.go
 
-### Tool Definition
+2. **Medium Priority**:
+   - Phase 3: code_indexing_tools.go
+   - Phase 4: indexer.go
 
-```yaml
-name: code_activate_project_watch
-description: Activate file monitoring for a code project. Automatically deactivates any previously watched project.
-input:
-  project_id: string (required) - The project ID to start monitoring
-output:
-  success: boolean
-  message: string
-  previous_project: string (if another project was being watched)
-  outdated_files_found: int (files queued for reindexing)
-```
+3. **Low Priority** (Smaller impact):
+   - Phase 5: code_manipulation_tools.go
+   - Phase 6: surrealdb_schema.go
 
-### Handler Logic
-
-1. Validate project exists and is indexed
-2. Check current active project
-3. If different project active, deactivate it first
-4. Activate new project monitoring
-5. Run initial scan for outdated files
-6. Update `CodeProject.WatcherEnabled = true`
-7. Return success with previous project info
-
-### Files to Modify
-
-- `pkg/mcp_tools/code_indexing_tools.go` - Add tool and handler
-- `pkg/mcp_tools/types.go` - Add input struct
+4. **Final**:
+   - Phase 7: Consolidation
 
 ---
 
-## PHASE 6: MCP Tool - code_deactivate_project_watch
+## Previous Plans (Completed)
 
-**Objective**: Create tool to explicitly stop monitoring
+### Code Project File Monitoring System (December 1, 2025)
+✅ Completed - Added file monitoring and automatic reindexing for code projects.
 
-### Tool Definition
-
-```yaml
-name: code_deactivate_project_watch
-description: Stop file monitoring for a code project
-input:
-  project_id: string (optional) - If omitted, deactivates current watched project
-output:
-  success: boolean
-  message: string
-  deactivated_project: string
-```
-
-### Handler Logic
-
-1. If project_id provided, verify it's the active project
-2. Stop the watcher
-3. Update `CodeProject.WatcherEnabled = false`
-4. Return confirmation
-
----
-
-## PHASE 7: MCP Tool - code_get_watch_status
-
-**Objective**: Query current monitoring status
-
-### Tool Definition
-
-```yaml
-name: code_get_watch_status
-description: Get the current file monitoring status
-input:
-  project_id: string (optional) - Query specific project status
-output:
-  active_project: string (currently monitored project ID, or null)
-  project_status: object (if project_id provided)
-    - project_id: string
-    - watcher_enabled: boolean
-    - is_currently_active: boolean
-```
-
-### Additional Enhancement
-
-Update `code_list_projects` output to include `watcher_enabled` field for each project.
-
----
-
-## PHASE 8: Integration with main.go
-
-**Objective**: Wire WatcherManager into application lifecycle
-
-### Tasks
-
-1. Create `WatcherManager` in `main.go`
-2. Pass to `CodeToolManager`
-3. On startup: if any project has `WatcherEnabled=true`, auto-activate
-4. On shutdown: gracefully stop any active watcher
-5. Add config flag `--disable-code-watch` to prevent auto-activation
-
-### Startup Flow
-
-```go
-// In main.go
-watcherManager := indexer.NewWatcherManager(idx, storage)
-
-// Find project with watcher enabled
-projects, _ := storage.ListCodeProjects(ctx)
-for _, p := range projects {
-    if p.WatcherEnabled {
-        watcherManager.ActivateProject(ctx, p.ProjectID)
-        break // Only one can be active
-    }
-}
-```
-
-### Shutdown Flow
-
-```go
-// In main.go shutdown handler
-watcherManager.Stop()
-```
-
----
-
-## PHASE 9: Documentation & Testing
-
-**Objective**: Complete documentation and test coverage
-
-### Documentation Tasks
-
-1. Update `docs/CODE_INDEXING.md` with monitoring section
-2. Add new tool documentation to help system
-3. Update `README.md` with monitoring feature overview
-
-### Test File: tests/test_code_monitoring.py
-
-```python
-# Test cases
-- test_activate_project_watch()
-- test_deactivate_project_watch()
-- test_single_watcher_constraint()
-- test_outdated_file_detection()
-- test_watcher_auto_restart()
-- test_file_change_triggers_reindex()
-```
-
----
-
-## Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        main.go                                   │
-├─────────────────────────────────────────────────────────────────┤
-│  WatcherManager ──────────────────────────────────────────────┐ │
-│      │                                                         │ │
-│      ▼                                                         │ │
-│  ┌─────────────────────┐                                       │ │
-│  │   CodeWatcher       │◄── fsnotify events                    │ │
-│  │   (one per project) │                                       │ │
-│  └──────────┬──────────┘                                       │ │
-│             │                                                   │ │
-│             ▼                                                   │ │
-│  ┌─────────────────────┐    ┌─────────────────────┐            │ │
-│  │      Indexer        │    │  CodeToolManager    │            │ │
-│  │  .ReindexFile()     │    │  (MCP tools)        │            │ │
-│  └─────────────────────┘    └─────────────────────┘            │ │
-└─────────────────────────────────────────────────────────────────┘
-
-MCP Tools:
-┌──────────────────────────────────────┐
-│ code_activate_project_watch          │──┐
-├──────────────────────────────────────┤  │
-│ code_deactivate_project_watch        │──┼──► WatcherManager
-├──────────────────────────────────────┤  │
-│ code_get_watch_status                │──┘
-└──────────────────────────────────────┘
-```
-
----
-
-## File Change Flow
-
-```
-File Modified on Disk
-        │
-        ▼
-   fsnotify event
-        │
-        ▼
-   CodeWatcher.run()
-        │
-        ▼
-   debounce (500ms)
-        │
-        ▼
-   isCodeFile() check
-        │
-        ▼
-   Indexer.ReindexFile()
-        │
-        ▼
-   Storage updated
-```
-
----
-
-## Success Criteria
-
-1. ☐ `code_activate_project_watch` tool functional
-2. ☐ `code_deactivate_project_watch` tool functional
-3. ☐ `code_get_watch_status` tool functional
-4. ☐ Only ONE project can be monitored at a time
-5. ☐ File changes trigger automatic reindexing
-6. ☐ Outdated files detected and queued on activation
-7. ☐ Graceful shutdown of watcher
-8. ☐ Auto-restart of watcher on server restart (if enabled)
-9. ☐ Documentation updated
-10. ☐ Tests passing
-
----
-
-## Related Facts (stored in remembrances)
-
-- `code_monitoring_phase_1` - Model Extension details
-- `code_monitoring_phase_2` - CodeWatcher Implementation details
-- `code_monitoring_phase_3` - Outdated File Detection details
-- `code_monitoring_phase_4` - Single Watcher Management details
-- `code_monitoring_phase_5` - code_activate_project_watch tool details
-- `code_monitoring_phase_6` - code_deactivate_project_watch tool details
-- `code_monitoring_phase_7` - code_get_watch_status tool details
-- `code_monitoring_phase_8` - main.go Integration details
-- `code_monitoring_phase_9` - Documentation & Testing details
-
----
-
-## Previous Plan (Completed)
-
-The previous plan "Dual Code Embeddings System" was completed on November 30, 2025. That feature added support for specialized embedding models for code indexing (CodeRankEmbed, Jina-code-embeddings, etc.).
+### Dual Code Embeddings System (November 30, 2025)
+✅ Completed - Added support for specialized embedding models for code indexing.
