@@ -30,7 +30,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 11 // v11: events table for temporal event storage
+	targetVersion := 12 // v12: watcher_enabled field for code_projects
 	if currentVersion < targetVersion {
 		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -413,6 +413,12 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 			`DEFINE INDEX idx_events_content ON events FIELDS content SEARCH ANALYZER events_analyzer BM25;`,
 		}
 		log.Println("Migration V11: Creating events table for temporal event storage")
+	case 12:
+		// V12: Add watcher_enabled field to code_projects for file monitoring
+		statements = []string{
+			`DEFINE FIELD watcher_enabled ON code_projects TYPE bool DEFAULT false;`,
+		}
+		log.Println("Migration V12: Adding watcher_enabled field to code_projects")
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}

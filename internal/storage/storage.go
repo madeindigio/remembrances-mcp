@@ -164,6 +164,7 @@ type CodeStorage interface {
 	GetCodeProject(ctx context.Context, projectID string) (*CodeProject, error)
 	ListCodeProjects(ctx context.Context) ([]CodeProject, error)
 	UpdateProjectStatus(ctx context.Context, projectID string, status treesitter.IndexingStatus) error
+	UpdateProjectWatcher(ctx context.Context, projectID string, enabled bool) error
 	DeleteCodeProject(ctx context.Context, projectID string) error
 
 	// File operations

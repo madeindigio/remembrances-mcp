@@ -171,7 +171,71 @@ Symbols are identified by their "name path" - a hierarchical path within a file:
 | `code_insert_before_symbol` | Insert code before symbol |
 | `code_delete_symbol` | Delete a symbol |
 
+### Monitoring Tools
+
+| Tool | Description |
+|------|-------------|
+| `code_activate_project_watch` | Enable file watching for a project |
+| `code_deactivate_project_watch` | Disable file watching |
+| `code_get_watch_status` | Get current watcher status |
+
 For detailed API documentation, see [CODE_INDEXING_API.md](CODE_INDEXING_API.md).
+
+## File Monitoring
+
+The Code Indexing System includes automatic file monitoring to keep your project index up-to-date as files change.
+
+### How It Works
+
+1. **File Watcher**: Uses fsnotify to monitor file system events
+2. **Debouncing**: Changes are collected and processed with 2-second debounce to avoid excessive re-indexing
+3. **Single Project**: Only one project can be actively monitored at a time (resource constraint)
+4. **Persistence**: Watcher state is persisted across server restarts
+
+### Enabling File Watching
+
+**Activate monitoring for a project**:
+```json
+{
+  "project_id": "my-project"
+}
+```
+
+This will:
+- Start monitoring all supported code files in the project
+- Automatically re-index files when they change
+- Set `watcher_enabled=true` in the project record
+
+**Deactivate monitoring**:
+```json
+{
+  "project_id": "my-project"
+}
+```
+
+**Check status**:
+```json
+{
+  "project_id": "my-project"  // Optional - omit for all projects
+}
+```
+
+### Outdated File Detection
+
+When the watcher starts, it scans all indexed files and checks if their content hash has changed since the last indexing. Modified files are automatically queued for re-processing.
+
+### Configuration
+
+| Flag | Environment Variable | Description |
+|------|---------------------|-------------|
+| `--disable-code-watch` | `GOMEM_DISABLE_CODE_WATCH` | Disable all file watching on startup |
+
+### Best Practices
+
+1. **Enable on active projects**: Only enable watching on projects you're actively developing
+2. **Single project at a time**: Due to resource constraints, only one project can be watched
+3. **Automatic on restart**: If a project has `watcher_enabled=true`, watching resumes on server restart
+4. **Excluded directories**: `.git`, `node_modules`, `vendor`, `.svn`, `.hg`, `__pycache__` are automatically excluded
 
 ## Configuration
 
