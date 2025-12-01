@@ -156,6 +156,39 @@ http: true
 http-addr: ":8080"
 ```
 
+### Modelos de Embedding Específicos para Código
+
+Para resultados óptimos en búsqueda de código al usar la función de [Indexación de Código](/es/docs/code-indexing/), puedes configurar un modelo de embedding dedicado especializado en código:
+
+```yaml
+# Usa las mismas opciones de proveedor que el embedder principal
+# GGUF (recomendado para despliegues locales y enfocados en privacidad)
+code-gguf-model-path: "./coderankembed.Q4_K_M.gguf"
+
+# O Ollama
+# code-ollama-model: "jina/jina-embeddings-v3"
+
+# O OpenAI
+# code-openai-model: "text-embedding-3-large"
+```
+
+**Modelos de Embedding de Código Recomendados:**
+
+| Proveedor | Modelo | Notas |
+|-----------|--------|-------|
+| GGUF | CodeRankEmbed (Q4_K_M) | Mejor para búsqueda de código local y privada |
+| Ollama | jina-embeddings-v3 | Buen equilibrio entre calidad y velocidad |
+| OpenAI | text-embedding-3-large | Alta calidad, basado en nube |
+
+**Comportamiento de Fallback:** Si no se configura un modelo específico para código, Remembrances usa automáticamente tu modelo de embedding por defecto para la indexación de código.
+
+**Variables de Entorno:**
+```bash
+export GOMEM_CODE_GGUF_MODEL_PATH="./coderankembed.Q4_K_M.gguf"
+export GOMEM_CODE_OLLAMA_MODEL="jina/jina-embeddings-v3"
+export GOMEM_CODE_OPENAI_MODEL="text-embedding-3-large"
+```
+
 ### Configuración a través de parámetros CLI
 
 Dispones de toda la configuración anterior a través de flags en la línea de comandos. Revisa la ayuda con:

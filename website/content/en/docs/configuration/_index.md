@@ -156,6 +156,39 @@ http: true
 http-addr: ":8080"
 ```
 
+### Code-Specific Embedding Models
+
+For optimal code search results when using the [Code Indexing](/docs/code-indexing/) feature, you can configure a dedicated embedding model specialized for code:
+
+```yaml
+# Use the same provider options as the main embedder
+# GGUF (recommended for local, privacy-focused deployments)
+code-gguf-model-path: "./coderankembed.Q4_K_M.gguf"
+
+# OR Ollama
+# code-ollama-model: "jina/jina-embeddings-v3"
+
+# OR OpenAI
+# code-openai-model: "text-embedding-3-large"
+```
+
+**Recommended Code Embedding Models:**
+
+| Provider | Model | Notes |
+|----------|-------|-------|
+| GGUF | CodeRankEmbed (Q4_K_M) | Best for local, privacy-focused code search |
+| Ollama | jina-embeddings-v3 | Good balance of quality and speed |
+| OpenAI | text-embedding-3-large | High quality, cloud-based |
+
+**Fallback Behavior:** If a code-specific model is not configured, Remembrances automatically uses your default embedding model for code indexing.
+
+**Environment Variables:**
+```bash
+export GOMEM_CODE_GGUF_MODEL_PATH="./coderankembed.Q4_K_M.gguf"
+export GOMEM_CODE_OLLAMA_MODEL="jina/jina-embeddings-v3"
+export GOMEM_CODE_OPENAI_MODEL="text-embedding-3-large"
+```
+
 ### Configuration through CLI parameters
 
 You have all the above configuration available through command line flags. Check the help with:
