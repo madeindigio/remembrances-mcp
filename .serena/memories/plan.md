@@ -1,25 +1,27 @@
-# Plan: Dual Code Embeddings System
+# Plan: Code Project File Monitoring System
 
-**Feature**: Specialized embedding models for code indexing  
-**Status**: ✅ IMPLEMENTATION COMPLETE  
-**Created**: November 30, 2025  
-**Completed**: November 30, 2025  
-**Branch**: `feature/dual-code-embeddings`
+**Feature**: Automatic file monitoring and reindexing for code projects  
+**Status**: 🚧 IN PLANNING  
+**Created**: December 1, 2025  
+**Branch**: `feature/code-project-monitoring`
 
 ---
 
 ## Problem Statement
 
-Generic text embedding models may not perform optimally for code understanding tasks. Specialized models like **CodeRankEmbed** or **Jina-code-embeddings** are trained specifically on code and can provide better semantic representation for:
-- Code symbol search
-- Semantic code similarity
-- Code-to-code matching
-- Natural language to code queries
+Currently, the code indexing feature allows starting indexing or reindexing a project via explicit tool calls. However, there's no automatic detection of file changes within an indexed code project. This means:
+
+- When source files are modified, the index becomes stale
+- Users must manually trigger reindexing after file changes
+- New files added to a project are not automatically indexed
+- Deleted files may still appear in search results
 
 The system should support:
-- Configuring a separate embedding model for code indexing
-- Fallback to default model if code model not specified
-- Support for all 3 providers: GGUF (local), Ollama, OpenAI-compatible
+- Activating file monitoring for a specific code project
+- Detecting file modifications, additions, and deletions
+- Automatically triggering reindexing for changed files
+- Ensuring only ONE project can be monitored at a time (resource constraint)
+- Similar implementation pattern to Knowledge Base watcher (`internal/kb/kb.go`)
 
 ---
 
@@ -27,223 +29,313 @@ The system should support:
 
 | Phase | Title | Description | Status |
 |-------|-------|-------------|--------|
-| 1 | Configuration Extension | Add code-specific embedding model config options | ✅ Complete |
-| 2 | Embedder Factory Extension | Create code-specific embedder factory function | ✅ Complete |
-| 3 | Dual Embedder Integration | Integrate code embedder with indexer | ✅ Complete |
-| 4 | Documentation | Update docs and sample configs | ✅ Complete |
-| 5 | Testing & Validation | Test with real code embedding models | ✅ Complete |
+| 1 | Model Extension | Add WatcherEnabled field to CodeProject | 🔲 Not Started |
+| 2 | CodeWatcher Implementation | Create file watcher based on kb.Watcher pattern | 🔲 Not Started |
+| 3 | Outdated File Detection | Implement hash-based file change detection | 🔲 Not Started |
+| 4 | Single Watcher Management | WatcherManager for exclusive project monitoring | 🔲 Not Started |
+| 5 | Tool: code_activate_project_watch | Activate monitoring for a project | 🔲 Not Started |
+| 6 | Tool: code_deactivate_project_watch | Deactivate monitoring | 🔲 Not Started |
+| 7 | Tool: code_get_watch_status | Query monitoring status | 🔲 Not Started |
+| 8 | main.go Integration | Startup/shutdown wiring | 🔲 Not Started |
+| 9 | Documentation & Testing | Docs and Python tests | 🔲 Not Started |
 
 ---
 
-## Configuration Additions
+## Reference Facts
 
-### New Configuration Options
+Each phase is stored as a fact in remembrances:
+- `code_monitoring_phase_1` through `code_monitoring_phase_9`
 
-| Option | CLI Flag | Env Var | YAML Key | Description |
-|--------|----------|---------|----------|-------------|
-| Code GGUF Model | `--code-gguf-model-path` | `GOMEM_CODE_GGUF_MODEL_PATH` | `code-gguf-model-path` | Path to GGUF model for code embeddings |
-| Code Ollama Model | `--code-ollama-model` | `GOMEM_CODE_OLLAMA_MODEL` | `code-ollama-model` | Ollama model name for code embeddings |
-| Code OpenAI Model | `--code-openai-model` | `GOMEM_CODE_OPENAI_MODEL` | `code-openai-model` | OpenAI model for code embeddings |
-
-### Behavior
-
-- **If code model specified**: Use it for code indexing, use default for text/facts/vectors/events
-- **If code model NOT specified**: Use default model for everything (current behavior preserved)
-- **Provider priority**: GGUF > Ollama > OpenAI (same as default embedder)
+Use `remembrance_get_fact(user_id="remembrances-mcp", key="code_monitoring_phase_N")` to retrieve details.
 
 ---
 
-## PHASE 1: Configuration Extension
+## PHASE 1: Model Extension
 
-**Objective**: Add code-specific embedding model configuration to all configuration sources
+**Objective**: Extend CodeProject model to track monitoring state
 
 ### Tasks
 
-1. Add new Config fields for code embeddings:
-   - `CodeGGUFModelPath string`
-   - `CodeOllamaModel string`
-   - `CodeOpenAIModel string`
-2. Add CLI flags:
-   - `--code-gguf-model-path`
-   - `--code-ollama-model`
-   - `--code-openai-model`
-3. Add env vars:
-   - `GOMEM_CODE_GGUF_MODEL_PATH`
-   - `GOMEM_CODE_OLLAMA_MODEL`
-   - `GOMEM_CODE_OPENAI_MODEL`
-4. Add YAML mapstructure tags:
-   - `code-gguf-model-path`
-   - `code-ollama-model`
-   - `code-openai-model`
-5. Add getter methods with fallback:
-   - `GetCodeGGUFModelPath()` - returns CodeGGUFModelPath or GGUFModelPath
-   - `GetCodeOllamaModel()` - returns CodeOllamaModel or OllamaModel
-   - `GetCodeOpenAIModel()` - returns CodeOpenAIModel or OpenAIModel
+1. Add `WatcherEnabled` field to `CodeProject` struct
+2. Add `UpdateProjectWatcher(ctx, projectID, enabled bool)` method to storage interface
+3. Implement method in `SurrealDBStorage`
+4. Ensure schema migration if needed
 
 ### Files to Modify
 
-- `internal/config/config.go` - Add fields, getters, and mapstructure tags
-- `cmd/remembrances-mcp/main.go` - Add CLI flag definitions
+- `internal/storage/storage.go` - Add interface method
+- `internal/storage/surrealdb_code.go` - Add field and implement method
+- `internal/storage/surrealdb_schema.go` - Add field definition if needed
 
-### Notes
+### CodeProject Struct Extension
 
-- Priority: GGUF > Ollama > OpenAI
-- If code model not specified, use corresponding default model
-- Keep same URL/key config for each provider (no need to duplicate)
-
----
-
-## PHASE 2: Embedder Factory Extension
-
-**Objective**: Extend embedder factory to create code-specific embedder instance
-
-### Tasks
-
-1. Add code embedder fields to `pkg/embedder/factory.go` Config struct:
-   - `CodeGGUFModelPath string`
-   - `CodeOllamaModel string`
-   - `CodeOpenAIModel string`
-2. Create `NewCodeEmbedderFromConfig()` function that creates embedder with code model config
-3. Add `NewCodeEmbedderFromMainConfig()` that extracts code model config from main Config
-4. Implement logic:
-   - If code model specified for provider, create separate embedder
-   - Else return same embedder as default
-5. Each provider should check code-specific model first, fallback to default
-
-### Files to Modify
-
-- `pkg/embedder/factory.go` - Add code embedder factory functions
-
-### Notes
-
-- GGUF may need separate llama instance for code model (memory consideration)
-- Ollama/OpenAI can use same client with different model param
-- Consider memory implications of loading 2 GGUF models simultaneously
-
----
-
-## PHASE 3: Dual Embedder Integration
-
-**Objective**: Create dual embedder system and integrate with code indexer
-
-### Tasks
-
-1. Create `pkg/embedder/dual.go` with DualEmbedder struct:
-   ```go
-   type DualEmbedder struct {
-       DefaultEmbedder Embedder
-       CodeEmbedder    Embedder
-   }
-   ```
-2. Add methods:
-   - `EmbedCode(ctx, text)` - uses CodeEmbedder
-   - `EmbedText(ctx, text)` - uses DefaultEmbedder
-3. Update `internal/indexer/indexer.go`:
-   - Accept separate code embedder parameter
-   - Use code embedder for symbol embeddings
-4. Update `internal/indexer/job_manager.go`:
-   - Pass code embedder to indexer constructor
-5. Update `cmd/remembrances-mcp/main.go`:
-   - Create both default and code embedders
-   - Pass code embedder to indexer/job manager
-
-### Files to Create/Modify
-
-- `pkg/embedder/dual.go` (new) - DualEmbedder struct
-- `internal/indexer/indexer.go` - Accept code embedder
-- `internal/indexer/job_manager.go` - Pass code embedder to indexer
-- `cmd/remembrances-mcp/main.go` - Create and wire both embedders
-
-### Notes
-
-- ToolManager keeps using default embedder for facts/vectors/events
-- Only code indexer uses code embedder
-- Simplest approach: pass separate codeEmbedder to indexer constructor
-
----
-
-## PHASE 4: Documentation & Sample Config
-
-**Objective**: Update documentation and sample configuration files
-
-### Tasks
-
-1. Update `config.sample.yaml`:
-   - Add `code-gguf-model-path` with example
-   - Add `code-ollama-model` with example
-   - Add `code-openai-model` with example
-   - Add comments explaining code embeddings
-2. Update `config.sample.gguf.yaml`:
-   - Add code model configuration section
-3. Update `README.md`:
-   - Add "Code Embeddings Configuration" section
-   - Explain when to use specialized code models
-   - Document fallback behavior
-4. Add comments explaining:
-   - When to use specialized code embedding models
-   - Recommended models (CodeRankEmbed, Jina-code-embeddings)
-   - Memory considerations for dual GGUF models
-
-### Files to Modify
-
-- `config.sample.yaml`
-- `config.sample.gguf.yaml`
-- `README.md`
-
-### Recommended Models
-
-| Provider | Recommended Code Model | Notes |
-|----------|----------------------|-------|
-| GGUF | CodeRankEmbed | Local, fast, code-specialized |
-| Ollama | jina/jina-embeddings-v2-code | Code-optimized |
-| OpenAI | text-embedding-3-large | Works for both text and code |
-
----
-
-## PHASE 5: Testing & Validation
-
-**Objective**: Test the dual embedder system with real models
-
-### Tasks
-
-1. Test with `coderankembed.Q4_K_M.gguf` at `/www/Remembrances/coderankembed.Q4_K_M.gguf`
-2. Verify code indexing uses code embedder when configured
-3. Verify regular embeddings (facts, vectors, events) use default embedder
-4. Test fallback: when code model not configured, should use default model
-5. Test all 3 providers with code models:
-   - GGUF: coderankembed.Q4_K_M.gguf
-   - Ollama: jina-embeddings-v2-code (if available)
-   - OpenAI: text-embedding-3-large
-6. Build and verify compilation
-
-### Test Cases
-
-```bash
-# Test 1: Code model configured - should use separate embedder
-GOMEM_CODE_GGUF_MODEL_PATH=/www/Remembrances/coderankembed.Q4_K_M.gguf \
-./build/remembrances-mcp
-
-# Test 2: No code model - should use default embedder for everything
-./build/remembrances-mcp
-
-# Test 3: Verify embedding dimensions match MTREE index (768)
-# Check logs for embedding dimension output
+```go
+type CodeProject struct {
+    // ... existing fields ...
+    WatcherEnabled bool `json:"watcher_enabled"` // NEW
+}
 ```
 
-### Validation Criteria
+---
 
-- [ ] Code indexing uses code embedder when configured
-- [ ] Regular embeddings use default embedder
-- [ ] Fallback works when code model not specified
-- [ ] Embedding dimension compatibility (768 for MTREE indexes)
-- [ ] No memory leaks with dual GGUF models
-- [ ] Build successful
+## PHASE 2: CodeWatcher Implementation
 
-### Notes
+**Objective**: Create file watcher for code projects based on kb.Watcher pattern
 
-- Test model path: `/www/Remembrances/coderankembed.Q4_K_M.gguf`
-- Verify embedding dimension compatibility (768 for MTREE indexes)
-- May need different dimension handling if code model has different output size
+### Reference: internal/kb/kb.go
+
+The Knowledge Base watcher uses:
+- `fsnotify.NewWatcher()` for filesystem events
+- Debounce mechanism to batch rapid changes
+- Initial scan to process existing files
+- Event loop for Create/Write/Remove/Rename events
+
+### Tasks
+
+1. Create `internal/indexer/code_watcher.go`
+2. Implement `CodeWatcher` struct
+3. Implement `StartCodeWatcher(ctx, projectID, storage, indexer)` function
+4. Implement event loop with debounce
+5. Integrate with `Indexer.ReindexFile` for processing changes
+
+### CodeWatcher Struct
+
+```go
+type CodeWatcher struct {
+    projectID    string
+    rootPath     string
+    indexer      *Indexer
+    storage      storage.FullStorage
+    watcher      *fsnotify.Watcher
+    cancel       context.CancelFunc
+    once         sync.Once
+}
+```
+
+### Key Methods
+
+- `StartCodeWatcher(ctx, project *storage.CodeProject, indexer *Indexer, storage storage.FullStorage) (*CodeWatcher, error)`
+- `(*CodeWatcher).Stop()`
+- `(*CodeWatcher).initialScan(ctx)`
+- `(*CodeWatcher).run(ctx)`
+- `(*CodeWatcher).processFile(ctx, filePath string)`
+- `(*CodeWatcher).isCodeFile(filePath string) bool`
+
+---
+
+## PHASE 3: Outdated File Detection
+
+**Objective**: Detect files that need reindexing at watcher activation
+
+### Detection Criteria
+
+1. **Modified files**: File hash differs from stored `CodeFile.FileHash`
+2. **New files**: Code files in project that don't exist in `code_files` table
+3. **Deleted files**: Entries in `code_files` with no corresponding file on disk
+
+### Tasks
+
+1. Add `(*CodeWatcher).scanOutdatedFiles(ctx) ([]OutdatedFile, error)` method
+2. Implement hash comparison logic using `FileScanner.calculateHash`
+3. Queue outdated files for reindexing during `initialScan`
+4. Handle deleted files by removing from index
+
+### OutdatedFile Struct
+
+```go
+type OutdatedFile struct {
+    FilePath string
+    Reason   string // "modified", "new", "deleted"
+}
+```
+
+---
+
+## PHASE 4: Single Active Watcher Management
+
+**Objective**: Ensure only ONE code project can have active monitoring
+
+### Rationale
+
+- File watchers consume system resources (file handles, memory)
+- Multiple project watchers could overwhelm the system
+- Resource constraint is intentional to maintain stability
+
+### Tasks
+
+1. Create `internal/indexer/watcher_manager.go`
+2. Implement `WatcherManager` struct with singleton pattern
+3. Track currently active watcher
+4. Handle graceful deactivation before new activation
+
+### WatcherManager Struct
+
+```go
+type WatcherManager struct {
+    mu            sync.RWMutex
+    activeWatcher *CodeWatcher
+    activeProject string
+    indexer       *Indexer
+    storage       storage.FullStorage
+}
+```
+
+### Key Methods
+
+- `NewWatcherManager(indexer, storage) *WatcherManager`
+- `(*WatcherManager).ActivateProject(ctx, projectID string) error`
+- `(*WatcherManager).DeactivateProject(ctx, projectID string) error`
+- `(*WatcherManager).DeactivateCurrent(ctx) error`
+- `(*WatcherManager).GetActiveProject() string`
+- `(*WatcherManager).IsProjectActive(projectID string) bool`
+- `(*WatcherManager).Stop() error`
+
+---
+
+## PHASE 5: MCP Tool - code_activate_project_watch
+
+**Objective**: Create tool to activate monitoring for a code project
+
+### Tool Definition
+
+```yaml
+name: code_activate_project_watch
+description: Activate file monitoring for a code project. Automatically deactivates any previously watched project.
+input:
+  project_id: string (required) - The project ID to start monitoring
+output:
+  success: boolean
+  message: string
+  previous_project: string (if another project was being watched)
+  outdated_files_found: int (files queued for reindexing)
+```
+
+### Handler Logic
+
+1. Validate project exists and is indexed
+2. Check current active project
+3. If different project active, deactivate it first
+4. Activate new project monitoring
+5. Run initial scan for outdated files
+6. Update `CodeProject.WatcherEnabled = true`
+7. Return success with previous project info
+
+### Files to Modify
+
+- `pkg/mcp_tools/code_indexing_tools.go` - Add tool and handler
+- `pkg/mcp_tools/types.go` - Add input struct
+
+---
+
+## PHASE 6: MCP Tool - code_deactivate_project_watch
+
+**Objective**: Create tool to explicitly stop monitoring
+
+### Tool Definition
+
+```yaml
+name: code_deactivate_project_watch
+description: Stop file monitoring for a code project
+input:
+  project_id: string (optional) - If omitted, deactivates current watched project
+output:
+  success: boolean
+  message: string
+  deactivated_project: string
+```
+
+### Handler Logic
+
+1. If project_id provided, verify it's the active project
+2. Stop the watcher
+3. Update `CodeProject.WatcherEnabled = false`
+4. Return confirmation
+
+---
+
+## PHASE 7: MCP Tool - code_get_watch_status
+
+**Objective**: Query current monitoring status
+
+### Tool Definition
+
+```yaml
+name: code_get_watch_status
+description: Get the current file monitoring status
+input:
+  project_id: string (optional) - Query specific project status
+output:
+  active_project: string (currently monitored project ID, or null)
+  project_status: object (if project_id provided)
+    - project_id: string
+    - watcher_enabled: boolean
+    - is_currently_active: boolean
+```
+
+### Additional Enhancement
+
+Update `code_list_projects` output to include `watcher_enabled` field for each project.
+
+---
+
+## PHASE 8: Integration with main.go
+
+**Objective**: Wire WatcherManager into application lifecycle
+
+### Tasks
+
+1. Create `WatcherManager` in `main.go`
+2. Pass to `CodeToolManager`
+3. On startup: if any project has `WatcherEnabled=true`, auto-activate
+4. On shutdown: gracefully stop any active watcher
+5. Add config flag `--disable-code-watch` to prevent auto-activation
+
+### Startup Flow
+
+```go
+// In main.go
+watcherManager := indexer.NewWatcherManager(idx, storage)
+
+// Find project with watcher enabled
+projects, _ := storage.ListCodeProjects(ctx)
+for _, p := range projects {
+    if p.WatcherEnabled {
+        watcherManager.ActivateProject(ctx, p.ProjectID)
+        break // Only one can be active
+    }
+}
+```
+
+### Shutdown Flow
+
+```go
+// In main.go shutdown handler
+watcherManager.Stop()
+```
+
+---
+
+## PHASE 9: Documentation & Testing
+
+**Objective**: Complete documentation and test coverage
+
+### Documentation Tasks
+
+1. Update `docs/CODE_INDEXING.md` with monitoring section
+2. Add new tool documentation to help system
+3. Update `README.md` with monitoring feature overview
+
+### Test File: tests/test_code_monitoring.py
+
+```python
+# Test cases
+- test_activate_project_watch()
+- test_deactivate_project_watch()
+- test_single_watcher_constraint()
+- test_outdated_file_detection()
+- test_watcher_auto_restart()
+- test_file_change_triggers_reindex()
+```
 
 ---
 
@@ -253,48 +345,88 @@ GOMEM_CODE_GGUF_MODEL_PATH=/www/Remembrances/coderankembed.Q4_K_M.gguf \
 ┌─────────────────────────────────────────────────────────────────┐
 │                        main.go                                   │
 ├─────────────────────────────────────────────────────────────────┤
-│  Config.Load()                                                   │
-│      ↓                                                           │
-│  ┌─────────────────────┐    ┌─────────────────────┐             │
-│  │  Default Embedder   │    │   Code Embedder     │             │
-│  │  (nomic-embed-text) │    │  (coderankembed)    │             │
-│  └──────────┬──────────┘    └──────────┬──────────┘             │
-│             │                          │                         │
-│             ▼                          ▼                         │
-│  ┌─────────────────────┐    ┌─────────────────────┐             │
-│  │    ToolManager      │    │      Indexer        │             │
-│  │  (facts, vectors,   │    │  (code symbols,     │             │
-│  │   events, kb docs)  │    │   code chunks)      │             │
-│  └─────────────────────┘    └─────────────────────┘             │
+│  WatcherManager ──────────────────────────────────────────────┐ │
+│      │                                                         │ │
+│      ▼                                                         │ │
+│  ┌─────────────────────┐                                       │ │
+│  │   CodeWatcher       │◄── fsnotify events                    │ │
+│  │   (one per project) │                                       │ │
+│  └──────────┬──────────┘                                       │ │
+│             │                                                   │ │
+│             ▼                                                   │ │
+│  ┌─────────────────────┐    ┌─────────────────────┐            │ │
+│  │      Indexer        │    │  CodeToolManager    │            │ │
+│  │  .ReindexFile()     │    │  (MCP tools)        │            │ │
+│  └─────────────────────┘    └─────────────────────┘            │ │
 └─────────────────────────────────────────────────────────────────┘
+
+MCP Tools:
+┌──────────────────────────────────────┐
+│ code_activate_project_watch          │──┐
+├──────────────────────────────────────┤  │
+│ code_deactivate_project_watch        │──┼──► WatcherManager
+├──────────────────────────────────────┤  │
+│ code_get_watch_status                │──┘
+└──────────────────────────────────────┘
+```
+
+---
+
+## File Change Flow
+
+```
+File Modified on Disk
+        │
+        ▼
+   fsnotify event
+        │
+        ▼
+   CodeWatcher.run()
+        │
+        ▼
+   debounce (500ms)
+        │
+        ▼
+   isCodeFile() check
+        │
+        ▼
+   Indexer.ReindexFile()
+        │
+        ▼
+   Storage updated
 ```
 
 ---
 
 ## Success Criteria
 
-1. ✅ Code-specific embedding model can be configured for each provider
-2. ✅ Code indexer uses code embedder when configured
-3. ✅ Regular operations (facts, vectors, events) use default embedder
-4. ✅ Fallback to default model when code model not specified
-5. ✅ Configuration works via CLI, env vars, and YAML
-6. ✅ Documentation updated with examples
-7. ✅ All tests pass
-8. ✅ Build successful
+1. ☐ `code_activate_project_watch` tool functional
+2. ☐ `code_deactivate_project_watch` tool functional
+3. ☐ `code_get_watch_status` tool functional
+4. ☐ Only ONE project can be monitored at a time
+5. ☐ File changes trigger automatic reindexing
+6. ☐ Outdated files detected and queued on activation
+7. ☐ Graceful shutdown of watcher
+8. ☐ Auto-restart of watcher on server restart (if enabled)
+9. ☐ Documentation updated
+10. ☐ Tests passing
 
 ---
 
-## Related Facts
+## Related Facts (stored in remembrances)
 
-- `dual_code_embeddings_phase_1` - Configuration extension phase
-- `dual_code_embeddings_phase_2` - Embedder factory extension phase
-- `dual_code_embeddings_phase_3` - Dual embedder integration phase
-- `dual_code_embeddings_phase_4` - Documentation phase
-- `dual_code_embeddings_phase_5` - Testing phase
+- `code_monitoring_phase_1` - Model Extension details
+- `code_monitoring_phase_2` - CodeWatcher Implementation details
+- `code_monitoring_phase_3` - Outdated File Detection details
+- `code_monitoring_phase_4` - Single Watcher Management details
+- `code_monitoring_phase_5` - code_activate_project_watch tool details
+- `code_monitoring_phase_6` - code_deactivate_project_watch tool details
+- `code_monitoring_phase_7` - code_get_watch_status tool details
+- `code_monitoring_phase_8` - main.go Integration details
+- `code_monitoring_phase_9` - Documentation & Testing details
 
 ---
 
-## Test Resources
+## Previous Plan (Completed)
 
-- **GGUF Code Model**: `/www/Remembrances/coderankembed.Q4_K_M.gguf`
-- **Default Text Model**: `nomic-embed-text:latest` (Ollama)
+The previous plan "Dual Code Embeddings System" was completed on November 30, 2025. That feature added support for specialized embedding models for code indexing (CodeRankEmbed, Jina-code-embeddings, etc.).
