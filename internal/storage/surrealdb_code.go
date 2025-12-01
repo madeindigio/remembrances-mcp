@@ -19,6 +19,7 @@ type CodeProject struct {
 	LanguageStats  map[treesitter.Language]int `json:"language_stats"`
 	LastIndexedAt  *time.Time                  `json:"last_indexed_at"`
 	IndexingStatus treesitter.IndexingStatus   `json:"indexing_status"`
+	WatcherEnabled bool                        `json:"watcher_enabled"`
 	CreatedAt      time.Time                   `json:"created_at"`
 	UpdatedAt      time.Time                   `json:"updated_at"`
 }
@@ -175,6 +176,23 @@ func (s *SurrealDBStorage) UpdateProjectStatus(ctx context.Context, projectID st
 	params := map[string]interface{}{
 		"project_id": projectID,
 		"status":     string(status),
+	}
+
+	_, err := s.query(ctx, query, params)
+	return err
+}
+
+// UpdateProjectWatcher updates the watcher_enabled field of a project
+func (s *SurrealDBStorage) UpdateProjectWatcher(ctx context.Context, projectID string, enabled bool) error {
+	query := `
+		UPDATE code_projects SET 
+			watcher_enabled = $enabled,
+			updated_at = time::now()
+		WHERE project_id = $project_id;
+	`
+	params := map[string]interface{}{
+		"project_id": projectID,
+		"enabled":    enabled,
 	}
 
 	_, err := s.query(ctx, query, params)

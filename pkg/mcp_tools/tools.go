@@ -192,3 +192,12 @@ func (tm *ToolManager) registerEventTools(reg func(string, *protocol.Tool, func(
 func (tm *ToolManager) CreateJobManager(fullStorage storage.FullStorage, indexerConfig indexer.IndexerConfig, jmConfig indexer.JobManagerConfig) *indexer.JobManager {
 	return indexer.NewJobManager(fullStorage, tm.codeEmbedder, indexerConfig, jmConfig)
 }
+
+// CreateWatcherManager creates a WatcherManager for code project file monitoring.
+// This uses the provided JobManager's indexer for reindexing changed files.
+//
+// The returned WatcherManager should be used with CodeToolManager to provide
+// file monitoring capabilities.
+func (tm *ToolManager) CreateWatcherManager(fullStorage storage.FullStorage, jm *indexer.JobManager) *indexer.WatcherManager {
+	return indexer.NewWatcherManager(jm.GetIndexer(), fullStorage)
+}

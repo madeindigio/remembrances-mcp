@@ -57,6 +57,9 @@ type Config struct {
 	ChunkSize    int    `mapstructure:"chunk-size"`
 	ChunkOverlap int    `mapstructure:"chunk-overlap"`
 	LogFile      string `mapstructure:"log"`
+	// Code monitoring configuration
+	// When true, disables automatic code file watching for projects
+	DisableCodeWatch bool `mapstructure:"disable-code-watch"`
 }
 
 // Load loads the configuration from CLI flags and environment variables.
@@ -100,6 +103,7 @@ func Load() (*Config, error) {
 	pflag.Int("chunk-size", 1500, "Maximum chunk size in characters for text splitting (default: 1500)")
 	pflag.Int("chunk-overlap", 200, "Overlap between chunks in characters (default: 200)")
 	pflag.String("log", "", "Path to the log file (logs will be written to both stdout and file)")
+	pflag.Bool("disable-code-watch", false, "Disable automatic file watching for code projects")
 	// Version flag is handled here so config package can manage early-exit flags
 	// Also register a version flag with the standard library's flag set so
 	// packages that use the stdlib flag package (or call flag.Parse)

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/madeindigio/remembrances-mcp/internal/config"
+	"github.com/madeindigio/remembrances-mcp/internal/indexer"
 	"github.com/madeindigio/remembrances-mcp/internal/kb"
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
 	"github.com/madeindigio/remembrances-mcp/internal/transport"
@@ -135,7 +136,7 @@ Choose the right tool for your data:
 	}
 
 	// Initialize storage
-	var storageInstance storage.StorageWithStats
+	var storageInstance storage.FullStorage
 	if cfg.SurrealDBURL != "" {
 		// Use remote SurrealDB
 		storageConfig := &storage.ConnectionConfig{
@@ -280,6 +281,33 @@ Choose the right tool for your data:
 		os.Exit(1)
 	}
 
+	// Create code indexing components
+	indexerConfig := indexer.DefaultIndexerConfig()
+	jmConfig := indexer.DefaultJobManagerConfig()
+	jobManager := toolManager.CreateJobManager(storageInstance, indexerConfig, jmConfig)
+	watcherManager := toolManager.CreateWatcherManager(storageInstance, jobManager)
+
+	// Create and register code indexing tools
+	codeToolManager := mcp_tools.NewCodeToolManager(toolManager, jobManager, watcherManager)
+	regFunc := func(name string, tool *protocol.Tool, handler func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error {
+		if tool == nil {
+			return fmt.Errorf("tool %s creation returned nil", name)
+		}
+		srv.RegisterTool(tool, handler)
+		return nil
+	}
+	if err := codeToolManager.RegisterCodeTools(regFunc); err != nil {
+		slog.Error("failed to register code indexing tools", "error", err)
+		os.Exit(1)
+	}
+
+	// Auto-activate code watcher if a project has WatcherEnabled=true
+	if !cfg.DisableCodeWatch {
+		if err := watcherManager.AutoActivateOnStartup(ctx); err != nil {
+			slog.Warn("failed to auto-activate code watcher", "error", err)
+		}
+	}
+
 	// Knowledge base watcher
 	var kbWatcher *kb.Watcher
 	if cfg.KnowledgeBase != "" {
@@ -325,6 +353,11 @@ Choose the right tool for your data:
 		// Stop knowledge base watcher
 		if kbWatcher != nil {
 			kbWatcher.Stop()
+		}
+
+		// Stop code watcher manager
+		if watcherManager != nil {
+			watcherManager.Stop()
 		}
 
 		_ = srv.Shutdown(shutdownCtx)
