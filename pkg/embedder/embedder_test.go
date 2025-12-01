@@ -16,14 +16,14 @@ type MockConfig struct {
 	ggufGPULayers int
 }
 
-func (m *MockConfig) GetOllamaURL() string       { return m.ollamaURL }
-func (m *MockConfig) GetOllamaModel() string     { return m.ollamaModel }
-func (m *MockConfig) GetOpenAIKey() string       { return m.openaiKey }
-func (m *MockConfig) GetOpenAIURL() string       { return m.openaiURL }
-func (m *MockConfig) GetOpenAIModel() string     { return m.openaiModel }
-func (m *MockConfig) GetGGUFModelPath() string   { return m.ggufModelPath }
-func (m *MockConfig) GetGGUFThreads() int        { return m.ggufThreads }
-func (m *MockConfig) GetGGUFGPULayers() int      { return m.ggufGPULayers }
+func (m *MockConfig) GetOllamaURL() string     { return m.ollamaURL }
+func (m *MockConfig) GetOllamaModel() string   { return m.ollamaModel }
+func (m *MockConfig) GetOpenAIKey() string     { return m.openaiKey }
+func (m *MockConfig) GetOpenAIURL() string     { return m.openaiURL }
+func (m *MockConfig) GetOpenAIModel() string   { return m.openaiModel }
+func (m *MockConfig) GetGGUFModelPath() string { return m.ggufModelPath }
+func (m *MockConfig) GetGGUFThreads() int      { return m.ggufThreads }
+func (m *MockConfig) GetGGUFGPULayers() int    { return m.ggufGPULayers }
 
 func TestNewEmbedderFromConfig(t *testing.T) {
 	tests := []struct {

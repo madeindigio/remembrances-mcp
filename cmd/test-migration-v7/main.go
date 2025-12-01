@@ -45,7 +45,7 @@ func main() {
 	if len(result) > 0 {
 		version := result[0]["version"]
 		fmt.Printf("✓ Current schema version: %v\n\n", version)
-		
+
 		if v, ok := version.(float64); ok && v >= 7 {
 			fmt.Println("✅ Migration V7 has been applied successfully!")
 		} else {

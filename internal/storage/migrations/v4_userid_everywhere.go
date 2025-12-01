@@ -2,8 +2,8 @@ package migrations
 
 import (
 	"context"
-	"log"
 	"github.com/surrealdb/surrealdb.go"
+	"log"
 )
 
 type MigrationV4 struct {
@@ -15,7 +15,9 @@ func NewMigrationV4(db *surrealdb.DB) *MigrationV4 {
 }
 
 func (m *MigrationV4) Version() int { return 4 }
-func (m *MigrationV4) Description() string { return "Add optional user_id to all major tables and ensure dynamic metadata" }
+func (m *MigrationV4) Description() string {
+	return "Add optional user_id to all major tables and ensure dynamic metadata"
+}
 
 func (m *MigrationV4) Apply(ctx context.Context, db *surrealdb.DB) error {
 	log.Println("Applying migration v4: Add user_id to all tables and dynamic metadata")

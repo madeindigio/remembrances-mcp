@@ -1,4 +1,7 @@
 // Package mcp_tools provides code indexing MCP tools.
+// This file contains the CodeToolManager, tool definitions, and core handlers.
+// Input types are in code_indexing_tools_types.go
+// Watch tools are in code_watch_tools.go
 package mcp_tools
 
 import (
@@ -12,62 +15,7 @@ import (
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
 )
 
-// ====== Input Types ======
-
-// CodeIndexProjectInput represents input for code_index_project tool
-type CodeIndexProjectInput struct {
-	ProjectPath string   `json:"project_path" description:"Absolute path to the project directory to index."`
-	ProjectName string   `json:"project_name,omitempty" description:"Human-readable name for the project. If omitted, uses the directory name."`
-	Languages   []string `json:"languages,omitempty" description:"List of programming languages to index (e.g., ['go', 'typescript']). If omitted, indexes all supported languages."`
-}
-
-// CodeIndexStatusInput represents input for code_index_status tool
-type CodeIndexStatusInput struct {
-	JobID string `json:"job_id,omitempty" description:"The job ID returned by code_index_project. If omitted, lists all active jobs."`
-}
-
-// CodeListProjectsInput represents input for code_list_projects tool (no inputs required)
-type CodeListProjectsInput struct{}
-
-// CodeDeleteProjectInput represents input for code_delete_project tool
-type CodeDeleteProjectInput struct {
-	ProjectID string `json:"project_id" description:"The project ID to delete."`
-}
-
-// CodeReindexFileInput represents input for code_reindex_file tool
-type CodeReindexFileInput struct {
-	ProjectID string `json:"project_id" description:"The project ID containing the file."`
-	FilePath  string `json:"file_path" description:"Relative path to the file within the project."`
-}
-
-// CodeGetProjectStatsInput represents input for code_get_project_stats tool
-type CodeGetProjectStatsInput struct {
-	ProjectID string `json:"project_id" description:"The project ID to get statistics for."`
-}
-
-// CodeGetFileSymbolsInput represents input for code_get_file_symbols tool
-type CodeGetFileSymbolsInput struct {
-	ProjectID    string `json:"project_id" description:"The project ID containing the file."`
-	RelativePath string `json:"relative_path" description:"Relative path to the file within the project."`
-	IncludeBody  bool   `json:"include_body,omitempty" description:"Whether to include the source code body of each symbol."`
-}
-
-// CodeActivateProjectWatchInput represents input for code_activate_project_watch tool
-type CodeActivateProjectWatchInput struct {
-	ProjectID string `json:"project_id" description:"The project ID to start monitoring for file changes."`
-}
-
-// CodeDeactivateProjectWatchInput represents input for code_deactivate_project_watch tool
-type CodeDeactivateProjectWatchInput struct {
-	ProjectID string `json:"project_id,omitempty" description:"The project ID to stop monitoring. If omitted, deactivates the current watched project."`
-}
-
-// CodeGetWatchStatusInput represents input for code_get_watch_status tool
-type CodeGetWatchStatusInput struct {
-	ProjectID string `json:"project_id,omitempty" description:"Query status for a specific project. If omitted, returns status for all projects."`
-}
-
-// ====== Tool Manager Extension ======
+// ====== Tool Manager ======
 
 // CodeToolManager extends ToolManager with code indexing capabilities
 type CodeToolManager struct {
@@ -448,20 +396,6 @@ func (ctm *CodeToolManager) codeGetProjectStatsHandler(ctx context.Context, req 
 	}, false), nil
 }
 
-// SymbolNode represents a symbol in the hierarchical tree
-type SymbolNode struct {
-	ID         string        `json:"id"`
-	Name       string        `json:"name"`
-	NamePath   string        `json:"name_path"`
-	SymbolType string        `json:"symbol_type"`
-	StartLine  int           `json:"start_line"`
-	EndLine    int           `json:"end_line"`
-	Signature  *string       `json:"signature,omitempty"`
-	DocString  *string       `json:"doc_string,omitempty"`
-	SourceCode *string       `json:"source_code,omitempty"`
-	Children   []*SymbolNode `json:"children,omitempty"`
-}
-
 func (ctm *CodeToolManager) codeGetFileSymbolsHandler(ctx context.Context, req *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
 	var input CodeGetFileSymbolsInput
 	if err := json.Unmarshal(req.RawArguments, &input); err != nil {
@@ -529,178 +463,6 @@ func (ctm *CodeToolManager) codeGetFileSymbolsHandler(ctx context.Context, req *
 		"relative_path": input.RelativePath,
 		"symbols":       roots,
 		"total_count":   len(symbols),
-	}
-
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
-	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
-	}, false), nil
-}
-
-// ====== Watch Tool Definitions ======
-
-func (ctm *CodeToolManager) codeActivateProjectWatchTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_activate_project_watch",
-		`Activate file monitoring for a code project. Automatically deactivates any previously watched project. Only ONE project can be monitored at a time.`,
-		CodeActivateProjectWatchInput{})
-	if err != nil {
-		slog.Error("failed to create tool", "name", "code_activate_project_watch", "err", err)
-		return nil
-	}
-	return tool
-}
-
-func (ctm *CodeToolManager) codeDeactivateProjectWatchTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_deactivate_project_watch",
-		`Stop file monitoring for a code project. If no project_id is specified, deactivates the currently watched project.`,
-		CodeDeactivateProjectWatchInput{})
-	if err != nil {
-		slog.Error("failed to create tool", "name", "code_deactivate_project_watch", "err", err)
-		return nil
-	}
-	return tool
-}
-
-func (ctm *CodeToolManager) codeGetWatchStatusTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_get_watch_status",
-		`Get the current file monitoring status. Returns the currently watched project and watcher_enabled status for all or a specific project.`,
-		CodeGetWatchStatusInput{})
-	if err != nil {
-		slog.Error("failed to create tool", "name", "code_get_watch_status", "err", err)
-		return nil
-	}
-	return tool
-}
-
-// ====== Watch Tool Handlers ======
-
-func (ctm *CodeToolManager) codeActivateProjectWatchHandler(ctx context.Context, req *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
-	var input CodeActivateProjectWatchInput
-	if err := json.Unmarshal(req.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("invalid input: %w", err)
-	}
-
-	if input.ProjectID == "" {
-		return nil, fmt.Errorf("project_id is required")
-	}
-
-	if ctm.watcherManager == nil {
-		return nil, fmt.Errorf("watcher manager not available")
-	}
-
-	outdatedCount, previousProject, err := ctm.watcherManager.ActivateProject(ctx, input.ProjectID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to activate project watch: %w", err)
-	}
-
-	result := map[string]interface{}{
-		"success":              true,
-		"message":              fmt.Sprintf("File monitoring activated for project %s", input.ProjectID),
-		"project_id":           input.ProjectID,
-		"outdated_files_found": outdatedCount,
-	}
-
-	if previousProject != "" {
-		result["previous_project"] = previousProject
-		result["message"] = fmt.Sprintf("File monitoring activated for project %s (deactivated %s)", input.ProjectID, previousProject)
-	}
-
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
-	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
-	}, false), nil
-}
-
-func (ctm *CodeToolManager) codeDeactivateProjectWatchHandler(ctx context.Context, req *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
-	var input CodeDeactivateProjectWatchInput
-	if err := json.Unmarshal(req.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("invalid input: %w", err)
-	}
-
-	if ctm.watcherManager == nil {
-		return nil, fmt.Errorf("watcher manager not available")
-	}
-
-	deactivatedProject, err := ctm.watcherManager.DeactivateProject(ctx, input.ProjectID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to deactivate project watch: %w", err)
-	}
-
-	var result map[string]interface{}
-	if deactivatedProject == "" {
-		result = map[string]interface{}{
-			"success": true,
-			"message": "No project was being watched",
-		}
-	} else {
-		result = map[string]interface{}{
-			"success":             true,
-			"message":             fmt.Sprintf("File monitoring deactivated for project %s", deactivatedProject),
-			"deactivated_project": deactivatedProject,
-		}
-	}
-
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
-	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
-	}, false), nil
-}
-
-func (ctm *CodeToolManager) codeGetWatchStatusHandler(ctx context.Context, req *protocol.CallToolRequest) (*protocol.CallToolResult, error) {
-	var input CodeGetWatchStatusInput
-	if err := json.Unmarshal(req.RawArguments, &input); err != nil {
-		return nil, fmt.Errorf("invalid input: %w", err)
-	}
-
-	if ctm.watcherManager == nil {
-		return nil, fmt.Errorf("watcher manager not available")
-	}
-
-	var result map[string]interface{}
-
-	if input.ProjectID != "" {
-		// Get status for specific project
-		status, err := ctm.watcherManager.GetProjectWatchStatus(ctx, input.ProjectID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get watch status: %w", err)
-		}
-
-		result = map[string]interface{}{
-			"active_project": ctm.watcherManager.GetActiveProject(),
-			"project_status": status,
-		}
-	} else {
-		// Get status for all projects
-		statuses, err := ctm.watcherManager.GetAllWatchStatus(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get watch status: %w", err)
-		}
-
-		result = map[string]interface{}{
-			"active_project": ctm.watcherManager.GetActiveProject(),
-			"projects":       statuses,
-		}
 	}
 
 	resultJSON, err := json.Marshal(result)

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-
 )
 
 // CreateEntity creates a new entity in the graph

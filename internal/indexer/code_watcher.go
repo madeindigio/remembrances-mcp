@@ -218,22 +218,22 @@ func (w *CodeWatcher) isCodeFile(path string) bool {
 func (w *CodeWatcher) isExcludedDir(name string) bool {
 	// Common directories to exclude
 	excludedDirs := map[string]bool{
-		".git":         true,
-		".svn":         true,
-		".hg":          true,
-		"node_modules": true,
-		"vendor":       true,
-		".idea":        true,
-		".vscode":      true,
-		"__pycache__":  true,
-		".tox":         true,
-		".mypy_cache":  true,
+		".git":          true,
+		".svn":          true,
+		".hg":           true,
+		"node_modules":  true,
+		"vendor":        true,
+		".idea":         true,
+		".vscode":       true,
+		"__pycache__":   true,
+		".tox":          true,
+		".mypy_cache":   true,
 		".pytest_cache": true,
-		"dist":         true,
-		"build":        true,
-		"target":       true, // Rust/Maven
-		"bin":          true,
-		"obj":          true, // .NET
+		"dist":          true,
+		"build":         true,
+		"target":        true, // Rust/Maven
+		"bin":           true,
+		"obj":           true, // .NET
 	}
 	return excludedDirs[name]
 }

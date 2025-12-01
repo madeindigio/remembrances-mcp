@@ -1,4 +1,9 @@
 // Package indexer provides the main indexing service for code projects.
+// This file contains the core Indexer struct and main indexing operations.
+// Types are in indexer_types.go
+// Embedding generation is in indexer_embeddings.go
+// Progress tracking is in indexer_progress.go
+// Chunking is in indexer_chunks.go
 package indexer
 
 import (
@@ -16,35 +21,6 @@ import (
 	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
 )
 
-// IndexerConfig holds configuration for the indexer
-type IndexerConfig struct {
-	// Number of concurrent file processors
-	Concurrency int
-
-	// Batch size for embedding generation
-	EmbeddingBatchSize int
-
-	// Whether to store source code in symbols
-	StoreSourceCode bool
-
-	// Maximum source code length to store
-	MaxSourceCodeLength int
-
-	// Scanner configuration
-	Scanner *FileScanner
-}
-
-// DefaultIndexerConfig returns sensible defaults
-func DefaultIndexerConfig() IndexerConfig {
-	return IndexerConfig{
-		Concurrency:         4,
-		EmbeddingBatchSize:  10,
-		StoreSourceCode:     true,
-		MaxSourceCodeLength: 10000,
-		Scanner:             NewFileScanner(),
-	}
-}
-
 // Indexer is the main code indexing service
 type Indexer struct {
 	config   IndexerConfig
@@ -56,19 +32,6 @@ type Indexer struct {
 	// For progress tracking
 	mu       sync.RWMutex
 	progress map[string]*IndexingProgress
-}
-
-// IndexingProgress tracks the progress of an indexing operation
-type IndexingProgress struct {
-	ProjectID    string
-	Status       treesitter.IndexingStatus
-	FilesTotal   int
-	FilesIndexed int
-	SymbolsFound int
-	CurrentFile  string
-	StartedAt    time.Time
-	UpdatedAt    time.Time
-	Error        *string
 }
 
 // NewIndexer creates a new indexer instance
@@ -300,76 +263,6 @@ func (idx *Indexer) processFile(ctx context.Context, projectID, rootPath string,
 	return nil
 }
 
-// generateEmbeddings generates embeddings for symbols in batches
-func (idx *Indexer) generateEmbeddings(ctx context.Context, symbols []*treesitter.CodeSymbol) error {
-	if len(symbols) == 0 {
-		return nil
-	}
-
-	// Prepare texts for embedding
-	texts := make([]string, 0, len(symbols))
-	symbolIdxs := make([]int, 0, len(symbols))
-
-	for i, sym := range symbols {
-		text := idx.prepareSymbolText(sym)
-		if text != "" {
-			texts = append(texts, text)
-			symbolIdxs = append(symbolIdxs, i)
-		}
-	}
-
-	if len(texts) == 0 {
-		return nil
-	}
-
-	// Generate embeddings in batches
-	for i := 0; i < len(texts); i += idx.config.EmbeddingBatchSize {
-		end := i + idx.config.EmbeddingBatchSize
-		if end > len(texts) {
-			end = len(texts)
-		}
-
-		batch := texts[i:end]
-		embeddings, err := idx.embedder.EmbedDocuments(ctx, batch)
-		if err != nil {
-			return fmt.Errorf("failed to generate embeddings: %w", err)
-		}
-
-		// Assign embeddings to symbols
-		for j, embedding := range embeddings {
-			symIdx := symbolIdxs[i+j]
-			symbols[symIdx].Embedding = embedding
-		}
-	}
-
-	return nil
-}
-
-// prepareSymbolText creates the text representation for embedding
-func (idx *Indexer) prepareSymbolText(sym *treesitter.CodeSymbol) string {
-	var parts []string
-
-	// Add symbol type and name
-	parts = append(parts, fmt.Sprintf("%s %s", sym.SymbolType, sym.Name))
-
-	// Add signature if available
-	if sym.Signature != "" {
-		parts = append(parts, sym.Signature)
-	}
-
-	// Add docstring if available
-	if sym.DocString != "" {
-		parts = append(parts, sym.DocString)
-	}
-
-	// Add source code if available and not too long
-	if sym.SourceCode != "" && len(sym.SourceCode) < 500 {
-		parts = append(parts, sym.SourceCode)
-	}
-
-	return strings.Join(parts, "\n")
-}
-
 // generateProjectID creates a stable project ID from the path
 func (idx *Indexer) generateProjectID(absPath string) string {
 	// Use sanitized path as ID
@@ -384,76 +277,6 @@ func (idx *Indexer) generateProjectID(absPath string) string {
 	}
 
 	return id
-}
-
-// Progress tracking methods
-
-func (idx *Indexer) initProgress(projectID string) {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-
-	idx.progress[projectID] = &IndexingProgress{
-		ProjectID: projectID,
-		Status:    treesitter.IndexingStatusInProgress,
-		StartedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-}
-
-func (idx *Indexer) updateProgress(projectID string, fn func(p *IndexingProgress)) {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-
-	if p, ok := idx.progress[projectID]; ok {
-		fn(p)
-		p.UpdatedAt = time.Now()
-	}
-}
-
-func (idx *Indexer) setError(projectID string, err error) {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-
-	if p, ok := idx.progress[projectID]; ok {
-		errStr := err.Error()
-		p.Error = &errStr
-		p.Status = treesitter.IndexingStatusFailed
-		p.UpdatedAt = time.Now()
-	}
-}
-
-// GetProgress returns the current progress for a project
-func (idx *Indexer) GetProgress(projectID string) *IndexingProgress {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-
-	if p, ok := idx.progress[projectID]; ok {
-		// Return a copy
-		copy := *p
-		return &copy
-	}
-	return nil
-}
-
-// GetAllProgress returns progress for all active indexing operations
-func (idx *Indexer) GetAllProgress() map[string]*IndexingProgress {
-	idx.mu.RLock()
-	defer idx.mu.RUnlock()
-
-	result := make(map[string]*IndexingProgress)
-	for k, v := range idx.progress {
-		copy := *v
-		result[k] = &copy
-	}
-	return result
-}
-
-// ClearProgress removes progress tracking for completed projects
-func (idx *Indexer) ClearProgress(projectID string) {
-	idx.mu.Lock()
-	defer idx.mu.Unlock()
-
-	delete(idx.progress, projectID)
 }
 
 // ReindexFile re-indexes a single file
@@ -502,137 +325,4 @@ func (idx *Indexer) ReindexFile(ctx context.Context, projectID, filePath string)
 // DeleteProject removes a project and all its data
 func (idx *Indexer) DeleteProject(ctx context.Context, projectID string) error {
 	return idx.storage.DeleteCodeProject(ctx, projectID)
-}
-
-// ===== LARGE SYMBOL CHUNKING =====
-
-const (
-	// ChunkThreshold is the minimum source code length to trigger chunking
-	ChunkThreshold = 1500
-
-	// ChunkSize is the maximum size of each chunk
-	ChunkSize = 1500
-
-	// ChunkOverlap is the overlap between consecutive chunks
-	ChunkOverlap = 200
-)
-
-// processLargeSymbols creates chunks for symbols larger than the threshold
-func (idx *Indexer) processLargeSymbols(ctx context.Context, projectID, filePath string, symbols []*treesitter.CodeSymbol) error {
-	// First, delete existing chunks for this file
-	if err := idx.storage.DeleteChunksByFile(ctx, projectID, filePath); err != nil {
-		log.Printf("Warning: failed to delete existing chunks: %v", err)
-	}
-
-	var allChunks []*storage.CodeChunk
-
-	for _, sym := range symbols {
-		if sym.SourceCode == "" || len(sym.SourceCode) < ChunkThreshold {
-			continue
-		}
-
-		// Create chunks for this symbol
-		chunks := idx.createSymbolChunks(sym, projectID, filePath)
-		allChunks = append(allChunks, chunks...)
-	}
-
-	if len(allChunks) == 0 {
-		return nil
-	}
-
-	// Generate embeddings for chunks
-	if err := idx.generateChunkEmbeddings(ctx, allChunks); err != nil {
-		return fmt.Errorf("failed to generate chunk embeddings: %w", err)
-	}
-
-	// Save chunks
-	if err := idx.storage.SaveCodeChunks(ctx, allChunks); err != nil {
-		return fmt.Errorf("failed to save chunks: %w", err)
-	}
-
-	log.Printf("Created %d chunks for large symbols in %s", len(allChunks), filePath)
-	return nil
-}
-
-// createSymbolChunks splits a large symbol into chunks
-func (idx *Indexer) createSymbolChunks(sym *treesitter.CodeSymbol, projectID, filePath string) []*storage.CodeChunk {
-	sourceCode := sym.SourceCode
-	chunks := embedder.ChunkText(sourceCode, ChunkSize, ChunkOverlap)
-
-	if len(chunks) <= 1 {
-		return nil // No need to chunk if only one piece
-	}
-
-	// Generate a unique symbol ID (project:file:name_path)
-	symbolID := fmt.Sprintf("%s:%s:%s", projectID, filePath, sym.NamePath)
-
-	result := make([]*storage.CodeChunk, len(chunks))
-	offset := 0
-
-	for i, chunkContent := range chunks {
-		// Find actual offset in source
-		startOffset := strings.Index(sourceCode[offset:], chunkContent)
-		if startOffset == -1 {
-			startOffset = offset
-		} else {
-			startOffset += offset
-		}
-		endOffset := startOffset + len(chunkContent)
-
-		result[i] = &storage.CodeChunk{
-			SymbolID:    symbolID,
-			ProjectID:   projectID,
-			FilePath:    filePath,
-			ChunkIndex:  i,
-			ChunkCount:  len(chunks),
-			Content:     chunkContent,
-			StartOffset: startOffset,
-			EndOffset:   endOffset,
-			SymbolName:  sym.Name,
-			SymbolType:  string(sym.SymbolType),
-			Language:    string(sym.Language),
-		}
-
-		offset = endOffset - ChunkOverlap
-		if offset < 0 {
-			offset = 0
-		}
-	}
-
-	return result
-}
-
-// generateChunkEmbeddings generates embeddings for chunks in batches
-func (idx *Indexer) generateChunkEmbeddings(ctx context.Context, chunks []*storage.CodeChunk) error {
-	if len(chunks) == 0 {
-		return nil
-	}
-
-	// Prepare texts with context
-	texts := make([]string, len(chunks))
-	for i, chunk := range chunks {
-		// Add symbol context to the chunk
-		texts[i] = fmt.Sprintf("%s %s:\n%s", chunk.SymbolType, chunk.SymbolName, chunk.Content)
-	}
-
-	// Generate embeddings in batches
-	for i := 0; i < len(texts); i += idx.config.EmbeddingBatchSize {
-		end := i + idx.config.EmbeddingBatchSize
-		if end > len(texts) {
-			end = len(texts)
-		}
-
-		batch := texts[i:end]
-		embeddings, err := idx.embedder.EmbedDocuments(ctx, batch)
-		if err != nil {
-			return fmt.Errorf("failed to generate embeddings: %w", err)
-		}
-
-		// Assign embeddings to chunks
-		for j, embedding := range embeddings {
-			chunks[i+j].Embedding = embedding
-		}
-	}
-
-	return nil
 }

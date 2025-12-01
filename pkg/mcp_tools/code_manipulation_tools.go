@@ -1,4 +1,6 @@
 // Package mcp_tools provides code manipulation MCP tools.
+// This file contains the CodeManipulationToolManager and handlers.
+// Input types are in code_manipulation_tools_types.go
 package mcp_tools
 
 import (
@@ -14,43 +16,6 @@ import (
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
 	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
 )
-
-// ====== Input Types ======
-
-// CodeReplaceSymbolInput represents input for code_replace_symbol tool
-type CodeReplaceSymbolInput struct {
-	ProjectID    string `json:"project_id" description:"The project ID containing the symbol."`
-	SymbolID     string `json:"symbol_id,omitempty" description:"ID of the symbol to replace (from previous search)."`
-	NamePath     string `json:"name_path,omitempty" description:"Name path of symbol (alternative to symbol_id)."`
-	RelativePath string `json:"relative_path,omitempty" description:"File path (required if using name_path)."`
-	NewBody      string `json:"new_body" description:"New source code for the symbol, including its definition/signature."`
-}
-
-// CodeInsertAfterSymbolInput represents input for code_insert_after_symbol tool
-type CodeInsertAfterSymbolInput struct {
-	ProjectID    string `json:"project_id" description:"The project ID containing the symbol."`
-	SymbolID     string `json:"symbol_id,omitempty" description:"ID of the symbol after which to insert."`
-	NamePath     string `json:"name_path,omitempty" description:"Name path of symbol (alternative to symbol_id)."`
-	RelativePath string `json:"relative_path,omitempty" description:"File path (required if using name_path)."`
-	Body         string `json:"body" description:"Code to insert after the symbol."`
-}
-
-// CodeInsertBeforeSymbolInput represents input for code_insert_before_symbol tool
-type CodeInsertBeforeSymbolInput struct {
-	ProjectID    string `json:"project_id" description:"The project ID containing the symbol."`
-	SymbolID     string `json:"symbol_id,omitempty" description:"ID of the symbol before which to insert."`
-	NamePath     string `json:"name_path,omitempty" description:"Name path of symbol (alternative to symbol_id)."`
-	RelativePath string `json:"relative_path,omitempty" description:"File path (required if using name_path)."`
-	Body         string `json:"body" description:"Code to insert before the symbol."`
-}
-
-// CodeDeleteSymbolInput represents input for code_delete_symbol tool
-type CodeDeleteSymbolInput struct {
-	ProjectID    string `json:"project_id" description:"The project ID containing the symbol."`
-	SymbolID     string `json:"symbol_id,omitempty" description:"ID of the symbol to delete."`
-	NamePath     string `json:"name_path,omitempty" description:"Name path of symbol (alternative to symbol_id)."`
-	RelativePath string `json:"relative_path,omitempty" description:"File path (required if using name_path)."`
-}
 
 // ====== CodeManipulationToolManager ======
 
@@ -137,7 +102,7 @@ func (cmtm *CodeManipulationToolManager) codeDeleteSymbolTool() *protocol.Tool {
 	return tool
 }
 
-// ====== Helper Functions ======
+// ====== Helper Types and Functions ======
 
 // symbolInfo holds resolved symbol information
 type symbolInfo struct {
@@ -418,9 +383,9 @@ func (cmtm *CodeManipulationToolManager) codeInsertAfterSymbolHandler(ctx contex
 	}
 
 	result := map[string]interface{}{
-		"message":         "Code inserted after symbol successfully",
-		"file_path":       sym.FilePath,
-		"reference_symbol": sym.NamePath,
+		"message":             "Code inserted after symbol successfully",
+		"file_path":           sym.FilePath,
+		"reference_symbol":    sym.NamePath,
 		"inserted_after_line": sym.EndLine,
 	}
 
@@ -480,9 +445,9 @@ func (cmtm *CodeManipulationToolManager) codeInsertBeforeSymbolHandler(ctx conte
 	}
 
 	result := map[string]interface{}{
-		"message":          "Code inserted before symbol successfully",
-		"file_path":        sym.FilePath,
-		"reference_symbol": sym.NamePath,
+		"message":              "Code inserted before symbol successfully",
+		"file_path":            sym.FilePath,
+		"reference_symbol":     sym.NamePath,
 		"inserted_before_line": sym.StartLine,
 	}
 

@@ -34,19 +34,19 @@ type JobManager struct {
 
 // Job represents an indexing job
 type Job struct {
-	ID          string
-	ProjectID   string
-	ProjectPath string
-	ProjectName string
-	Status      treesitter.IndexingStatus
-	Progress    float64
-	FilesTotal  int
+	ID           string
+	ProjectID    string
+	ProjectPath  string
+	ProjectName  string
+	Status       treesitter.IndexingStatus
+	Progress     float64
+	FilesTotal   int
 	FilesIndexed int
 	SymbolsFound int
-	StartedAt   time.Time
-	CompletedAt *time.Time
-	Error       *string
-	CreatedAt   time.Time
+	StartedAt    time.Time
+	CompletedAt  *time.Time
+	Error        *string
+	CreatedAt    time.Time
 }
 
 // JobManagerConfig holds configuration for the job manager

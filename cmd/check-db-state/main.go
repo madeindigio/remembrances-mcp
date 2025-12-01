@@ -39,11 +39,11 @@ func main() {
 		if doc == nil {
 			continue
 		}
-		
+
 		fmt.Printf("Document #%d:\n", i+1)
 		fmt.Printf("  file_path: %s\n", doc.FilePath)
 		fmt.Printf("  ID: %s\n", doc.ID)
-		
+
 		// Check metadata
 		fmt.Printf("  metadata type: %T\n", doc.Metadata)
 		fmt.Printf("  metadata keys: %d\n", len(doc.Metadata))
