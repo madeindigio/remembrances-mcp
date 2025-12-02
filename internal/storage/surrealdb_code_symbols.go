@@ -13,27 +13,24 @@ import (
 
 // SaveCodeSymbol saves or updates a code symbol
 func (s *SurrealDBStorage) SaveCodeSymbol(ctx context.Context, symbol *treesitter.CodeSymbol) error {
-	query := `
-		UPSERT code_symbols SET
-			project_id = $project_id,
-			file_path = $file_path,
-			language = $language,
-			symbol_type = $symbol_type,
-			name = $name,
-			name_path = $name_path,
-			start_line = $start_line,
-			end_line = $end_line,
-			start_byte = $start_byte,
-			end_byte = $end_byte,
-			source_code = $source_code,
-			signature = $signature,
-			doc_string = $doc_string,
-			embedding = $embedding,
-			parent_id = $parent_id,
-			metadata = $metadata,
-			updated_at = time::now()
-		WHERE project_id = $project_id AND name_path = $name_path;
-	`
+	// Check if symbol exists (same pattern as SaveDocument)
+	existsQuery := "SELECT id FROM code_symbols WHERE project_id = $project_id AND name_path = $name_path"
+	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{
+		"project_id": symbol.ProjectID,
+		"name_path":  symbol.NamePath,
+	})
+
+	isNewSymbol := true
+	if err != nil {
+		return fmt.Errorf("failed to check existing symbol: %w", err)
+	}
+
+	if existsResult != nil && len(*existsResult) > 0 {
+		queryResult := (*existsResult)[0]
+		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+			isNewSymbol = false
+		}
+	}
 
 	var sourceCode, signature, docString *string
 	if symbol.SourceCode != "" {
@@ -70,8 +67,57 @@ func (s *SurrealDBStorage) SaveCodeSymbol(ctx context.Context, symbol *treesitte
 		"metadata":    symbol.Metadata,
 	}
 
-	_, err := s.query(ctx, query, params)
-	return err
+	if isNewSymbol {
+		query := `
+			CREATE code_symbols CONTENT {
+				project_id: $project_id,
+				file_path: $file_path,
+				language: $language,
+				symbol_type: $symbol_type,
+				name: $name,
+				name_path: $name_path,
+				start_line: $start_line,
+				end_line: $end_line,
+				start_byte: $start_byte,
+				end_byte: $end_byte,
+				source_code: $source_code,
+				signature: $signature,
+				doc_string: $doc_string,
+				embedding: $embedding,
+				parent_id: $parent_id,
+				metadata: $metadata,
+				updated_at: time::now()
+			}
+		`
+		if _, err := s.query(ctx, query, params); err != nil {
+			return fmt.Errorf("failed to create symbol: %w", err)
+		}
+	} else {
+		query := `
+			UPDATE code_symbols SET
+				file_path = $file_path,
+				language = $language,
+				symbol_type = $symbol_type,
+				name = $name,
+				start_line = $start_line,
+				end_line = $end_line,
+				start_byte = $start_byte,
+				end_byte = $end_byte,
+				source_code = $source_code,
+				signature = $signature,
+				doc_string = $doc_string,
+				embedding = $embedding,
+				parent_id = $parent_id,
+				metadata = $metadata,
+				updated_at = time::now()
+			WHERE project_id = $project_id AND name_path = $name_path
+		`
+		if _, err := s.query(ctx, query, params); err != nil {
+			return fmt.Errorf("failed to update symbol: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // SaveCodeSymbols saves multiple symbols in batch

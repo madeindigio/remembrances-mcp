@@ -188,6 +188,8 @@ func (s *FileScanner) Scan(rootPath string) (*ScanResult, error) {
 
 		// Check file extension for supported language
 		ext := filepath.Ext(path)
+		// Remove leading dot from extension (filepath.Ext returns ".go", we need "go")
+		ext = strings.TrimPrefix(ext, ".")
 		lang, ok := treesitter.GetLanguageByExtension(ext)
 		if !ok {
 			result.SkippedFiles++

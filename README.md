@@ -347,6 +347,19 @@ go build -o dist/remembrances-mcp ./cmd/remembrances-mcp
 cp dist/remembrances-mcp ./remembrances-mcp || (rm -f ./remembrances-mcp && cp dist/remembrances-mcp ./remembrances-mcp)
 ```
 
+### build-and-copy
+
+Build the project and copy the binary to path
+
+interactive: true
+
+```bash
+make BUILD_TYPE=cuda build
+rm -f ~/bin/remembrances-mcp
+cp ./build/remembrances-mcp ~/bin/
+rm *.log
+```
+
 ### starts-surrealdb
 
 Starts the SurrealDB instance

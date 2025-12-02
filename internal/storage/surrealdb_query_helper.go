@@ -32,6 +32,12 @@ func (s *SurrealDBStorage) Query(ctx context.Context, query string, params map[s
 		}
 	}
 
+	// Normalize SurrealDB datetime objects to ISO strings
+	normalized := normalizeSurrealDBDatetimes(allResults)
+	if normalizedMaps, ok := normalized.([]map[string]interface{}); ok {
+		return normalizedMaps, nil
+	}
+
 	return allResults, nil
 }
 

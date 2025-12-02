@@ -13,17 +13,23 @@ import (
 
 // CreateCodeProject creates or updates a code project
 func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *treesitter.CodeProject) error {
-	query := `
-		UPSERT code_projects SET
-			project_id = $project_id,
-			name = $name,
-			root_path = $root_path,
-			language_stats = $language_stats,
-			last_indexed_at = $last_indexed_at,
-			indexing_status = $indexing_status,
-			updated_at = time::now()
-		WHERE project_id = $project_id;
-	`
+	// First check if project exists (same pattern as SaveDocument)
+	existsQuery := "SELECT id FROM code_projects WHERE project_id = $project_id"
+	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{
+		"project_id": project.ProjectID,
+	})
+
+	isNewProject := true
+	if err != nil {
+		return fmt.Errorf("failed to check existing project: %w", err)
+	}
+
+	if existsResult != nil && len(*existsResult) > 0 {
+		queryResult := (*existsResult)[0]
+		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+			isNewProject = false
+		}
+	}
 
 	params := map[string]interface{}{
 		"project_id":      project.ProjectID,
@@ -34,8 +40,42 @@ func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *trees
 		"indexing_status": string(project.IndexingStatus),
 	}
 
-	_, err := s.query(ctx, query, params)
-	return err
+	if isNewProject {
+		// Create new project
+		query := `
+			CREATE code_projects CONTENT {
+				project_id: $project_id,
+				name: $name,
+				root_path: $root_path,
+				language_stats: $language_stats,
+				last_indexed_at: $last_indexed_at,
+				indexing_status: $indexing_status,
+				watcher_enabled: false,
+				created_at: time::now(),
+				updated_at: time::now()
+			}
+		`
+		if _, err := s.query(ctx, query, params); err != nil {
+			return fmt.Errorf("failed to create project: %w", err)
+		}
+	} else {
+		// Update existing project
+		query := `
+			UPDATE code_projects SET
+				name = $name,
+				root_path = $root_path,
+				language_stats = $language_stats,
+				last_indexed_at = $last_indexed_at,
+				indexing_status = $indexing_status,
+				updated_at = time::now()
+			WHERE project_id = $project_id
+		`
+		if _, err := s.query(ctx, query, params); err != nil {
+			return fmt.Errorf("failed to update project: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // GetCodeProject retrieves a code project by ID

@@ -25,8 +25,11 @@ func decodeResult[T any](result *[]QueryResult) ([]T, error) {
 		return nil, nil
 	}
 
+	// Pre-process results to convert SurrealDB datetime objects to ISO strings
+	processedResult := normalizeSurrealDBDatetimes(queryResult.Result)
+
 	// Marshal to JSON and unmarshal to typed slice
-	jsonData, err := json.Marshal(queryResult.Result)
+	jsonData, err := json.Marshal(processedResult)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal result: %w", err)
 	}
@@ -37,6 +40,57 @@ func decodeResult[T any](result *[]QueryResult) ([]T, error) {
 	}
 
 	return items, nil
+}
+
+// normalizeSurrealDBDatetimes recursively converts SurrealDB datetime objects
+// from {"Datetime": "2025-..."} format to plain ISO8601 strings for proper JSON unmarshaling.
+// Also normalizes SurrealDB record IDs from {"id": "xxx", "tb": "table"} to "table:xxx".
+func normalizeSurrealDBDatetimes(data interface{}) interface{} {
+	switch v := data.(type) {
+	case []interface{}:
+		result := make([]interface{}, len(v))
+		for i, item := range v {
+			result[i] = normalizeSurrealDBDatetimes(item)
+		}
+		return result
+	case []map[string]interface{}:
+		// Handle slices of maps (common return type from Query)
+		result := make([]map[string]interface{}, len(v))
+		for i, item := range v {
+			normalized := normalizeSurrealDBDatetimes(item)
+			if m, ok := normalized.(map[string]interface{}); ok {
+				result[i] = m
+			} else {
+				result[i] = item
+			}
+		}
+		return result
+	case map[string]interface{}:
+		// Check if this is a SurrealDB Datetime object
+		if datetime, ok := v["Datetime"]; ok && len(v) == 1 {
+			if dtStr, ok := datetime.(string); ok {
+				return dtStr
+			}
+		}
+		// Check if this is a SurrealDB Record ID object {"id": "xxx", "tb": "table"}
+		if id, hasID := v["id"]; hasID {
+			if tb, hasTB := v["tb"]; hasTB && len(v) == 2 {
+				if idStr, ok := id.(string); ok {
+					if tbStr, ok := tb.(string); ok {
+						return tbStr + ":" + idStr
+					}
+				}
+			}
+		}
+		// Recursively process all map values
+		result := make(map[string]interface{}, len(v))
+		for key, val := range v {
+			result[key] = normalizeSurrealDBDatetimes(val)
+		}
+		return result
+	default:
+		return data
+	}
 }
 
 // convertToInt safely converts various numeric types to int
@@ -149,12 +203,27 @@ func getTime(m map[string]interface{}, key string) time.Time {
 		if t, err := time.Parse(time.RFC3339, v); err == nil {
 			return t
 		}
+		if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
+			return t
+		}
 	case time.Time:
 		return v
 	case float64:
 		return time.Unix(int64(v), 0)
 	case int64:
 		return time.Unix(v, 0)
+	case map[string]interface{}:
+		// Handle SurrealDB Datetime object format: {"Datetime": "2025-..."}
+		if datetime, ok := v["Datetime"]; ok {
+			if dtStr, ok := datetime.(string); ok {
+				if t, err := time.Parse(time.RFC3339, dtStr); err == nil {
+					return t
+				}
+				if t, err := time.Parse(time.RFC3339Nano, dtStr); err == nil {
+					return t
+				}
+			}
+		}
 	default:
 		rv := reflect.ValueOf(val)
 		if rv.Kind() == reflect.Struct {

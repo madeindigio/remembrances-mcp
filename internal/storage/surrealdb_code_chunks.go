@@ -11,22 +11,24 @@ import (
 
 // SaveCodeChunk saves a single code chunk
 func (s *SurrealDBStorage) SaveCodeChunk(ctx context.Context, chunk *CodeChunk) error {
-	query := `
-		UPSERT code_chunks SET
-			symbol_id = $symbol_id,
-			project_id = $project_id,
-			file_path = $file_path,
-			chunk_index = $chunk_index,
-			chunk_count = $chunk_count,
-			content = $content,
-			start_offset = $start_offset,
-			end_offset = $end_offset,
-			embedding = $embedding,
-			symbol_name = $symbol_name,
-			symbol_type = $symbol_type,
-			language = $language
-		WHERE symbol_id = $symbol_id AND chunk_index = $chunk_index;
-	`
+	// Check if chunk exists (same pattern as SaveDocument)
+	existsQuery := "SELECT id FROM code_chunks WHERE symbol_id = $symbol_id AND chunk_index = $chunk_index"
+	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{
+		"symbol_id":   chunk.SymbolID,
+		"chunk_index": chunk.ChunkIndex,
+	})
+
+	isNewChunk := true
+	if err != nil {
+		return fmt.Errorf("failed to check existing chunk: %w", err)
+	}
+
+	if existsResult != nil && len(*existsResult) > 0 {
+		queryResult := (*existsResult)[0]
+		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+			isNewChunk = false
+		}
+	}
 
 	params := map[string]interface{}{
 		"symbol_id":    chunk.SymbolID,
@@ -43,8 +45,47 @@ func (s *SurrealDBStorage) SaveCodeChunk(ctx context.Context, chunk *CodeChunk) 
 		"language":     chunk.Language,
 	}
 
-	_, err := s.query(ctx, query, params)
-	return err
+	if isNewChunk {
+		query := `
+			CREATE code_chunks CONTENT {
+				symbol_id: $symbol_id,
+				project_id: $project_id,
+				file_path: $file_path,
+				chunk_index: $chunk_index,
+				chunk_count: $chunk_count,
+				content: $content,
+				start_offset: $start_offset,
+				end_offset: $end_offset,
+				embedding: $embedding,
+				symbol_name: $symbol_name,
+				symbol_type: $symbol_type,
+				language: $language
+			}
+		`
+		if _, err := s.query(ctx, query, params); err != nil {
+			return fmt.Errorf("failed to create chunk: %w", err)
+		}
+	} else {
+		query := `
+			UPDATE code_chunks SET
+				project_id = $project_id,
+				file_path = $file_path,
+				chunk_count = $chunk_count,
+				content = $content,
+				start_offset = $start_offset,
+				end_offset = $end_offset,
+				embedding = $embedding,
+				symbol_name = $symbol_name,
+				symbol_type = $symbol_type,
+				language = $language
+			WHERE symbol_id = $symbol_id AND chunk_index = $chunk_index
+		`
+		if _, err := s.query(ctx, query, params); err != nil {
+			return fmt.Errorf("failed to update chunk: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // SaveCodeChunks saves multiple code chunks in a batch

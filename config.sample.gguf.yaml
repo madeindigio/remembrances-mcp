@@ -91,7 +91,7 @@ gguf-gpu-layers: 32
 #code-gguf-model-path: "/www/Remembrances/coderankembed.Q4_K_M.gguf"
 
 # Path to GGUF model for code embeddings (default: uses default gguf-model-path)
-#code-gguf-model-path: ""
+code-gguf-model-path: "/www/Remembrances/coderankembed.Q4_K_M.gguf"
 
 # Ollama model for code embeddings (default: uses default ollama-model)
 #code-ollama-model: ""

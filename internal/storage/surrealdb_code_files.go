@@ -13,16 +13,24 @@ import (
 
 // SaveCodeFile saves or updates a code file
 func (s *SurrealDBStorage) SaveCodeFile(ctx context.Context, file *treesitter.CodeFile) error {
-	query := `
-		UPSERT code_files SET
-			project_id = $project_id,
-			file_path = $file_path,
-			language = $language,
-			file_hash = $file_hash,
-			symbols_count = $symbols_count,
-			indexed_at = time::now()
-		WHERE project_id = $project_id AND file_path = $file_path;
-	`
+	// Check if file exists (same pattern as SaveDocument)
+	existsQuery := "SELECT id FROM code_files WHERE project_id = $project_id AND file_path = $file_path"
+	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{
+		"project_id": file.ProjectID,
+		"file_path":  file.FilePath,
+	})
+
+	isNewFile := true
+	if err != nil {
+		return fmt.Errorf("failed to check existing file: %w", err)
+	}
+
+	if existsResult != nil && len(*existsResult) > 0 {
+		queryResult := (*existsResult)[0]
+		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+			isNewFile = false
+		}
+	}
 
 	params := map[string]interface{}{
 		"project_id":    file.ProjectID,
@@ -32,8 +40,35 @@ func (s *SurrealDBStorage) SaveCodeFile(ctx context.Context, file *treesitter.Co
 		"symbols_count": file.SymbolsCount,
 	}
 
-	_, err := s.query(ctx, query, params)
-	return err
+	if isNewFile {
+		query := `
+			CREATE code_files CONTENT {
+				project_id: $project_id,
+				file_path: $file_path,
+				language: $language,
+				file_hash: $file_hash,
+				symbols_count: $symbols_count,
+				indexed_at: time::now()
+			}
+		`
+		if _, err := s.query(ctx, query, params); err != nil {
+			return fmt.Errorf("failed to create file: %w", err)
+		}
+	} else {
+		query := `
+			UPDATE code_files SET
+				language = $language,
+				file_hash = $file_hash,
+				symbols_count = $symbols_count,
+				indexed_at = time::now()
+			WHERE project_id = $project_id AND file_path = $file_path
+		`
+		if _, err := s.query(ctx, query, params); err != nil {
+			return fmt.Errorf("failed to update file: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // GetCodeFile retrieves a code file by project and path

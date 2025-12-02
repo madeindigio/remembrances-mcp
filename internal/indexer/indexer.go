@@ -137,13 +137,15 @@ func (idx *Indexer) processFiles(ctx context.Context, projectID, rootPath string
 	errChan := make(chan error, idx.config.Concurrency)
 	var wg sync.WaitGroup
 
-	// Start workers
+	// Start workers - each with its own parser to avoid tree-sitter thread-safety issues
 	for i := 0; i < idx.config.Concurrency; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			// Create a parser per worker - tree-sitter parsers are NOT thread-safe
+			workerParser := treesitter.NewParser()
 			for file := range fileChan {
-				if err := idx.processFile(ctx, projectID, rootPath, file); err != nil {
+				if err := idx.processFileWithParser(ctx, projectID, rootPath, file, workerParser); err != nil {
 					log.Printf("Error processing file %s: %v", file.RelPath, err)
 					errChan <- err
 				}
@@ -179,8 +181,13 @@ func (idx *Indexer) processFiles(ctx context.Context, projectID, rootPath string
 	return nil
 }
 
-// processFile processes a single source file
+// processFile processes a single source file using the shared parser (for single-threaded use)
 func (idx *Indexer) processFile(ctx context.Context, projectID, rootPath string, file ScannedFile) error {
+	return idx.processFileWithParser(ctx, projectID, rootPath, file, idx.parser)
+}
+
+// processFileWithParser processes a single source file with a specific parser instance
+func (idx *Indexer) processFileWithParser(ctx context.Context, projectID, rootPath string, file ScannedFile, parser *treesitter.Parser) error {
 	idx.updateProgress(projectID, func(p *IndexingProgress) {
 		p.CurrentFile = file.RelPath
 	})
@@ -205,8 +212,8 @@ func (idx *Indexer) processFile(ctx context.Context, projectID, rootPath string,
 		return fmt.Errorf("failed to read file: %w", err)
 	}
 
-	// Parse file
-	tree, lang, err := idx.parser.ParseFile(ctx, file.AbsPath)
+	// Parse file using the provided parser instance
+	tree, lang, err := parser.ParseFile(ctx, file.AbsPath)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
