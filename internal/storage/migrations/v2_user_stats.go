@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -31,7 +31,7 @@ func (m *MigrationV2) Description() string {
 
 // Apply executes the migration
 func (m *MigrationV2) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v2: Adding user_stats table")
+	slog.Info("Applying migration v2: Adding user_stats table")
 
 	elements := []SchemaElement{
 		// Add user_stats table

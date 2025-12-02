@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -21,7 +21,7 @@ func (m *MigrationV5) Description() string {
 }
 
 func (m *MigrationV5) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v5: setting metadata and property fields to FLEXIBLE objects")
+	slog.Info("Applying migration v5: setting metadata and property fields to FLEXIBLE objects")
 	elements := []SchemaElement{
 		{Type: "field", Statement: `DEFINE FIELD metadata ON knowledge_base TYPE object FLEXIBLE;`, OnTable: "knowledge_base"},
 		{Type: "field", Statement: `DEFINE FIELD metadata ON vector_memories TYPE object FLEXIBLE;`, OnTable: "vector_memories"},

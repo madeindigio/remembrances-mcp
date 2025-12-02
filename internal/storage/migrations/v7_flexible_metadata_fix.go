@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -22,7 +22,7 @@ func (m *V7FlexibleMetadataFix) Description() string {
 }
 
 func (m *V7FlexibleMetadataFix) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v7: fixing metadata/properties fields to be FLEXIBLE")
+	slog.Info("Applying migration v7: fixing metadata/properties fields to be FLEXIBLE")
 
 	// Note: We need to REMOVE the old field definitions first, then redefine them
 	// This ensures the FLEXIBLE keyword is properly applied
@@ -35,11 +35,11 @@ func (m *V7FlexibleMetadataFix) Apply(ctx context.Context, db *surrealdb.DB) err
 	}
 
 	for _, stmt := range removeStatements {
-		log.Printf("Removing old field definition: %s", stmt)
+		slog.Debug("Removing old field definition: %s", stmt)
 		_, err := surrealdb.Query[[]map[string]interface{}](db, stmt, nil)
 		if err != nil {
 			// Log warning but continue - field might not exist
-			log.Printf("Warning: Could not remove field (may not exist): %v", err)
+			slog.Debug("Warning: Could not remove field (may not exist): %v", err)
 		}
 	}
 
@@ -50,6 +50,6 @@ func (m *V7FlexibleMetadataFix) Apply(ctx context.Context, db *surrealdb.DB) err
 		{Type: "field", Statement: `DEFINE FIELD properties ON entities FLEXIBLE TYPE object DEFAULT {};`, OnTable: "entities"},
 	}
 
-	log.Println("Redefining fields with FLEXIBLE keyword")
+	slog.Info("Redefining fields with FLEXIBLE keyword")
 	return NewMigrationBase(db).ApplyElements(ctx, elements)
 }

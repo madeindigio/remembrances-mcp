@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 )
 
@@ -36,7 +36,7 @@ func (s *SurrealDBStorage) CreateEntity(ctx context.Context, entityType, name st
 		queryResult := (*result)[0]
 		if queryResult.Status == "OK" {
 			if err := s.updateUserStat(ctx, "global", "entity_count", 1); err != nil {
-				log.Printf("Warning: failed to update entity_count stat: %v", err)
+				slog.Warn("failed to update entity_count stat", "error", err)
 			}
 			return nil
 		}
@@ -127,7 +127,7 @@ func (s *SurrealDBStorage) CreateRelationship(ctx context.Context, fromEntity, t
 		queryResult := (*result)[0]
 		if queryResult.Status == "OK" {
 			if err := s.updateUserStat(ctx, "global", "relationship_count", 1); err != nil {
-				log.Printf("Warning: failed to update relationship_count stat: %v", err)
+				slog.Warn("failed to update relationship_count stat", "error", err)
 			}
 			return nil
 		}
@@ -197,7 +197,7 @@ func (s *SurrealDBStorage) DeleteEntity(ctx context.Context, entityID string) er
 	}
 
 	if err := s.updateUserStat(ctx, "global", "entity_count", -1); err != nil {
-		log.Printf("Warning: failed to update entity_count stat: %v", err)
+		slog.Warn("failed to update entity_count stat", "error", err)
 	}
 
 	return nil

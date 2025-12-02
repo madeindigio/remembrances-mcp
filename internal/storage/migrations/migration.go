@@ -3,7 +3,7 @@ package migrations
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	"github.com/surrealdb/surrealdb.go"
@@ -218,22 +218,22 @@ func (m *MigrationBase) ApplyElements(ctx context.Context, elements []SchemaElem
 	for i, element := range elements {
 		exists, err := m.checkSchemaElementExists(ctx, element)
 		if err != nil {
-			log.Printf("Warning: Could not check existence of %s, attempting to create anyway: %v", element.Type, err)
+			slog.Warn("Could not check existence of element, attempting to create anyway", "type", element.Type, "error", err)
 		}
 
 		if !exists {
-			log.Printf("Creating %s: %s", element.Type, element.Statement)
+			slog.Debug("Creating schema element", "type", element.Type, "statement", element.Statement)
 			_, err := surrealdb.Query[[]map[string]interface{}](m.db, element.Statement, nil)
 			if err != nil {
 				// Log warning but don't fail for "already exists" type errors
 				if m.IsAlreadyExistsError(err) {
-					log.Printf("Warning: %s already exists, continuing...", element.Type)
+					slog.Debug("Schema element already exists, continuing", "type", element.Type)
 				} else {
 					return fmt.Errorf("failed to execute migration statement %d '%s': %w", i+1, element.Statement, err)
 				}
 			}
 		} else {
-			log.Printf("Skipping existing %s", element.Type)
+			slog.Debug("Skipping existing schema element", "type", element.Type)
 		}
 	}
 

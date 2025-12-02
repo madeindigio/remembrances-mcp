@@ -6,7 +6,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strconv"
 	"strings"
 
@@ -18,7 +18,7 @@ const defaultMtreeDim = 768
 
 // InitializeSchema creates all required tables and indexes
 func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
-	log.Println("Initializing SurrealDB schema...")
+	slog.Info("Initializing SurrealDB schema...")
 
 	// First, ensure schema_version table exists to track migrations
 	err := s.ensureSchemaVersionTable(ctx)
@@ -35,16 +35,16 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	// Run migrations if needed
 	targetVersion := 12 // v12: watcher_enabled field for code_projects
 	if currentVersion < targetVersion {
-		log.Printf("Running schema migrations from version %d to %d", currentVersion, targetVersion)
+		slog.Info("Running schema migrations", "from", currentVersion, "to", targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
 		if err != nil {
 			return fmt.Errorf("failed to run migrations: %w", err)
 		}
 	} else {
-		log.Printf("Schema is up to date (version %d)", currentVersion)
+		slog.Info("Schema is up to date", "version", currentVersion)
 	}
 
-	log.Println("Schema initialization completed")
+	slog.Info("Schema initialization completed")
 	return nil
 }
 
@@ -54,7 +54,7 @@ func (s *SurrealDBStorage) ensureSchemaVersionTable(ctx context.Context) error {
 	exists, err := s.checkTableExists(ctx, "schema_version")
 	if err != nil {
 		// If we can't check, try to create anyway
-		log.Printf("Warning: Could not check if schema_version table exists: %v", err)
+		slog.Warn("Could not check if schema_version table exists", "error", err)
 	}
 
 	if !exists {
@@ -68,14 +68,14 @@ func (s *SurrealDBStorage) ensureSchemaVersionTable(ctx context.Context) error {
 		if err != nil {
 			// Check if it's an "already exists" error
 			if s.isAlreadyExistsError(err) {
-				log.Println("Schema version table already exists, continuing...")
+				slog.Debug("Schema version table already exists, continuing...")
 				return nil
 			}
 			return fmt.Errorf("failed to create schema_version table: %w", err)
 		}
-		log.Println("Created schema_version table")
+		slog.Info("Created schema_version table")
 	} else {
-		log.Println("Schema version table already exists")
+		slog.Debug("Schema version table already exists")
 	}
 
 	return nil
@@ -138,7 +138,7 @@ func (s *SurrealDBStorage) setSchemaVersion(ctx context.Context, version int) er
 func (s *SurrealDBStorage) runMigrations(ctx context.Context, currentVersion, targetVersion int) error {
 	for version := currentVersion; version < targetVersion; version++ {
 		nextVersion := version + 1
-		log.Printf("Applying migration to version %d", nextVersion)
+		slog.Info("Applying migration", "version", nextVersion)
 
 		err := s.applyMigration(ctx, nextVersion)
 		if err != nil {

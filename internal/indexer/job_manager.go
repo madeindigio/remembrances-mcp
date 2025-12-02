@@ -4,7 +4,7 @@ package indexer
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -106,7 +106,7 @@ func (jm *JobManager) SubmitJob(projectPath, projectName string) (*Job, error) {
 	// Send to queue
 	select {
 	case jm.jobQueue <- job:
-		log.Printf("Job %s queued for project: %s", jobID, projectPath)
+		slog.Info("Job queued for project", "job_id", jobID, "project", projectPath)
 		return job, nil
 	default:
 		jm.mu.Lock()
@@ -147,7 +147,7 @@ func (jm *JobManager) processJob(job *Job) {
 		cancel()
 	}()
 
-	log.Printf("Starting job %s for project: %s", job.ID, job.ProjectPath)
+	slog.Info("Starting job for project", "job_id", job.ID, "project", job.ProjectPath)
 
 	// Run indexing
 	projectID, err := jm.indexer.IndexProject(ctx, job.ProjectPath, job.ProjectName)
@@ -163,7 +163,7 @@ func (jm *JobManager) processJob(job *Job) {
 		errStr := err.Error()
 		job.Error = &errStr
 		job.Status = treesitter.IndexingStatusFailed
-		log.Printf("Job %s failed: %v", job.ID, err)
+		slog.Error("Job failed", "job_id", job.ID, "error", err)
 	} else {
 		job.Status = treesitter.IndexingStatusCompleted
 
@@ -174,7 +174,7 @@ func (jm *JobManager) processJob(job *Job) {
 			job.SymbolsFound = progress.SymbolsFound
 		}
 
-		log.Printf("Job %s completed: %d files, %d symbols", job.ID, job.FilesIndexed, job.SymbolsFound)
+		slog.Info("Job completed", "job_id", job.ID, "files", job.FilesIndexed, "symbols", job.SymbolsFound)
 	}
 
 	// Persist job to database
@@ -192,7 +192,7 @@ func (jm *JobManager) processJob(job *Job) {
 	}
 
 	if _, err := jm.storage.CreateIndexingJob(ctx, indexingJob); err != nil {
-		log.Printf("Warning: failed to persist job record: %v", err)
+		slog.Warn("failed to persist job record", "error", err)
 	}
 }
 
@@ -303,7 +303,7 @@ func (jm *JobManager) CancelJob(jobID string) error {
 		job.CompletedAt = &now
 	}
 
-	log.Printf("Job %s cancelled", jobID)
+	slog.Info("Job cancelled", "job_id", jobID)
 	return nil
 }
 
@@ -320,7 +320,7 @@ func (jm *JobManager) Stop() {
 
 	// Wait for workers to finish
 	jm.wg.Wait()
-	log.Println("Job manager stopped")
+	slog.Info("Job manager stopped")
 }
 
 // CleanupOldJobs removes completed jobs older than the specified duration

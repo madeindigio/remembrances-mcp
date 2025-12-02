@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 )
 
 // SaveDocument saves a knowledge base document
@@ -77,7 +77,7 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
 
 	if isNewDocument {
 		if err := s.updateUserStat(ctx, "global", "document_count", 1); err != nil {
-			log.Printf("Warning: failed to update document_count stat: %v", err)
+			slog.Warn("failed to update document_count stat", "error", err)
 		}
 	}
 
@@ -120,7 +120,7 @@ func (s *SurrealDBStorage) DeleteDocument(ctx context.Context, filePath string) 
 	}
 
 	if err := s.updateUserStat(ctx, "global", "document_count", -1); err != nil {
-		log.Printf("Warning: failed to update document_count stat: %v", err)
+		slog.Warn("failed to update document_count stat", "error", err)
 	}
 
 	return nil
@@ -302,7 +302,7 @@ func (s *SurrealDBStorage) SaveDocumentChunks(ctx context.Context, filePath stri
 
 	// Update document count stat (count by source_file, not by chunks)
 	if err := s.updateUserStat(ctx, "global", "document_count", 1); err != nil {
-		log.Printf("Warning: failed to update document_count stat: %v", err)
+		slog.Warn("failed to update document_count stat", "error", err)
 	}
 
 	return nil

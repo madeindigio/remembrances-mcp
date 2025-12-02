@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -102,7 +102,7 @@ func (s *SurrealDBStorage) SaveEvent(ctx context.Context, userID, subject, conte
 				createdAt = time.Now()
 			}
 
-			log.Printf("Event saved: id=%s, subject=%s, user_id=%s", eventID, subject, userID)
+			slog.Debug("Event saved", "id", eventID, "subject", subject, "user_id", userID)
 			return eventID, createdAt, nil
 		}
 	}

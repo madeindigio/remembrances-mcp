@@ -3,7 +3,7 @@ package migrations
 import (
 	"context"
 	"github.com/surrealdb/surrealdb.go"
-	"log"
+	"log/slog"
 )
 
 type MigrationV4 struct {
@@ -20,7 +20,7 @@ func (m *MigrationV4) Description() string {
 }
 
 func (m *MigrationV4) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v4: Add user_id to all tables and dynamic metadata")
+	slog.Info("Applying migration v4: Add user_id to all tables and dynamic metadata")
 	elements := []SchemaElement{
 		// Add user_id to entities
 		{Type: "field", Statement: `DEFINE FIELD user_id ON entities TYPE option<string>;`, OnTable: "entities"},

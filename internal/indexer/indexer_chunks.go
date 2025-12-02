@@ -4,7 +4,7 @@ package indexer
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
@@ -27,7 +27,7 @@ const (
 func (idx *Indexer) processLargeSymbols(ctx context.Context, projectID, filePath string, symbols []*treesitter.CodeSymbol) error {
 	// First, delete existing chunks for this file
 	if err := idx.storage.DeleteChunksByFile(ctx, projectID, filePath); err != nil {
-		log.Printf("Warning: failed to delete existing chunks: %v", err)
+		slog.Warn("failed to delete existing chunks", "error", err)
 	}
 
 	var allChunks []*storage.CodeChunk
@@ -56,7 +56,7 @@ func (idx *Indexer) processLargeSymbols(ctx context.Context, projectID, filePath
 		return fmt.Errorf("failed to save chunks: %w", err)
 	}
 
-	log.Printf("Created %d chunks for large symbols in %s", len(allChunks), filePath)
+	slog.Info("Created chunks for large symbols", "count", len(allChunks), "file", filePath)
 	return nil
 }
 

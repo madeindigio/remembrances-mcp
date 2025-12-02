@@ -5,7 +5,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
 )
@@ -15,7 +15,7 @@ import (
 // CreateCodeProject creates or updates a code project
 // Uses INSERT ON DUPLICATE KEY UPDATE for atomic upsert operation
 func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *treesitter.CodeProject) error {
-	log.Printf("[DEBUG] CreateCodeProject called: project_id=%s, status=%s", project.ProjectID, project.IndexingStatus)
+	slog.Debug("CreateCodeProject called", "project_id", project.ProjectID, "status", project.IndexingStatus)
 
 	// Convert last_indexed_at to ISO string format for SurrealDB compatibility
 	var lastIndexedAtStr interface{}
@@ -44,7 +44,7 @@ func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *trees
 
 	// Use INSERT with ON DUPLICATE KEY UPDATE for atomic upsert
 	// This handles the unique index on project_id properly
-	log.Printf("[DEBUG] INSERT ON DUPLICATE KEY UPDATE: project_id=%s, status=%s", project.ProjectID, project.IndexingStatus)
+	slog.Debug("INSERT ON DUPLICATE KEY UPDATE", "project_id", project.ProjectID, "status", project.IndexingStatus)
 	query := `
 		INSERT INTO code_projects {
 			project_id: $project_id,
@@ -75,15 +75,14 @@ func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *trees
 
 	result, err := s.query(ctx, query, params)
 	if err != nil {
-		log.Printf("[ERROR] INSERT ON DUPLICATE KEY UPDATE failed: %v", err)
+		slog.Error("INSERT ON DUPLICATE KEY UPDATE failed", "error", err)
 		return fmt.Errorf("failed to upsert project: %w", err)
 	}
 
 	// Log result for debugging
 	if result != nil && len(*result) > 0 {
 		queryResult := (*result)[0]
-		log.Printf("[DEBUG] INSERT result: status=%s, result_count=%d", 
-			queryResult.Status, len(queryResult.Result))
+		slog.Debug("INSERT result", "status", queryResult.Status, "result_count", len(queryResult.Result))
 	}
 
 	return nil

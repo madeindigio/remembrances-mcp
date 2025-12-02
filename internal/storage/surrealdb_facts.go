@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 )
 
 // SaveFact saves a key-value fact for a user
@@ -45,7 +45,7 @@ func (s *SurrealDBStorage) SaveFact(ctx context.Context, userID, key string, val
 
 	// Recalculate statistics after mutation
 	if err := s.updateUserStat(ctx, userID, "key_value_count", 1); err != nil {
-		log.Printf("Warning: failed to update key_value_count stat for user %s: %v", userID, err)
+		slog.Warn("failed to update key_value_count stat", "user_id", userID, "error", err)
 	}
 
 	return nil
@@ -135,7 +135,7 @@ func (s *SurrealDBStorage) DeleteFact(ctx context.Context, userID, key string) e
 	}
 
 	if err := s.updateUserStat(ctx, userID, "key_value_count", -1); err != nil {
-		log.Printf("Warning: failed to update key_value_count stat for user %s: %v", userID, err)
+		slog.Warn("failed to update key_value_count stat", "user_id", userID, "error", err)
 	}
 
 	return nil

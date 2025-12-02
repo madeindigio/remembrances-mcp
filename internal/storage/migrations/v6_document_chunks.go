@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -22,7 +22,7 @@ func (m *V6DocumentChunks) Description() string {
 }
 
 func (m *V6DocumentChunks) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v6: adding document chunking support")
+	slog.Info("Applying migration v6: adding document chunking support")
 	elements := []SchemaElement{
 		{Type: "field", Statement: `DEFINE FIELD chunk_index ON knowledge_base TYPE int DEFAULT 0;`, OnTable: "knowledge_base"},
 		{Type: "field", Statement: `DEFINE FIELD chunk_count ON knowledge_base TYPE int DEFAULT 0;`, OnTable: "knowledge_base"},

@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -31,7 +31,7 @@ func (m *V9CodeIndexing) Description() string {
 
 // Apply executes the migration
 func (m *V9CodeIndexing) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v9: Creating code indexing schema")
+	slog.Info("Applying migration v9: Creating code indexing schema")
 
 	elements := []SchemaElement{
 		// ===========================================

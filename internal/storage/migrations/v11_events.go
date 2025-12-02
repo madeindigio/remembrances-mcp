@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -31,7 +31,7 @@ func (m *V11Events) Description() string {
 
 // Apply executes the migration
 func (m *V11Events) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v11: Creating events table")
+	slog.Info("Applying migration v11: Creating events table")
 
 	elements := []SchemaElement{
 		// ===========================================

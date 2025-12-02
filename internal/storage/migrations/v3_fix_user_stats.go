@@ -3,7 +3,7 @@ package migrations
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -32,7 +32,7 @@ func (m *MigrationV3) Description() string {
 
 // Apply executes the migration
 func (m *MigrationV3) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v3: Fixing user_stats field definitions")
+	slog.Info("Applying migration v3: Fixing user_stats field definitions")
 
 	// Remove the problematic fields that have VALUE constraints
 	dropStatements := []string{
@@ -45,11 +45,11 @@ func (m *MigrationV3) Apply(ctx context.Context, db *surrealdb.DB) error {
 
 	// Execute drop statements
 	for _, stmt := range dropStatements {
-		log.Printf("Executing: %s", stmt)
+		slog.Debug("Executing: %s", stmt)
 		_, err := surrealdb.Query[[]map[string]interface{}](db, stmt, nil)
 		if err != nil {
 			// Log warning but continue - field might not exist
-			log.Printf("Warning: Failed to drop field: %v", err)
+			slog.Debug("Warning: Failed to drop field: %v", err)
 		}
 	}
 
@@ -64,7 +64,7 @@ func (m *MigrationV3) Apply(ctx context.Context, db *surrealdb.DB) error {
 
 	// Apply the corrected field definitions
 	for i, element := range elements {
-		log.Printf("Creating corrected field: %s", element.Statement)
+		slog.Debug("Creating corrected field: %s", element.Statement)
 		_, err := surrealdb.Query[[]map[string]interface{}](db, element.Statement, nil)
 		if err != nil {
 			// This should succeed since we removed the old definitions
@@ -72,6 +72,6 @@ func (m *MigrationV3) Apply(ctx context.Context, db *surrealdb.DB) error {
 		}
 	}
 
-	log.Println("Migration v3 completed successfully")
+	slog.Info("Migration v3 completed successfully")
 	return nil
 }

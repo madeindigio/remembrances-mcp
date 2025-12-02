@@ -3,7 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"reflect"
 	"strconv"
 	"strings"
@@ -197,7 +197,7 @@ func getTime(m map[string]interface{}, key string) time.Time {
 		return time.Time{}
 	}
 
-	log.Printf("getTime: key=%s type=%s value=%#v", key, reflect.TypeOf(val), val)
+	slog.Debug("getTime", "key", key, "type", reflect.TypeOf(val), "value", val)
 	switch v := val.(type) {
 	case string:
 		if t, err := time.Parse(time.RFC3339, v); err == nil {

@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -20,7 +20,7 @@ func (s *SurrealDBStorage) HybridSearch(ctx context.Context, userID string, quer
 	for _, entity := range entities {
 		results, err := s.TraverseGraph(ctx, entity, "", 2)
 		if err != nil {
-			log.Printf("Warning: failed to traverse graph for entity %s: %v", entity, err)
+			slog.Warn("failed to traverse graph for entity", "entity", entity, "error", err)
 			continue
 		}
 		graphResults = append(graphResults, results...)
@@ -28,7 +28,7 @@ func (s *SurrealDBStorage) HybridSearch(ctx context.Context, userID string, quer
 
 	facts, err := s.ListFacts(ctx, userID)
 	if err != nil {
-		log.Printf("Warning: failed to get facts: %v", err)
+		slog.Warn("failed to get facts", "error", err)
 		facts = make(map[string]interface{})
 	}
 

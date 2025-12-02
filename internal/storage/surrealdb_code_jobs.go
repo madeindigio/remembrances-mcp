@@ -5,7 +5,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
 )
@@ -149,6 +149,6 @@ func (s *SurrealDBStorage) GetCodeProjectStats(ctx context.Context, projectID st
 		}
 	}
 
-	log.Printf("Project %s stats: %+v", projectID, stats)
+	slog.Debug("Project stats retrieved", "project_id", projectID, "stats", stats)
 	return stats, nil
 }

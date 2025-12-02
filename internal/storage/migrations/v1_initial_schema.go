@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -31,7 +31,7 @@ func (m *MigrationV1) Description() string {
 
 // Apply executes the migration
 func (m *MigrationV1) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v1: Creating initial schema")
+	slog.Info("Applying migration v1: Creating initial schema")
 
 	elements := []SchemaElement{
 		// Tables first

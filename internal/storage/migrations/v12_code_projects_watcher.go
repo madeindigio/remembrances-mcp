@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -31,7 +31,7 @@ func (m *V12CodeProjectsWatcher) Description() string {
 
 // Apply executes the migration
 func (m *V12CodeProjectsWatcher) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v12: Adding watcher_enabled field to code_projects")
+	slog.Info("Applying migration v12: Adding watcher_enabled field to code_projects")
 
 	elements := []SchemaElement{
 		// Add watcher_enabled field to code_projects

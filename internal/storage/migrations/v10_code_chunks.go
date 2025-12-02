@@ -2,7 +2,7 @@ package migrations
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -31,7 +31,7 @@ func (m *V10CodeChunks) Description() string {
 
 // Apply executes the migration
 func (m *V10CodeChunks) Apply(ctx context.Context, db *surrealdb.DB) error {
-	log.Println("Applying migration v10: Creating code_chunks table")
+	slog.Info("Applying migration v10: Creating code_chunks table")
 
 	elements := []SchemaElement{
 		// ===========================================

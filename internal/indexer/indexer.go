@@ -9,7 +9,7 @@ package indexer
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -93,14 +93,14 @@ func (idx *Indexer) IndexProject(ctx context.Context, projectPath string, projec
 	}
 
 	// Scan for files
-	log.Printf("Scanning project: %s", absPath)
+	slog.Info("Scanning project", "path", absPath)
 	scanResult, err := idx.config.Scanner.Scan(absPath)
 	if err != nil {
 		idx.setError(projectID, err)
 		return projectID, fmt.Errorf("failed to scan project: %w", err)
 	}
 
-	log.Printf("Found %d files to index", scanResult.TotalFiles)
+	slog.Info("Found files to index", "count", scanResult.TotalFiles)
 	idx.updateProgress(projectID, func(p *IndexingProgress) {
 		p.FilesTotal = scanResult.TotalFiles
 	})
@@ -119,20 +119,20 @@ func (idx *Indexer) IndexProject(ctx context.Context, projectPath string, projec
 	project.LanguageStats = scanResult.GetLanguageStats()
 
 	if err := idx.storage.CreateCodeProject(ctx, project); err != nil {
-		log.Printf("Warning: failed to update project stats: %v", err)
+		slog.Warn("failed to update project stats", "error", err)
 	}
 
 	// Explicitly update the project status to completed
 	// This ensures the status is updated even if CreateCodeProject's upsert doesn't update it
 	if err := idx.storage.UpdateProjectStatus(ctx, projectID, treesitter.IndexingStatusCompleted); err != nil {
-		log.Printf("Warning: failed to update project status to completed: %v", err)
+		slog.Warn("failed to update project status to completed", "error", err)
 	}
 
 	idx.updateProgress(projectID, func(p *IndexingProgress) {
 		p.Status = treesitter.IndexingStatusCompleted
 	})
 
-	log.Printf("Indexing completed for project: %s", projectName)
+	slog.Info("Indexing completed for project", "name", projectName)
 	return projectID, nil
 }
 
@@ -152,7 +152,7 @@ func (idx *Indexer) processFiles(ctx context.Context, projectID, rootPath string
 			workerParser := treesitter.NewParser()
 			for file := range fileChan {
 				if err := idx.processFileWithParser(ctx, projectID, rootPath, file, workerParser); err != nil {
-					log.Printf("Error processing file %s: %v", file.RelPath, err)
+					slog.Error("Error processing file", "file", file.RelPath, "error", err)
 					errChan <- err
 				}
 			}
@@ -233,13 +233,13 @@ func (idx *Indexer) processFileWithParser(ctx context.Context, projectID, rootPa
 	// Delete old symbols for this file
 	if existingFile != nil {
 		if err := idx.storage.DeleteSymbolsByFile(ctx, projectID, file.RelPath); err != nil {
-			log.Printf("Warning: failed to delete old symbols: %v", err)
+			slog.Warn("failed to delete old symbols", "error", err)
 		}
 	}
 
 	// Generate embeddings for symbols
 	if err := idx.generateEmbeddings(ctx, symbols); err != nil {
-		log.Printf("Warning: failed to generate embeddings for %s: %v", file.RelPath, err)
+		slog.Warn("failed to generate embeddings", "file", file.RelPath, "error", err)
 		// Continue without embeddings
 	}
 
@@ -264,7 +264,7 @@ func (idx *Indexer) processFileWithParser(ctx context.Context, projectID, rootPa
 
 	// Process large symbols for chunking
 	if err := idx.processLargeSymbols(ctx, projectID, file.RelPath, symbols); err != nil {
-		log.Printf("Warning: failed to process large symbols for chunking: %v", err)
+		slog.Warn("failed to process large symbols for chunking", "error", err)
 		// Continue even if chunking fails
 	}
 

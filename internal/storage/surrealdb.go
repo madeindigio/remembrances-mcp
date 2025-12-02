@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -68,7 +68,7 @@ func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 	// Priority: if DBPath is set, use embedded; otherwise use remote URL
 	if s.config.DBPath != "" && s.config.URL == "" {
 		// Use embedded SurrealDB with configurable backend (memory, rocksdb, surrealkv)
-		log.Printf("Connecting to embedded SurrealDB with URL: %s", s.config.DBPath)
+		slog.Info("Connecting to embedded SurrealDB", "url", s.config.DBPath)
 		s.embeddedDB, err = embedded.NewFromURL(s.config.DBPath)
 		if err != nil {
 			return fmt.Errorf("failed to connect to embedded SurrealDB: %w", err)
@@ -79,10 +79,10 @@ func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 		}
 
 		s.useEmbedded = true
-		log.Printf("Successfully connected to embedded SurrealDB")
+		slog.Info("Successfully connected to embedded SurrealDB")
 	} else if s.config.URL != "" {
 		// Use remote SurrealDB
-		log.Printf("Connecting to remote SurrealDB at %s", s.config.URL)
+		slog.Info("Connecting to remote SurrealDB", "url", s.config.URL)
 		s.db, err = surrealdb.New(s.config.URL)
 		if err != nil {
 			return fmt.Errorf("failed to connect to remote SurrealDB: %w", err)
@@ -103,7 +103,7 @@ func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 		}
 
 		s.useEmbedded = false
-		log.Printf("Successfully connected to remote SurrealDB")
+		slog.Info("Successfully connected to remote SurrealDB")
 	} else {
 		return fmt.Errorf("either DBPath or URL must be configured")
 	}

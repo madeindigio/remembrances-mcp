@@ -3,12 +3,12 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 )
 
 // applyMigrationEmbedded applies migrations for embedded mode using direct SurrealQL
 func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version int) error {
-	log.Printf("Applying embedded migration version %d", version)
+	slog.Info("Applying embedded migration", "version", version)
 
 	statements := s.getEmbeddedMigrationStatements(version)
 	if statements == nil {
@@ -21,14 +21,14 @@ func (s *SurrealDBStorage) applyMigrationEmbedded(ctx context.Context, version i
 		if err != nil {
 			// Check if it's an "already exists" error and continue
 			if s.isAlreadyExistsError(err) {
-				log.Printf("Schema element already exists, continuing: %v", err)
+				slog.Debug("Schema element already exists, continuing", "error", err)
 				continue
 			}
 			return fmt.Errorf("failed to execute migration statement: %w\nStatement: %s", err, stmt)
 		}
 	}
 
-	log.Printf("Successfully applied embedded migration version %d", version)
+	slog.Info("Successfully applied embedded migration", "version", version)
 	return nil
 }
 
@@ -40,13 +40,13 @@ func (s *SurrealDBStorage) getEmbeddedMigrationStatements(version int) []string 
 	case 2:
 		return s.getMigrationV2Statements()
 	case 3:
-		log.Println("Migration V3: Fixing user_stats schema (embedded mode uses direct field updates)")
+		slog.Debug("Migration V3: Fixing user_stats schema (embedded mode uses direct field updates)")
 		return []string{}
 	case 4:
-		log.Println("Migration V4: user_id fields already present in embedded schema")
+		slog.Debug("Migration V4: user_id fields already present in embedded schema")
 		return []string{}
 	case 5:
-		log.Println("Migration V5: flexible metadata already present in embedded schema")
+		slog.Debug("Migration V5: flexible metadata already present in embedded schema")
 		return []string{}
 	case 6:
 		return s.getMigrationV6Statements()
@@ -136,7 +136,7 @@ func (s *SurrealDBStorage) getMigrationV6Statements() []string {
 
 // getMigrationV7Statements returns V7 migration statements (flexible metadata)
 func (s *SurrealDBStorage) getMigrationV7Statements() []string {
-	log.Println("Migration V7: Fixed metadata/properties fields to be FLEXIBLE (allows dynamic nested fields)")
+	slog.Debug("Migration V7: Fixed metadata/properties fields to be FLEXIBLE")
 	return []string{
 		// Remove old field definitions
 		`REMOVE FIELD metadata ON vector_memories;`,
@@ -151,7 +151,7 @@ func (s *SurrealDBStorage) getMigrationV7Statements() []string {
 
 // getMigrationV8Statements returns V8 migration statements (flexible KV value)
 func (s *SurrealDBStorage) getMigrationV8Statements() []string {
-	log.Println("Migration V8: Fixed kv_memories value field to be FLEXIBLE (allows strings with newlines)")
+	slog.Debug("Migration V8: Fixed kv_memories value field to be FLEXIBLE")
 	return []string{
 		// Remove old field definition
 		`REMOVE FIELD value ON kv_memories;`,
@@ -162,7 +162,7 @@ func (s *SurrealDBStorage) getMigrationV8Statements() []string {
 
 // getMigrationV9Statements returns V9 migration statements (code indexing schema)
 func (s *SurrealDBStorage) getMigrationV9Statements() []string {
-	log.Println("Migration V9: Creating code indexing schema (code_projects, code_files, code_symbols, code_indexing_jobs)")
+	slog.Debug("Migration V9: Creating code indexing schema")
 	return []string{
 		// code_projects table
 		`DEFINE TABLE code_projects SCHEMAFULL;`,
@@ -238,7 +238,7 @@ func (s *SurrealDBStorage) getMigrationV9Statements() []string {
 
 // getMigrationV10Statements returns V10 migration statements (code chunks table)
 func (s *SurrealDBStorage) getMigrationV10Statements() []string {
-	log.Println("Migration V10: Creating code_chunks table for large symbol chunking")
+	slog.Debug("Migration V10: Creating code_chunks table")
 	return []string{
 		// code_chunks table
 		`DEFINE TABLE code_chunks SCHEMAFULL;`,
@@ -265,7 +265,7 @@ func (s *SurrealDBStorage) getMigrationV10Statements() []string {
 
 // getMigrationV11Statements returns V11 migration statements (events table)
 func (s *SurrealDBStorage) getMigrationV11Statements() []string {
-	log.Println("Migration V11: Creating events table for temporal event storage")
+	slog.Debug("Migration V11: Creating events table")
 	return []string{
 		// events table
 		`DEFINE TABLE events SCHEMAFULL;`,
@@ -289,7 +289,7 @@ func (s *SurrealDBStorage) getMigrationV11Statements() []string {
 
 // getMigrationV12Statements returns V12 migration statements (watcher_enabled field)
 func (s *SurrealDBStorage) getMigrationV12Statements() []string {
-	log.Println("Migration V12: Adding watcher_enabled field to code_projects")
+	slog.Debug("Migration V12: Adding watcher_enabled field to code_projects")
 	return []string{
 		`DEFINE FIELD watcher_enabled ON code_projects TYPE bool DEFAULT false;`,
 	}
