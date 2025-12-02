@@ -187,6 +187,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewV10CodeChunks(s.db)
 	case 11:
 		migration = migrations.NewV11Events(s.db)
+	case 12:
+		migration = migrations.NewV12CodeProjectsWatcher(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}

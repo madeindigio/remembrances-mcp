@@ -355,9 +355,11 @@ interactive: true
 
 ```bash
 make BUILD_TYPE=cuda build
+cp ./build/libs/cuda/*.so ./build/
 rm -f ~/bin/remembrances-mcp
+cp ./build/libs/cuda/*.so ~/bin/
 cp ./build/remembrances-mcp ~/bin/
-rm *.log
+rm -f *.log
 ```
 
 ### starts-surrealdb

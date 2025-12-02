@@ -5,6 +5,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
 )
@@ -12,67 +13,77 @@ import (
 // ===== PROJECT OPERATIONS =====
 
 // CreateCodeProject creates or updates a code project
+// Uses INSERT ON DUPLICATE KEY UPDATE for atomic upsert operation
 func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *treesitter.CodeProject) error {
-	// First check if project exists (same pattern as SaveDocument)
-	existsQuery := "SELECT id FROM code_projects WHERE project_id = $project_id"
-	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{
-		"project_id": project.ProjectID,
-	})
+	log.Printf("[DEBUG] CreateCodeProject called: project_id=%s, status=%s", project.ProjectID, project.IndexingStatus)
 
-	isNewProject := true
-	if err != nil {
-		return fmt.Errorf("failed to check existing project: %w", err)
+	// Convert last_indexed_at to ISO string format for SurrealDB compatibility
+	var lastIndexedAtStr interface{}
+	if project.LastIndexedAt != nil {
+		lastIndexedAtStr = project.LastIndexedAt.Format("2006-01-02T15:04:05Z07:00")
 	}
 
-	if existsResult != nil && len(*existsResult) > 0 {
-		queryResult := (*existsResult)[0]
-		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
-			isNewProject = false
+	// Convert language_stats map to a plain map[string]interface{} for SurrealDB
+	var langStats interface{}
+	if len(project.LanguageStats) > 0 {
+		ls := make(map[string]interface{})
+		for lang, count := range project.LanguageStats {
+			ls[string(lang)] = count
 		}
+		langStats = ls
+	} else {
+		langStats = nil
 	}
 
+	// Check if project exists to get watcher_enabled value
+	existingProject, _ := s.GetCodeProject(ctx, project.ProjectID)
+	watcherEnabled := false
+	if existingProject != nil {
+		watcherEnabled = existingProject.WatcherEnabled
+	}
+
+	// Use INSERT with ON DUPLICATE KEY UPDATE for atomic upsert
+	// This handles the unique index on project_id properly
+	log.Printf("[DEBUG] INSERT ON DUPLICATE KEY UPDATE: project_id=%s, status=%s", project.ProjectID, project.IndexingStatus)
+	query := `
+		INSERT INTO code_projects {
+			project_id: $project_id,
+			name: $name,
+			root_path: $root_path,
+			language_stats: $language_stats,
+			last_indexed_at: $last_indexed_at,
+			indexing_status: $indexing_status,
+			watcher_enabled: $watcher_enabled
+		}
+		ON DUPLICATE KEY UPDATE
+			name = $input.name,
+			root_path = $input.root_path,
+			language_stats = $input.language_stats,
+			last_indexed_at = $input.last_indexed_at,
+			indexing_status = $input.indexing_status,
+			updated_at = time::now()
+	`
 	params := map[string]interface{}{
 		"project_id":      project.ProjectID,
 		"name":            project.Name,
 		"root_path":       project.RootPath,
-		"language_stats":  project.LanguageStats,
-		"last_indexed_at": project.LastIndexedAt,
+		"language_stats":  langStats,
+		"last_indexed_at": lastIndexedAtStr,
 		"indexing_status": string(project.IndexingStatus),
+		"watcher_enabled": watcherEnabled,
 	}
 
-	if isNewProject {
-		// Create new project
-		query := `
-			CREATE code_projects CONTENT {
-				project_id: $project_id,
-				name: $name,
-				root_path: $root_path,
-				language_stats: $language_stats,
-				last_indexed_at: $last_indexed_at,
-				indexing_status: $indexing_status,
-				watcher_enabled: false,
-				created_at: time::now(),
-				updated_at: time::now()
-			}
-		`
-		if _, err := s.query(ctx, query, params); err != nil {
-			return fmt.Errorf("failed to create project: %w", err)
-		}
-	} else {
-		// Update existing project
-		query := `
-			UPDATE code_projects SET
-				name = $name,
-				root_path = $root_path,
-				language_stats = $language_stats,
-				last_indexed_at = $last_indexed_at,
-				indexing_status = $indexing_status,
-				updated_at = time::now()
-			WHERE project_id = $project_id
-		`
-		if _, err := s.query(ctx, query, params); err != nil {
-			return fmt.Errorf("failed to update project: %w", err)
-		}
+	result, err := s.query(ctx, query, params)
+	if err != nil {
+		log.Printf("[ERROR] INSERT ON DUPLICATE KEY UPDATE failed: %v", err)
+		return fmt.Errorf("failed to upsert project: %w", err)
+	}
+
+	// Log result for debugging
+	if result != nil && len(*result) > 0 {
+		queryResult := (*result)[0]
+		log.Printf("[DEBUG] INSERT result: status=%s, result_count=%d", 
+			queryResult.Status, len(queryResult.Result))
 	}
 
 	return nil

@@ -122,6 +122,12 @@ func (idx *Indexer) IndexProject(ctx context.Context, projectPath string, projec
 		log.Printf("Warning: failed to update project stats: %v", err)
 	}
 
+	// Explicitly update the project status to completed
+	// This ensures the status is updated even if CreateCodeProject's upsert doesn't update it
+	if err := idx.storage.UpdateProjectStatus(ctx, projectID, treesitter.IndexingStatusCompleted); err != nil {
+		log.Printf("Warning: failed to update project status to completed: %v", err)
+	}
+
 	idx.updateProgress(projectID, func(p *IndexingProgress) {
 		p.Status = treesitter.IndexingStatusCompleted
 	})
