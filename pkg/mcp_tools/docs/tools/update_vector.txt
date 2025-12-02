@@ -1,0 +1,41 @@
+TOOL: remembrance_update_vector
+================================
+
+Update an existing semantic remembrance.
+
+DESCRIPTION
+-----------
+Recomputes embedding for the new content and updates metadata. 
+Requires the vector's ID and the owning user.
+
+WHEN TO CALL
+------------
+Use when correcting or improving previously stored content.
+
+ARGUMENTS
+---------
+id: string (required)
+    The vector ID to update (from previous search results).
+
+user_id: string (required)
+    The user identifier. If unsure, use the current project name.
+
+content: string (required)
+    The new text content.
+
+metadata: object (optional)
+    Updated metadata.
+
+EXAMPLE
+-------
+{
+    "id": "vec_abc123",
+    "user_id": "my-project",
+    "content": "Updated meeting notes with action items completed.",
+    "metadata": { "edited_by": "agent", "status": "completed" }
+}
+
+RELATED TOOLS
+-------------
+- remembrance_search_vectors: Find vectors to update
+- remembrance_delete_vector: Remove instead of update

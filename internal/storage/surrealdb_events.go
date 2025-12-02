@@ -162,13 +162,15 @@ func (s *SurrealDBStorage) SearchEvents(ctx context.Context, params EventSearchP
 	}
 
 	if fromDate != nil {
-		conditions = append(conditions, "created_at >= $from_date")
-		queryParams["from_date"] = fromDate.Format(time.RFC3339Nano)
+		// Use SurrealQL datetime cast for proper index usage
+		conditions = append(conditions, "created_at >= <datetime>$from_date")
+		queryParams["from_date"] = fromDate.UTC().Truncate(time.Second).Format(time.RFC3339)
 	}
 
 	if toDate != nil {
-		conditions = append(conditions, "created_at <= $to_date")
-		queryParams["to_date"] = toDate.Format(time.RFC3339Nano)
+		// Use SurrealQL datetime cast for proper index usage
+		conditions = append(conditions, "created_at <= <datetime>$to_date")
+		queryParams["to_date"] = toDate.UTC().Truncate(time.Second).Format(time.RFC3339)
 	}
 
 	whereClause := ""

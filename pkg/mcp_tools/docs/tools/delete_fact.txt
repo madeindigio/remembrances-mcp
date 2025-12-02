@@ -1,0 +1,34 @@
+TOOL: remembrance_delete_fact
+=============================
+
+Delete a user-scoped key-value fact.
+
+DESCRIPTION
+-----------
+Permanently removes the specified key for the user.
+
+WHEN TO CALL
+------------
+Use to correct mistakes or to forget outdated personal data 
+(e.g., user requested deletion).
+
+ARGUMENTS
+---------
+user_id: string (required)
+    The user identifier. If unsure, use the current project name.
+
+key: string (required)
+    The key to delete.
+
+EXAMPLE
+-------
+{
+    "user_id": "my-project",
+    "key": "old_preference"
+}
+
+RELATED TOOLS
+-------------
+- remembrance_save_fact: Store a fact
+- remembrance_get_fact: Retrieve a fact
+- remembrance_list_facts: List all facts

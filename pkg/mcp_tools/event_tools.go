@@ -86,16 +86,22 @@ func (tm *ToolManager) searchEventsHandler(ctx context.Context, request *protoco
 		Limit:   input.Limit,
 	}
 
-	// Parse date filters
+	// Parse date filters - normalize to UTC and truncate to seconds
 	if input.FromDate != "" {
 		t, err := time.Parse(time.RFC3339, input.FromDate)
-		if err == nil {
+		if err != nil {
+			slog.Warn("invalid from_date format, ignoring", "from_date", input.FromDate, "err", err)
+		} else {
+			t = t.UTC().Truncate(time.Second)
 			params.FromDate = &t
 		}
 	}
 	if input.ToDate != "" {
 		t, err := time.Parse(time.RFC3339, input.ToDate)
-		if err == nil {
+		if err != nil {
+			slog.Warn("invalid to_date format, ignoring", "to_date", input.ToDate, "err", err)
+		} else {
+			t = t.UTC().Truncate(time.Second)
 			params.ToDate = &t
 		}
 	}
