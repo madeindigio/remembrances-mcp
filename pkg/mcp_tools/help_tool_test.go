@@ -37,7 +37,7 @@ func TestReadDocFileMemoryGroup(t *testing.T) {
 	if !strings.Contains(content, "MEMORY TOOLS GROUP") {
 		t.Error("memory group should contain group title")
 	}
-	if !strings.Contains(content, "remembrance_save_fact") {
+	if !strings.Contains(content, "save_fact") {
 		t.Error("memory group should mention fact tools")
 	}
 }
@@ -72,12 +72,12 @@ func TestReadDocFileSpecificTools(t *testing.T) {
 		filename    string
 		shouldMatch string
 	}{
-		{"docs/tools/remembrance_save_fact.txt", "PURPOSE"},
+		{"docs/tools/save_fact.txt", "PURPOSE"},
 		{"docs/tools/kb_add_document.txt", "PURPOSE"},
 		{"docs/tools/index_repository.txt", "PURPOSE"},
 		{"docs/tools/hybrid_search.txt", "PURPOSE"},
-		{"docs/tools/remembrance_get_fact.txt", "PURPOSE"},
-		{"docs/tools/remembrance_search_vectors.txt", "PURPOSE"},
+		{"docs/tools/get_fact.txt", "PURPOSE"},
+		{"docs/tools/search_vectors.txt", "PURPOSE"},
 	}
 
 	for _, tc := range testCases {
@@ -109,18 +109,18 @@ func TestDocFilesEmbedded(t *testing.T) {
 		"docs/memory_group.txt",
 		"docs/kb_group.txt",
 		"docs/code_group.txt",
-		"docs/tools/remembrance_save_fact.txt",
-		"docs/tools/remembrance_get_fact.txt",
-		"docs/tools/remembrance_list_facts.txt",
-		"docs/tools/remembrance_delete_fact.txt",
-		"docs/tools/remembrance_add_vector.txt",
-		"docs/tools/remembrance_search_vectors.txt",
-		"docs/tools/remembrance_update_vector.txt",
-		"docs/tools/remembrance_delete_vector.txt",
-		"docs/tools/remembrance_create_entity.txt",
-		"docs/tools/remembrance_get_entity.txt",
-		"docs/tools/remembrance_create_relationship.txt",
-		"docs/tools/remembrance_traverse_graph.txt",
+		"docs/tools/save_fact.txt",
+		"docs/tools/get_fact.txt",
+		"docs/tools/list_facts.txt",
+		"docs/tools/delete_fact.txt",
+		"docs/tools/add_vector.txt",
+		"docs/tools/search_vectors.txt",
+		"docs/tools/update_vector.txt",
+		"docs/tools/delete_vector.txt",
+		"docs/tools/create_entity.txt",
+		"docs/tools/get_entity.txt",
+		"docs/tools/create_relationship.txt",
+		"docs/tools/traverse_graph.txt",
 		"docs/tools/kb_add_document.txt",
 		"docs/tools/kb_get_document.txt",
 		"docs/tools/kb_search_documents.txt",

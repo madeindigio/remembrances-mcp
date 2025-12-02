@@ -11,36 +11,36 @@ import (
 
 // Graph tool definitions
 func (tm *ToolManager) createEntityTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_create_entity", `Create an entity in the knowledge graph. Use how_to_use("remembrance_create_entity") for details.`, CreateEntityInput{})
+	tool, err := protocol.NewTool("create_entity", `Create an entity in the knowledge graph. Use how_to_use("create_entity") for details.`, CreateEntityInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_create_entity", "err", err)
+		slog.Error("failed to create tool", "name", "create_entity", "err", err)
 		return nil
 	}
 	return tool
 }
 
 func (tm *ToolManager) createRelationshipTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_create_relationship", `Create a relationship between two entities. Use how_to_use("remembrance_create_relationship") for details.`, CreateRelationshipInput{})
+	tool, err := protocol.NewTool("create_relationship", `Create a relationship between two entities. Use how_to_use("create_relationship") for details.`, CreateRelationshipInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_create_relationship", "err", err)
+		slog.Error("failed to create tool", "name", "create_relationship", "err", err)
 		return nil
 	}
 	return tool
 }
 
 func (tm *ToolManager) traverseGraphTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_traverse_graph", `Traverse the knowledge graph from a start entity. Use how_to_use("remembrance_traverse_graph") for details.`, TraverseGraphInput{})
+	tool, err := protocol.NewTool("traverse_graph", `Traverse the knowledge graph from a start entity. Use how_to_use("traverse_graph") for details.`, TraverseGraphInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_traverse_graph", "err", err)
+		slog.Error("failed to create tool", "name", "traverse_graph", "err", err)
 		return nil
 	}
 	return tool
 }
 
 func (tm *ToolManager) getEntityTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_get_entity", `Get a graph entity by ID. Use how_to_use("remembrance_get_entity") for details.`, GetEntityInput{})
+	tool, err := protocol.NewTool("get_entity", `Get a graph entity by ID. Use how_to_use("get_entity") for details.`, GetEntityInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_get_entity", "err", err)
+		slog.Error("failed to create tool", "name", "get_entity", "err", err)
 		return nil
 	}
 	return tool

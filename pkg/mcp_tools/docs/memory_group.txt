@@ -9,33 +9,33 @@ KEY-VALUE FACTS
 ---------------
 Store simple key-value pairs for exact retrieval.
 
-- remembrance_save_fact: Store a key-value fact
-- remembrance_get_fact: Retrieve a fact by exact key
-- remembrance_list_facts: List all facts for a user
-- remembrance_delete_fact: Delete a specific fact
+- save_fact: Store a key-value fact
+- get_fact: Retrieve a fact by exact key
+- list_facts: List all facts for a user
+- delete_fact: Delete a specific fact
 
 SEMANTIC VECTORS
 ----------------
 Store content with embeddings for semantic similarity search.
 
-- remembrance_add_vector: Add content with automatic embedding
-- remembrance_search_vectors: Search by semantic similarity
-- remembrance_update_vector: Update content and re-embed
-- remembrance_delete_vector: Remove a vector entry
+- add_vector: Add content with automatic embedding
+- search_vectors: Search by semantic similarity
+- update_vector: Update content and re-embed
+- delete_vector: Remove a vector entry
 
 KNOWLEDGE GRAPH
 ---------------
 Create entities and relationships for structured data.
 
-- remembrance_create_entity: Create a typed entity (person, project, etc.)
-- remembrance_create_relationship: Link two entities
-- remembrance_traverse_graph: Explore entity connections
-- remembrance_get_entity: Get entity details by ID
+- create_entity: Create a typed entity (person, project, etc.)
+- create_relationship: Link two entities
+- traverse_graph: Explore entity connections
+- get_entity: Get entity details by ID
 
 UTILITIES
 ---------
-- remembrance_hybrid_search: Search across all three layers
-- remembrance_get_stats: Get memory usage statistics
+- hybrid_search: Search across all three layers
+- get_stats: Get memory usage statistics
 - to_remember: Store important context for future sessions
 - last_to_remember: Retrieve stored context and recent activity
 

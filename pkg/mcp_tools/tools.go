@@ -87,48 +87,48 @@ func (tm *ToolManager) RegisterTools(srv *mcpserver.Server) error {
 
 // registration helper groups keep RegisterTools small and readable
 func (tm *ToolManager) registerRemembranceTools(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
-	if err := reg("remembrance_save_fact", tm.saveFactTool(), tm.saveFactHandler); err != nil {
+	if err := reg("save_fact", tm.saveFactTool(), tm.saveFactHandler); err != nil {
 		return err
 	}
-	if err := reg("remembrance_get_fact", tm.getFactTool(), tm.getFactHandler); err != nil {
+	if err := reg("get_fact", tm.getFactTool(), tm.getFactHandler); err != nil {
 		return err
 	}
-	if err := reg("remembrance_list_facts", tm.listFactsTool(), tm.listFactsHandler); err != nil {
+	if err := reg("list_facts", tm.listFactsTool(), tm.listFactsHandler); err != nil {
 		return err
 	}
-	if err := reg("remembrance_delete_fact", tm.deleteFactTool(), tm.deleteFactHandler); err != nil {
+	if err := reg("delete_fact", tm.deleteFactTool(), tm.deleteFactHandler); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (tm *ToolManager) registerVectorTools(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
-	if err := reg("remembrance_add_vector", tm.addVectorTool(), tm.addVectorHandler); err != nil {
+	if err := reg("add_vector", tm.addVectorTool(), tm.addVectorHandler); err != nil {
 		return err
 	}
-	if err := reg("remembrance_search_vectors", tm.searchVectorsTool(), tm.searchVectorsHandler); err != nil {
+	if err := reg("search_vectors", tm.searchVectorsTool(), tm.searchVectorsHandler); err != nil {
 		return err
 	}
-	if err := reg("remembrance_update_vector", tm.updateVectorTool(), tm.updateVectorHandler); err != nil {
+	if err := reg("update_vector", tm.updateVectorTool(), tm.updateVectorHandler); err != nil {
 		return err
 	}
-	if err := reg("remembrance_delete_vector", tm.deleteVectorTool(), tm.deleteVectorHandler); err != nil {
+	if err := reg("delete_vector", tm.deleteVectorTool(), tm.deleteVectorHandler); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (tm *ToolManager) registerGraphTools(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
-	if err := reg("remembrance_create_entity", tm.createEntityTool(), tm.createEntityHandler); err != nil {
+	if err := reg("create_entity", tm.createEntityTool(), tm.createEntityHandler); err != nil {
 		return err
 	}
-	if err := reg("remembrance_create_relationship", tm.createRelationshipTool(), tm.createRelationshipHandler); err != nil {
+	if err := reg("create_relationship", tm.createRelationshipTool(), tm.createRelationshipHandler); err != nil {
 		return err
 	}
-	if err := reg("remembrance_traverse_graph", tm.traverseGraphTool(), tm.traverseGraphHandler); err != nil {
+	if err := reg("traverse_graph", tm.traverseGraphTool(), tm.traverseGraphHandler); err != nil {
 		return err
 	}
-	if err := reg("remembrance_get_entity", tm.getEntityTool(), tm.getEntityHandler); err != nil {
+	if err := reg("get_entity", tm.getEntityTool(), tm.getEntityHandler); err != nil {
 		return err
 	}
 	return nil
@@ -161,10 +161,10 @@ func (tm *ToolManager) registerRememberTools(reg func(string, *protocol.Tool, fu
 }
 
 func (tm *ToolManager) registerMiscTools(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
-	if err := reg("remembrance_hybrid_search", tm.hybridSearchTool(), tm.hybridSearchHandler); err != nil {
+	if err := reg("hybrid_search", tm.hybridSearchTool(), tm.hybridSearchHandler); err != nil {
 		return err
 	}
-	if err := reg("remembrance_get_stats", tm.getStatsTool(), tm.getStatsHandler); err != nil {
+	if err := reg("get_stats", tm.getStatsTool(), tm.getStatsHandler); err != nil {
 		return err
 	}
 	if err := reg("how_to_use", tm.howToUseTool(), tm.howToUseHandler); err != nil {

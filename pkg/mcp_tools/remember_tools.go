@@ -86,7 +86,7 @@ func (tm *ToolManager) lastToRememberHandler(ctx context.Context, request *proto
 	stats, err := tm.storage.GetStats(ctx, input.UserID)
 	if err == nil && stats.VectorCount > 0 {
 		result["vectors_count"] = stats.VectorCount
-		result["vectors_note"] = "Use remembrance_search_vectors to query specific semantic memories"
+		result["vectors_note"] = "Use search_vectors to query specific semantic memories"
 	}
 
 	// 4. Get graph entities - query the database directly for recent entities

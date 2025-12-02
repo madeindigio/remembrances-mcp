@@ -11,36 +11,36 @@ import (
 
 // Vector tool definitions
 func (tm *ToolManager) addVectorTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_add_vector", `Add a semantic remembrance (text -> embedding). Use how_to_use("remembrance_add_vector") for details.`, AddVectorInput{})
+	tool, err := protocol.NewTool("add_vector", `Add a semantic remembrance (text -> embedding). Use how_to_use("add_vector") for details.`, AddVectorInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_add_vector", "err", err)
+		slog.Error("failed to create tool", "name", "add_vector", "err", err)
 		return nil
 	}
 	return tool
 }
 
 func (tm *ToolManager) searchVectorsTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_search_vectors", `Search remembrances by semantic similarity. Use how_to_use("remembrance_search_vectors") for details.`, SearchVectorsInput{})
+	tool, err := protocol.NewTool("search_vectors", `Search remembrances by semantic similarity. Use how_to_use("search_vectors") for details.`, SearchVectorsInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_search_vectors", "err", err)
+		slog.Error("failed to create tool", "name", "search_vectors", "err", err)
 		return nil
 	}
 	return tool
 }
 
 func (tm *ToolManager) updateVectorTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_update_vector", `Update an existing semantic remembrance. Use how_to_use("remembrance_update_vector") for details.`, UpdateVectorInput{})
+	tool, err := protocol.NewTool("update_vector", `Update an existing semantic remembrance. Use how_to_use("update_vector") for details.`, UpdateVectorInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_update_vector", "err", err)
+		slog.Error("failed to create tool", "name", "update_vector", "err", err)
 		return nil
 	}
 	return tool
 }
 
 func (tm *ToolManager) deleteVectorTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_delete_vector", `Delete a semantic remembrance by ID. Use how_to_use("remembrance_delete_vector") for details.`, DeleteVectorInput{})
+	tool, err := protocol.NewTool("delete_vector", `Delete a semantic remembrance by ID. Use how_to_use("delete_vector") for details.`, DeleteVectorInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_delete_vector", "err", err)
+		slog.Error("failed to create tool", "name", "delete_vector", "err", err)
 		return nil
 	}
 	return tool

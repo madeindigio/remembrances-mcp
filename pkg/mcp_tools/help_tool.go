@@ -65,7 +65,7 @@ Available topics:
   - "kb" or "knowledge_base": Knowledge base tools
   - "events" or "logs": Events and temporal storage tools
   - "code" or "indexing": Code indexing and search tools
-  - Or specify a tool name like "remembrance_save_fact", "save_event", etc.
+  - Or specify a tool name like "save_fact", "save_event", etc.
 
 Call how_to_use() with no arguments for a complete overview.`, topic)
 			err = nil

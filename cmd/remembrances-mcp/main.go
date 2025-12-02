@@ -97,22 +97,22 @@ func main() {
 This server provides a comprehensive remembrance system with three complementary layers:
 
 🗂️ KEY-VALUE FACTS: Store simple facts, preferences, and settings that can be quickly retrieved by key
-   • remembrance_save_fact: Store basic information
-   • remembrance_get_fact: Retrieve by key
-   • remembrance_list_facts: See all facts for a user
-   • remembrance_delete_fact: Remove facts
+   • save_fact: Store basic information
+   • get_fact: Retrieve by key
+   • list_facts: See all facts for a user
+   • delete_fact: Remove facts
 
 🧠 SEMANTIC VECTORS: Store content with automatic embedding for similarity search
-   • remembrance_add_vector: Add content that gets automatically embedded
-   • remembrance_search_vectors: Find similar content using semantic search
-   • remembrance_update_vector: Update existing content and regenerate embedding
-   • remembrance_delete_vector: Remove semantic content
+   • add_vector: Add content that gets automatically embedded
+   • search_vectors: Find similar content using semantic search
+   • update_vector: Update existing content and regenerate embedding
+   • delete_vector: Remove semantic content
 
 🕸️ KNOWLEDGE GRAPH: Create entities and relationships to model complex connections
-   • remembrance_create_entity: Add people, places, concepts
-   • remembrance_create_relationship: Connect entities with relationships
-   • remembrance_traverse_graph: Explore connections between entities
-   • remembrance_get_entity: Retrieve entity details
+   • create_entity: Add people, places, concepts
+   • create_relationship: Connect entities with relationships
+   • traverse_graph: Explore connections between entities
+   • get_entity: Retrieve entity details
 
 📚 KNOWLEDGE BASE: Store and search documents
    • kb_add_document: Add documents with automatic embedding
@@ -121,8 +121,8 @@ This server provides a comprehensive remembrance system with three complementary
    • kb_delete_document: Remove documents
 
 🔍 UNIFIED SEARCH: Combine all layers for comprehensive results
-   • remembrance_hybrid_search: Search across facts, vectors, and graph simultaneously
-   • remembrance_get_stats: Get overview of all stored remembrances
+   • hybrid_search: Search across facts, vectors, and graph simultaneously
+   • get_stats: Get overview of all stored remembrances
 
 Choose the right tool for your data:
 - Use FACTS for simple key-value data
@@ -298,6 +298,20 @@ Choose the right tool for your data:
 	}
 	if err := codeToolManager.RegisterCodeTools(regFunc); err != nil {
 		slog.Error("failed to register code indexing tools", "error", err)
+		os.Exit(1)
+	}
+
+	// Create and register code search tools
+	codeSearchToolManager := mcp_tools.NewCodeSearchToolManager(storageInstance, codeEmbedderInstance)
+	if err := codeSearchToolManager.RegisterCodeSearchTools(regFunc); err != nil {
+		slog.Error("failed to register code search tools", "error", err)
+		os.Exit(1)
+	}
+
+	// Create and register code manipulation tools
+	codeManipulationToolManager := mcp_tools.NewCodeManipulationToolManager(storageInstance, codeEmbedderInstance)
+	if err := codeManipulationToolManager.RegisterCodeManipulationTools(regFunc); err != nil {
+		slog.Error("failed to register code manipulation tools", "error", err)
 		os.Exit(1)
 	}
 

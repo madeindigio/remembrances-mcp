@@ -11,36 +11,36 @@ import (
 
 // Fact tool definitions
 func (tm *ToolManager) saveFactTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_save_fact", `Store a key-value fact for a user. Use how_to_use("remembrance_save_fact") for details.`, SaveFactInput{})
+	tool, err := protocol.NewTool("save_fact", `Store a key-value fact for a user. Use how_to_use("save_fact") for details.`, SaveFactInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_save_fact", "err", err)
+		slog.Error("failed to create tool", "name", "save_fact", "err", err)
 		return nil
 	}
 	return tool
 }
 
 func (tm *ToolManager) getFactTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_get_fact", `Retrieve a fact by exact key. Use how_to_use("remembrance_get_fact") for details.`, GetFactInput{})
+	tool, err := protocol.NewTool("get_fact", `Retrieve a fact by exact key. Use how_to_use("get_fact") for details.`, GetFactInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_get_fact", "err", err)
+		slog.Error("failed to create tool", "name", "get_fact", "err", err)
 		return nil
 	}
 	return tool
 }
 
 func (tm *ToolManager) listFactsTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_list_facts", `List all facts for a user. Use how_to_use("remembrance_list_facts") for details.`, ListFactsInput{})
+	tool, err := protocol.NewTool("list_facts", `List all facts for a user. Use how_to_use("list_facts") for details.`, ListFactsInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_list_facts", "err", err)
+		slog.Error("failed to create tool", "name", "list_facts", "err", err)
 		return nil
 	}
 	return tool
 }
 
 func (tm *ToolManager) deleteFactTool() *protocol.Tool {
-	tool, err := protocol.NewTool("remembrance_delete_fact", `Delete a fact by key. Use how_to_use("remembrance_delete_fact") for details.`, DeleteFactInput{})
+	tool, err := protocol.NewTool("delete_fact", `Delete a fact by key. Use how_to_use("delete_fact") for details.`, DeleteFactInput{})
 	if err != nil {
-		slog.Error("failed to create tool", "name", "remembrance_delete_fact", "err", err)
+		slog.Error("failed to create tool", "name", "delete_fact", "err", err)
 		return nil
 	}
 	return tool
