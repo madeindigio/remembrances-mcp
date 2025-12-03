@@ -16,6 +16,21 @@
         ".ai/mycommand-mcp.yaml"
       ]
     },
+    "serena": {
+      "type": "stdio",
+      "command": "pkgx",
+      "args": [
+        "uvx",
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "./"
+      ]
+    },
     "remembrances": {
       "type": "stdio",
       "command": "remembrances-mcp",
