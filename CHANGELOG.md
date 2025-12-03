@@ -1,5 +1,92 @@
 # Changelog
 
+## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.14.0...60bf3a9f5af8d30a0b9afdd78de436e4d071d81d) (2025-12-03)
+
+## [v1.14.0](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.13.1...v1.14.0) (2025-12-03)
+
+### Fixes
+
+* problems with timestamps in events tools
+([9cb8687](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/9cb86875411e15f5989689ed8cd18c3beb8b67a2))
+* add slog instead log
+([811980e](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/811980e8512bf704f62f81e447bd88d1ac77010b))
+* indexing code jobs completion error
+([7ef87d8](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/7ef87d83cbb50fc958a0a1a02431fd345ce389fc))
+* fix problems in status of code project indexation
+([096a199](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/096a19942c4be82f50bc815a10717a997af503c9))
+
+### [v1.13.1](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.11.0...v1.13.1) (2025-12-01)
+
+#### Features
+
+* refactor code splitting
+([2c036d5](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/2c036d526ee1c12bef4a894e3657b91f5af38989))
+* **code-monitoring:** implement automatic file monitoring system
+([ddb1f9c](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/ddb1f9cd34eb8045e764974205500db32bd63fdd))
+
+## [v1.11.0](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.9.0...v1.11.0) (2025-11-30)
+
+### Features
+
+* dual code embeddings model
+([882abc8](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/882abc8a87e5ebff813e9b0c54e02f191ca2618d))
+* add events or logs tools
+([ff410a0](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/ff410a0a31191a713037ef4109b48411343cf7f0))
+
+## [v1.9.0](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.4.6...v1.9.0) (2025-11-30)
+
+### Features
+
+* token reduction in tool description using how-to-use
+([34aa10f](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/34aa10f0976c9d47b7b25e22365ad400999085bc))
+* documentation of code indexing
+([5c6258d](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/5c6258dcc8f9b70b45a6b37cbc24946b1b454d2a))
+* add code manipulation tools
+([a93aaa5](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a93aaa50f02f81e35087a3cc28c8f72965987a70))
+* add tools for code search, symbols and patterns
+([931a4d9](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/931a4d9d45cff638045de6f375d44377c2990345))
+* first mvp of code indexing
+([c454e09](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/c454e09bd5a6b50bfdd64512eeb15e445d86ccbd))
+* Add installation script
+([6626231](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/6626231fe430a6e40dd8ab30458a3bc970b30886))
+* add complete documentation and Digio-branded styling
+([0bb6994](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/0bb699474e2b219c75062d893b19b224bd1d16ad))
+
+### Fixes
+
+* fixes list facts and add a new feature plan
+([a9cf036](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a9cf036b73b9cbaad6545c0ae0b734e8b5572427))
+* correct About page desktop layout for feature blocks grid
+([8401285](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/84012858e6caf61924c84707494b2f38a444723e))
+* remove custom head-css.html to fix CSS loading
+([9ca50d3](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/9ca50d36e1b7b3a8997cace632299cfaed14c68c))
+* rename custom CSS to _styles_project.scss for Docsy import
+([d1d9a9b](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/d1d9a9b378e6a13262c8c12926947dc352fb1ca2))
+* configure language-specific menus in hugo.toml
+([9f92422](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/9f9242275785df22c30c1c3dc9766b3c3d2cc3a2))
+
+### [v1.4.6](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.0.0...v1.4.6) (2025-11-22)
+
+#### Features
+
+* Add short place memory
+([167ea8a](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/167ea8af9afc02cf793c4692233fc6a7904db25b))
+* Add support to config file in user config standard path
+([6007449](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/6007449d862fdd37e1f4b7af44788cf69cce2b66))
+* enable compilation of llama.cpp for all gpu variants
+([e1dc8ae](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/e1dc8ae71a79f1bd505329c346bc511b5064579c))
+
+#### Fixes
+
+* problems with update in some tools
+([f32ca0b](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/f32ca0b135f76aa0e730b5fec820d93393b37e92))
+* error with surreal-embedded, and knowledge base storage
+([0237129](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/02371297bfb6a069effaa6e98d80bdbd2759538c))
+* update makefile for variants
+([0702bd9](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/0702bd9accb708a6d3b22821f26eb74bb0470fd2))
+* use chunking into database and read big files
+([11d5793](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/11d5793f6f48678174407a1d5a9fc72661d64080))
+
 ## [v1.0.0](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v0.50.3...v1.0.0) (2025-11-18)
 
 ### Features
