@@ -6,7 +6,14 @@
       "args": [
         "--config-file",
         ".ai/hyper-mcp.yaml"
-      ]
+      ],
+      "env": {
+        "SERPER_API_KEY": "${input:serper-api-key}",
+        "PERPLEXITY_API_KEY": "${input:perplexity-api-key}",
+        "GOOGLE_API_KEY": "${input:google-api-key}",
+        "GOOGLE_SEARCH_ENGINE_ID": "${input:google-search-engine-id}",
+        "BRAVE_API_KEY": "${input:brave-api-key}"
+      }
     },
     "mycommandmcp": {
       "type": "stdio",
@@ -25,5 +32,36 @@
       ]
     }
   },
-  "inputs": []
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "serper-api-key",
+      "description": "Your Serper API key. Get one at https://serper.dev",
+      "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "perplexity-api-key",
+      "description": "Your Perplexity API key. Get one at https://www.perplexity.ai/api",
+      "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "google-api-key",
+      "description": "Your Google API key. Get one at https://developers.google.com/custom-search/v1/overview",
+      "password": true
+    },
+    {
+      "type": "promptString",
+      "id": "google-search-engine-id",
+      "description": "Your Google Search Engine ID. Get one at https://cse.google.com/cse/all",
+      "password": false
+    },
+    {
+      "type": "promptString",
+      "id": "brave-api-key",
+      "description": "Your Brave Search API key. Get one at https://brave.com/search/api/",
+      "password": true
+    }
+  ]
 }

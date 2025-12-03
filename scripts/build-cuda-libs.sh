@@ -123,13 +123,31 @@ if [ "$CUDA_VERSION_MAJOR" -lt 12 ]; then
     CMAKE_CUDA_FLAGS="-DGGML_CUDA_FLASH_ATTN=OFF -DGGML_CUDA_FA_ALL_QUANTS=OFF"
 fi
 
+# Opciones de portabilidad CPU (Intel/AMD)
+# PORTABLE=1 : Compilación genérica compatible con Intel y AMD (AVX2, sin AVX-512)
+# PORTABLE=0 : Optimizado para la CPU actual (-march=native)
+PORTABLE="${PORTABLE:-0}"
+
+CMAKE_CPU_FLAGS=""
+if [ "$PORTABLE" = "1" ]; then
+    echo -e "${YELLOW}Modo PORTABLE: Compilando para compatibilidad Intel/AMD (AVX2, sin AVX-512)${NC}"
+    # Deshabilitar optimizaciones nativas y AVX-512 para máxima compatibilidad
+    CMAKE_CPU_FLAGS="-DGGML_NATIVE=OFF -DGGML_AVX512=OFF -DGGML_AVX512_VBMI=OFF -DGGML_AVX512_VNNI=OFF"
+    # Usar x86-64-v3 (AVX2 + FMA) que funciona en Intel Haswell+ y AMD Zen+
+    export CFLAGS="-march=x86-64-v3 -mtune=generic"
+    export CXXFLAGS="-march=x86-64-v3 -mtune=generic"
+else
+    echo -e "${GREEN}Modo NATIVO: Optimizando para CPU actual${NC}"
+fi
+
 cmake ../llama.cpp \
     -DCMAKE_CUDA_COMPILER=${CUDA_HOME}/bin/nvcc \
     -DGGML_CUDA=ON \
     -DLLAMA_STATIC=OFF \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CUDA_ARCHITECTURES=${GPU_ARCH} \
-    ${CMAKE_CUDA_FLAGS}
+    ${CMAKE_CUDA_FLAGS} \
+    ${CMAKE_CPU_FLAGS}
 
 echo ""
 echo "Compilando con $(nproc) cores..."
@@ -205,3 +223,10 @@ echo "2. Al ejecutar, usa --gguf-gpu-layers para habilitar GPU:"
 echo "   ./build/remembrances-mcp --gguf-model-path ./models/tu-modelo.gguf --gguf-gpu-layers 32"
 echo ""
 echo -e "${YELLOW}Nota: El número de capas GPU depende de tu VRAM. RTX 3060 (6GB) puede usar ~32 capas.${NC}"
+echo ""
+echo -e "${GREEN}Opciones de compilación:${NC}"
+echo "  PORTABLE=0 (default) - Optimizado para tu CPU actual (más rápido, menos compatible)"
+echo "  PORTABLE=1           - Compatible con Intel y AMD (AVX2, sin AVX-512)"
+echo ""
+echo "Para compilar portable (Intel/AMD compatible):"
+echo "  PORTABLE=1 $0"

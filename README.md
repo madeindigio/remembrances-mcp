@@ -483,3 +483,13 @@ Releasing a new snapshot version into the repo.
 ```
 goreleaser release --snapshot --skip sign --clean
 ```
+
+### build-llama-cpp-portable
+
+Build llama.cpp in portable mode (Intel/AMD compatible)
+
+interactive: true
+
+```
+GO_LLAMA_DIR=/www/MCP/Remembrances/go-llama.cpp PORTABLE=1 ./scripts/build-cuda-libs.sh
+```
