@@ -235,9 +235,7 @@ main() {
     # Windows amd64
     build_for_platform "windows" "amd64" "x86_64-w64-mingw32-gcc" "x86_64-w64-mingw32-g++"
 
-    # Windows arm64
-    build_for_platform "windows" "arm64" "/llvm-mingw/bin/aarch64-w64-mingw32-gcc" "/llvm-mingw/bin/aarch64-w64-mingw32-g++"
-
+ 
     log_info "=========================================="
     log_info "All libraries built successfully!"
     log_info "=========================================="

@@ -21,7 +21,7 @@
       "command": "remembrances-mcp",
       "args": [
         "--config",
-        "./config.sample.gguf.yaml"
+        "./.ai/remembrances.config.yaml"
       ]
     }
   },

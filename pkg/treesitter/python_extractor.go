@@ -158,7 +158,7 @@ func (p *PythonExtractor) extractMethod(node *sitter.Node, sourceCode []byte, fi
 
 	symbolType := SymbolTypeMethod
 	// Check if it's a property by looking at decorators
-	if p.hasDecorator(node, "property") || p.hasDecorator(node, "cached_property") {
+	if p.hasDecorator(node, "property", sourceCode) || p.hasDecorator(node, "cached_property", sourceCode) {
 		symbolType = SymbolTypeProperty
 	}
 
@@ -183,7 +183,7 @@ func (p *PythonExtractor) extractDecorated(node *sitter.Node, sourceCode []byte,
 
 	case "function_definition":
 		// Check for property decorator
-		if p.nodeHasPropertyDecorator(node) {
+		if p.nodeHasPropertyDecorator(node, sourceCode) {
 			return p.extractPropertyFromDecorated(node, definition, sourceCode, filePath, projectID, parentPath, parentID)
 		}
 		// Check if this is at module level or class level
@@ -197,7 +197,7 @@ func (p *PythonExtractor) extractDecorated(node *sitter.Node, sourceCode []byte,
 }
 
 // nodeHasPropertyDecorator checks if the decorated node has a property decorator
-func (p *PythonExtractor) nodeHasPropertyDecorator(node *sitter.Node) bool {
+func (p *PythonExtractor) nodeHasPropertyDecorator(node *sitter.Node, sourceCode []byte) bool {
 	for i := 0; i < int(node.NamedChildCount()); i++ {
 		child := node.NamedChild(i)
 		if child != nil && child.Type() == "decorator" {
@@ -208,7 +208,7 @@ func (p *PythonExtractor) nodeHasPropertyDecorator(node *sitter.Node) bool {
 					continue
 				}
 				if decoratorChild.Type() == "identifier" {
-					name := GetNodeContent(decoratorChild, nil)
+					name := GetNodeContent(decoratorChild, sourceCode)
 					if name == "property" || name == "cached_property" {
 						return true
 					}
@@ -240,7 +240,7 @@ func (p *PythonExtractor) extractPropertyFromDecorated(decoratedNode *sitter.Nod
 }
 
 // hasDecorator checks if a function has a specific decorator
-func (p *PythonExtractor) hasDecorator(node *sitter.Node, decoratorName string) bool {
+func (p *PythonExtractor) hasDecorator(node *sitter.Node, decoratorName string, sourceCode []byte) bool {
 	// For decorated_definition, decorators are siblings before the function
 	parent := node.Parent()
 	if parent != nil && parent.Type() == "decorated_definition" {
@@ -250,7 +250,7 @@ func (p *PythonExtractor) hasDecorator(node *sitter.Node, decoratorName string) 
 				for j := 0; j < int(child.NamedChildCount()); j++ {
 					decoratorChild := child.NamedChild(j)
 					if decoratorChild != nil && decoratorChild.Type() == "identifier" {
-						if GetNodeContent(decoratorChild, nil) == decoratorName {
+						if GetNodeContent(decoratorChild, sourceCode) == decoratorName {
 							return true
 						}
 					}
