@@ -555,6 +555,7 @@ zip -9 ./dist-variants/remembrances-mcp-darwin-arm64-metal.zip ./dist-variants/d
 
 echo "Creating docker images..."
 make docker-prepare-cpu
+make docker-build-cpu
 make docker-push-cpu
 ```
 

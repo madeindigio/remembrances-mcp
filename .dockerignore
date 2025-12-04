@@ -64,11 +64,10 @@ scripts/
 .goreleaser.yml.backup
 dist/
 
-models/
-dist-variants/
-# Keep these (explicitly, though .dockerignore works by exclusion):
-# - docker/Dockerfile.cuda (the dockerfile itself)
-# - dist-variants/remembrances-mcp-cuda-linux-x86_64/ (binary and libs)
+# Keep these directories for Docker build:
 # - models/ (GGUF model)
+# - dist-variants/ (binary and libs)
 # - config.sample.gguf.yaml (sample config)
 # - LICENSE.txt (license file)
+!models/
+!dist-variants/

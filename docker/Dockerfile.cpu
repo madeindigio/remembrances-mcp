@@ -109,7 +109,7 @@ chunk-overlap: 200
 EOF
 
 # Set library path for runtime - required for llama.cpp libraries
-ENV LD_LIBRARY_PATH="/app:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/app"
 
 # Default environment variables (can be overridden at runtime)
 # These use the GOMEM_ prefix as expected by the application
