@@ -565,6 +565,7 @@ Build for macOS (arm64 metal)
 interactive: true
 
 ```zsh
+export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH
 #make dist-darwin-arm64
 make BUILD_TYPE=metal build
 ```

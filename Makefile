@@ -56,10 +56,10 @@ ifeq ($(UNAME_S),Darwin)
 	LIB_EXT := dylib
 	# RPATH for macOS - use @executable_path
 	RPATH_FLAG := -Wl,-rpath,@executable_path
-	# Go linker RPATH option for macOS
-	RPATH_OPTION := -r @executable_path
+	# Go linker RPATH option for macOS - use extldflags to pass to external linker
+	RPATH_OPTION := -extldflags "-Wl,-rpath,@executable_path"
 	# Go linker flags for macOS (RPATH only, no version - use GO_ALL_LDFLAGS for full flags)
-	GO_LDFLAGS := -ldflags="-r @executable_path"
+	GO_LDFLAGS := -ldflags="-extldflags '-Wl,-rpath,@executable_path'"
 else ifeq ($(UNAME_S),Linux)
 	# Linux
 	PLATFORM := linux
@@ -69,10 +69,10 @@ else ifeq ($(UNAME_S),Linux)
 	LIB_EXT := so
 	# RPATH for Linux
 	RPATH_FLAG := -Wl,-rpath,$$ORIGIN
-	# Go linker RPATH option for Linux
-	RPATH_OPTION := -r \$$ORIGIN
+	# Go linker RPATH option for Linux - use extldflags to pass to external linker
+	RPATH_OPTION := -extldflags "-Wl,-rpath,\$$ORIGIN"
 	# Go linker flags for Linux (RPATH only, no version - use GO_ALL_LDFLAGS for full flags)
-	GO_LDFLAGS := -ldflags="-r \$$ORIGIN"
+	GO_LDFLAGS := -ldflags="-extldflags '-Wl,-rpath,\$$ORIGIN'"
 else
 	$(error Unsupported platform: $(UNAME_S))
 endif
