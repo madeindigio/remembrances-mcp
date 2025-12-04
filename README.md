@@ -493,3 +493,78 @@ interactive: true
 ```
 GO_LLAMA_DIR=/www/MCP/Remembrances/go-llama.cpp PORTABLE=1 ./scripts/build-cuda-libs.sh
 ```
+
+### build-llama-cpp
+
+Build llama.cpp with optimizations for the current CPU
+
+interactive: true
+
+```
+GO_LLAMA_DIR=/www/MCP/Remembrances/go-llama.cpp PORTABLE=0 ./scripts/build-cuda-libs.sh
+```
+
+### dist
+
+Create a distribution package
+
+```bash
+rm -rf dist-variants/*
+
+echo "Creating distribution package linux amd64 cuda portable (AMD Ryzen compatible)..."
+xc build-llama-cpp-portable
+mkdir -p dist-variants/linux-amd64-cuda-amd-ryzen
+cp ./build/*.so ./dist-variants/linux-amd64-cuda-amd-ryzen/
+make BUILD_TYPE=cuda build
+cp ./build/remembrances-mcp ./dist-variants/linux-amd64-cuda-amd-ryzen/
+cp config.*.yaml ./dist-variants/linux-amd64-cuda-amd-ryzen/
+cd ./dist-variants/linux-amd64-cuda-amd-ryzen/
+zip -9 ../remembrances-mcp-linux-amd64-cuda-portable.zip *.*
+cd ../../
+
+echo "Creating distribution package linux amd64 cuda (optimized for current CPU)..."
+xc build-llama-cpp
+mkdir -p dist-variants/linux-amd64-cuda
+cp ./build/*.so ./dist-variants/linux-amd64-cuda/
+make BUILD_TYPE=cuda build
+cp ./build/remembrances-mcp ./dist-variants/linux-amd64-cuda/
+cp config.*.yaml ./dist-variants/linux-amd64-cuda/
+cd ./dist-variants/linux-amd64-cuda/
+zip -9 ../remembrances-mcp-linux-amd64-cuda.zip *.*
+cd ../../
+
+echo "Creating distribution package linux amd64 cpu (optimized for current CPU)..."
+xc build-llama-cpp
+mkdir -p dist-variants/linux-amd64-cpu
+cp ./build/*.so ./dist-variants/linux-amd64-cpu/
+make BUILD_TYPE=cpu build
+cp ./build/remembrances-mcp ./dist-variants/linux-amd64-cpu/
+cp config.*.yaml ./dist-variants/linux-amd64-cpu/
+cd ./dist-variants/linux-amd64-cpu/
+zip -9 ../remembrances-mcp-linux-amd64-cpu.zip *.*
+cd ../../
+
+echo "Creating distribution package OSX arm64 metal (M1/M2 optimized)..."
+ssh mac-mini-de-digio "cd ~/www/MCP/remembrances-mcp && make dist-darwin-arm64"
+ssh mac-mini-de-digio "cd ~/www/MCP/remembrances-mcp && xc build-osx"
+mkdir -p dist-variants/darwin-arm64-metal
+scp mac-mini-de-digio:~/www/MCP/remembrances-mcp/build/*.dylib ./dist-variants/darwin-arm64-metal/
+scp mac-mini-de-digio:~/www/MCP/remembrances-mcp/build/remembrances-mcp ./dist-variants/darwin-arm64-metal/
+cp config.*.yaml ./dist-variants/darwin-arm64-metal/
+zip -9 ./dist-variants/remembrances-mcp-darwin-arm64-metal.zip ./dist-variants/darwin-arm64-metal/*
+
+echo "Creating docker images..."
+make docker-prepare-cpu
+make docker-push-cpu
+```
+
+### build-osx
+
+Build for macOS (arm64 metal)
+
+interactive: true
+
+```zsh
+#make dist-darwin-arm64
+make BUILD_TYPE=metal build
+```
