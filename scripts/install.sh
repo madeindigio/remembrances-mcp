@@ -4,11 +4,23 @@
 #
 # This script will:
 # 1. Detect your operating system and architecture
-# 2. Download the appropriate binary release
-# 3. Install to ~/.local/share/remembrances/
-# 4. Add the bin directory to your PATH
-# 5. Create a default configuration file
-# 6. Download the GGUF embedding model
+# 2. Detect CPU type (Intel/AMD) and NVIDIA GPU availability
+# 3. Download the appropriate binary release
+# 4. Install to ~/.local/share/remembrances/ (Linux) or ~/Library/Application Support/remembrances/ (macOS)
+# 5. Add the bin directory to your PATH
+# 6. Create a default configuration file
+# 7. Download the GGUF embedding model
+#
+# Environment variables for non-interactive mode (curl | bash):
+#   REMEMBRANCES_VERSION=v1.14.1     - Specific version to install
+#   REMEMBRANCES_NVIDIA=yes|no       - Force NVIDIA or CPU-only build
+#   REMEMBRANCES_DOWNLOAD_MODEL=yes|no - Download GGUF model or skip
+#
+# Available builds:
+#   - darwin-arm64: macOS with Apple Silicon (M1/M2/M3)
+#   - linux-amd64-nvidia: Linux with NVIDIA GPU + modern Intel CPU
+#   - linux-amd64-nvidia-portable: Linux with NVIDIA GPU + AMD Ryzen or older Intel
+#   - linux-amd64-cpu-only: Linux without NVIDIA GPU
 
 set -e
 
@@ -19,8 +31,15 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Check if running interactively (for curl | bash support)
+# When piped, stdin is not a terminal, so we use defaults
+INTERACTIVE=false
+if [ -t 0 ]; then
+    INTERACTIVE=true
+fi
+
 # Version to install
-VERSION="${REMEMBRANCES_VERSION:-v1.4.6}"
+VERSION="${REMEMBRANCES_VERSION:-v1.14.1}"
 REPO="madeindigio/remembrances-mcp"
 GITHUB_RELEASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
 
@@ -75,6 +94,52 @@ check_nvidia() {
     return 1
 }
 
+# Check if CPU is modern Intel (not AMD Ryzen or older Intel)
+# Returns 0 (true) if modern Intel, 1 (false) if AMD Ryzen or older Intel
+check_modern_intel_cpu() {
+    local cpu_info
+    
+    # Get CPU model name
+    if [ -f /proc/cpuinfo ]; then
+        cpu_info=$(grep -m1 "model name" /proc/cpuinfo 2>/dev/null | cut -d: -f2 | tr '[:upper:]' '[:lower:]')
+    else
+        return 1  # Cannot determine, use portable version
+    fi
+    
+    # Check for AMD Ryzen - use portable version
+    if echo "$cpu_info" | grep -q "amd\|ryzen"; then
+        return 1
+    fi
+    
+    # Check for Intel - determine if modern (10th gen or newer)
+    if echo "$cpu_info" | grep -q "intel"; then
+        # Try to extract generation from Intel Core processors
+        # Modern formats: "11th gen intel", "12th gen intel", "13th gen intel", "14th gen intel"
+        # Also: Intel Core i7-10xxx, i7-11xxx, etc.
+        
+        # Check for "Nth gen" format (10th gen and above = modern)
+        if echo "$cpu_info" | grep -qE "(1[0-9]th|2[0-9]th)\s*gen"; then
+            return 0  # Modern Intel
+        fi
+        
+        # Check for Core iX-NXXXX format where N >= 10
+        if echo "$cpu_info" | grep -qE "i[3579]-1[0-9][0-9][0-9][0-9]"; then
+            return 0  # Modern Intel (10th gen+)
+        fi
+        
+        # Check for 12th/13th/14th gen patterns (like i7-12700, i9-13900)
+        if echo "$cpu_info" | grep -qE "i[3579]-(1[2-9][0-9][0-9][0-9]|[2-9][0-9][0-9][0-9][0-9])"; then
+            return 0  # Modern Intel
+        fi
+        
+        # Older Intel - use portable version for better compatibility
+        return 1
+    fi
+    
+    # Unknown CPU, use portable version for safety
+    return 1
+}
+
 # Get installation directories based on OS
 get_install_dirs() {
     local os="$1"
@@ -98,18 +163,25 @@ get_install_dirs() {
 get_download_url() {
     local os="$1"
     local arch="$2"
-    local nvidia="$3"
+    local variant="$3"  # "nvidia", "nvidia-portable", or "cpu-only"
 
     local filename
 
     if [ "$os" = "darwin" ]; then
-        filename="${os}-${arch}.zip"
+        # macOS - only arm64 supported
+        filename="remembrances-mcp-darwin-arm64.zip"
     elif [ "$os" = "linux" ]; then
-        if [ "$nvidia" = "true" ] && [ "$arch" = "amd64" ]; then
-            filename="linux-amd64-nvidia.zip"
-        else
-            filename="${os}-${arch}.zip"
-        fi
+        case "$variant" in
+            "nvidia")
+                filename="remembrances-mcp-linux-amd64-nvidia.zip"
+                ;;
+            "nvidia-portable")
+                filename="remembrances-mcp-linux-amd64-nvidia-portable.zip"
+                ;;
+            *)
+                filename="remembrances-mcp-linux-amd64-cpu-only.zip"
+                ;;
+        esac
     fi
 
     echo "${GITHUB_RELEASE_URL}/${filename}"
@@ -397,6 +469,25 @@ cleanup() {
     fi
 }
 
+# Ask user a yes/no question with default
+# Usage: ask_yes_no "prompt" "default" -> sets REPLY to y or n
+ask_yes_no() {
+    local prompt="$1"
+    local default="$2"
+    
+    if [ "$INTERACTIVE" = "true" ]; then
+        read -p "$prompt" -n 1 -r
+        echo ""
+        if [ -z "$REPLY" ]; then
+            REPLY="$default"
+        fi
+    else
+        # Non-interactive mode: use default
+        REPLY="$default"
+        print_warning "Non-interactive mode: using default ($default) for: $prompt"
+    fi
+}
+
 # Main installation function
 main() {
     echo ""
@@ -404,6 +495,13 @@ main() {
     echo -e "${GREEN}              Remembrances-MCP Installer ${VERSION}              ${NC}"
     echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
     echo ""
+    
+    if [ "$INTERACTIVE" = "false" ]; then
+        print_warning "Running in non-interactive mode (piped input detected)"
+        print_warning "Using default values for all prompts"
+        print_warning "Set environment variables to customize: REMEMBRANCES_VERSION, REMEMBRANCES_NVIDIA=yes/no, REMEMBRANCES_DOWNLOAD_MODEL=yes/no"
+        echo ""
+    fi
 
     # Detect OS
     local os
@@ -427,6 +525,14 @@ main() {
         exit 1
     fi
 
+    # Check for macOS x86_64 (not supported in releases)
+    if [ "${os}" = "darwin" ] && [ "${arch}" = "amd64" ]; then
+        print_error "macOS Intel (x86_64) binaries are not available in the current release."
+        print_error "Only macOS ARM64 (M1/M2/M3) is supported."
+        print_error "Please compile from source or use a Mac with Apple Silicon."
+        exit 1
+    fi
+
     # Check for Linux ARM (not supported in releases)
     if [ "${os}" = "linux" ] && [ "${arch}" = "aarch64" ]; then
         print_error "Linux ARM64 binaries are not available in the current release."
@@ -434,18 +540,51 @@ main() {
         exit 1
     fi
 
-    # Check for NVIDIA (Linux only)
-    local use_nvidia="false"
+    # Determine variant for Linux
+    local variant="cpu-only"
     if [ "${os}" = "linux" ] && [ "${arch}" = "amd64" ]; then
-        if check_nvidia; then
-            print_success "NVIDIA GPU detected"
-            echo ""
-            read -p "Do you want to install the NVIDIA/CUDA optimized version? [Y/n] " -n 1 -r nvidia_choice
-            echo ""
-            if [[ ! $nvidia_choice =~ ^[Nn]$ ]]; then
-                use_nvidia="true"
-                print_success "Using NVIDIA-optimized build"
+        # Check environment variable first
+        if [ "${REMEMBRANCES_NVIDIA:-}" = "yes" ]; then
+            if check_modern_intel_cpu; then
+                variant="nvidia"
+                print_success "Using NVIDIA build (modern Intel CPU detected, from env var)"
+            else
+                variant="nvidia-portable"
+                print_success "Using NVIDIA portable build (AMD Ryzen/older Intel, from env var)"
             fi
+        elif [ "${REMEMBRANCES_NVIDIA:-}" = "no" ]; then
+            variant="cpu-only"
+            print_success "Using CPU-only build (from env var)"
+        elif check_nvidia; then
+            print_success "NVIDIA GPU detected"
+            
+            # Detect CPU type
+            local cpu_info=""
+            if [ -f /proc/cpuinfo ]; then
+                cpu_info=$(grep -m1 "model name" /proc/cpuinfo 2>/dev/null | cut -d: -f2)
+            fi
+            if [ -n "$cpu_info" ]; then
+                print_step "Detected CPU:$cpu_info"
+            fi
+            
+            echo ""
+            ask_yes_no "Do you want to install the NVIDIA/CUDA optimized version? [Y/n] " "y"
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                # Determine which NVIDIA variant based on CPU
+                if check_modern_intel_cpu; then
+                    variant="nvidia"
+                    print_success "Using NVIDIA build (optimized for modern Intel CPUs)"
+                else
+                    variant="nvidia-portable"
+                    print_success "Using NVIDIA portable build (compatible with AMD Ryzen and older Intel)"
+                fi
+            else
+                variant="cpu-only"
+                print_success "Using CPU-only build"
+            fi
+        else
+            print_step "No NVIDIA GPU detected, using CPU-only build"
+            variant="cpu-only"
         fi
     fi
 
@@ -454,7 +593,8 @@ main() {
 
     # Get download URL
     local download_url
-    download_url=$(get_download_url "${os}" "${arch}" "${use_nvidia}")
+    download_url=$(get_download_url "${os}" "${arch}" "${variant}")
+    print_step "Download URL: ${download_url}"
 
     # Download and extract
     local extracted_dir
@@ -468,9 +608,18 @@ main() {
 
     # Download GGUF model
     echo ""
-    read -p "Do you want to download the GGUF embedding model (~260MB)? [Y/n] " -n 1 -r gguf_choice
-    echo ""
-    if [[ ! $gguf_choice =~ ^[Nn]$ ]]; then
+    local download_model="y"
+    if [ "${REMEMBRANCES_DOWNLOAD_MODEL:-}" = "no" ]; then
+        download_model="n"
+        print_warning "Skipping GGUF model download (from env var)"
+    elif [ "${REMEMBRANCES_DOWNLOAD_MODEL:-}" = "yes" ]; then
+        download_model="y"
+    else
+        ask_yes_no "Do you want to download the GGUF embedding model (~260MB)? [Y/n] " "y"
+        download_model="$REPLY"
+    fi
+    
+    if [[ ! $download_model =~ ^[Nn]$ ]]; then
         download_gguf_model
     else
         print_warning "Skipping GGUF model download"
