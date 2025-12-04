@@ -545,10 +545,10 @@ zip -9 ../remembrances-mcp-linux-amd64-cpu.zip *.*
 cd ../../
 
 echo "Creating distribution package OSX arm64 metal (M1/M2 optimized)..."
-ssh mac-mini-de-digio "cd ~/www/MCP/remembrances-mcp && make dist-darwin-arm64"
-ssh mac-mini-de-digio "cd ~/www/MCP/remembrances-mcp && xc build-osx"
+ssh mac-mini-de-digio "cd www/MCP/remembrances-mcp;pwd;/usr/local/bin/xc build-libs-osx"
 mkdir -p dist-variants/darwin-arm64-metal
 scp mac-mini-de-digio:~/www/MCP/remembrances-mcp/build/*.dylib ./dist-variants/darwin-arm64-metal/
+ssh mac-mini-de-digio "cd www/MCP/remembrances-mcp;pwd;/usr/local/bin/xc build-osx"
 scp mac-mini-de-digio:~/www/MCP/remembrances-mcp/build/remembrances-mcp ./dist-variants/darwin-arm64-metal/
 cp config.*.yaml ./dist-variants/darwin-arm64-metal/
 zip -9 ./dist-variants/remembrances-mcp-darwin-arm64-metal.zip ./dist-variants/darwin-arm64-metal/*
@@ -566,6 +566,16 @@ interactive: true
 
 ```zsh
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH
-#make dist-darwin-arm64
 make BUILD_TYPE=metal build
+```
+
+### build-libs-osx
+
+Build libs for macOS (arm64 metal)
+
+interactive: true
+
+```zsh
+export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH
+make dist-darwin-arm64
 ```
