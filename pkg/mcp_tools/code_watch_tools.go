@@ -79,16 +79,8 @@ func (ctm *CodeToolManager) codeActivateProjectWatchHandler(ctx context.Context,
 		result["message"] = fmt.Sprintf("File monitoring activated for project %s (deactivated %s)", input.ProjectID, previousProject)
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -121,16 +113,8 @@ func (ctm *CodeToolManager) codeDeactivateProjectWatchHandler(ctx context.Contex
 		}
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -170,15 +154,14 @@ func (ctm *CodeToolManager) codeGetWatchStatusHandler(ctx context.Context, req *
 		}
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	if projects, ok := result["projects"].([]map[string]interface{}); ok && len(projects) == 0 {
+		payload := CreateEmptyResultYAML("No watched projects", nil)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: payload},
+		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }

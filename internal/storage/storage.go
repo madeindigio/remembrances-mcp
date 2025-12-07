@@ -155,6 +155,7 @@ type MemoryStats struct {
 // GetStats returns statistics about stored memories
 type StatsProvider interface {
 	GetStats(ctx context.Context, userID string) (*MemoryStats, error)
+	CountByUserID(ctx context.Context, tableName string) (map[string]int, error)
 }
 
 // CodeStorage provides code indexing storage operations

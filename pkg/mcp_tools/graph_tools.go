@@ -100,13 +100,16 @@ func (tm *ToolManager) traverseGraphHandler(ctx context.Context, request *protoc
 		return nil, fmt.Errorf("failed to traverse graph: %w", err)
 	}
 
-	resultsBytes, _ := json.MarshalIndent(results, "", "  ")
+	response := map[string]interface{}{
+		"start_entity":      input.StartEntity,
+		"relationship_type": input.RelationshipType,
+		"depth":             input.Depth,
+		"count":             len(results),
+		"results":           results,
+	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: fmt.Sprintf("Graph traversal from '%s' found %d results:\n%s", input.StartEntity, len(results), string(resultsBytes)),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
 	}, false), nil
 }
 
@@ -122,20 +125,18 @@ func (tm *ToolManager) getEntityHandler(ctx context.Context, request *protocol.C
 	}
 
 	if entity == nil {
+		payload := CreateEmptyResultYAML(fmt.Sprintf("No entity found with ID '%s'", input.EntityID), nil)
 		return protocol.NewCallToolResult([]protocol.Content{
-			&protocol.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("No entity found with ID '%s'", input.EntityID),
-			},
+			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
 	}
 
-	entityBytes, _ := json.MarshalIndent(entity, "", "  ")
+	response := map[string]interface{}{
+		"entity_id": input.EntityID,
+		"entity":    entity,
+	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: fmt.Sprintf("Entity '%s':\n%s", input.EntityID, string(entityBytes)),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
 	}, false), nil
 }

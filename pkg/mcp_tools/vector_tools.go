@@ -93,12 +93,26 @@ func (tm *ToolManager) searchVectorsHandler(ctx context.Context, request *protoc
 		return nil, fmt.Errorf("failed to search remembrances: %w", err)
 	}
 
-	resultsBytes, _ := json.MarshalIndent(results, "", "  ")
+	if len(results) == 0 {
+		alt := tm.userAlternatives(ctx, "vector_memories")
+		yamlText := CreateEmptyResultYAML(fmt.Sprintf("No similar remembrances found for user '%s' and query '%s'", input.UserID, input.Query), alt)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: yamlText},
+		}, false), nil
+	}
+
+	payload := map[string]interface{}{
+		"user_id": input.UserID,
+		"query":   input.Query,
+		"limit":   input.Limit,
+		"count":   len(results),
+		"results": results,
+	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: fmt.Sprintf("Found %d similar remembrances for query '%s':\n%s", len(results), input.Query, string(resultsBytes)),
+			Text: MarshalYAML(payload),
 		},
 	}, false), nil
 }

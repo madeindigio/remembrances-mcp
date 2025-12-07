@@ -62,13 +62,9 @@ func (tm *ToolManager) saveEventHandler(ctx context.Context, request *protocol.C
 		"created_at": createdAt.Format(time.RFC3339),
 		"status":     "saved",
 	}
-	resultJSON, _ := json.MarshalIndent(result, "", "  ")
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -151,12 +147,16 @@ func (tm *ToolManager) searchEventsHandler(ctx context.Context, request *protoco
 		"count":  len(results),
 		"events": output,
 	}
-	resultJSON, _ := json.MarshalIndent(response, "", "  ")
+
+	if len(results) == 0 {
+		alt := tm.userAlternatives(ctx, "events")
+		yamlText := CreateEmptyResultYAML(fmt.Sprintf("No events found for user '%s' with current filters", input.UserID), alt)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: yamlText},
+		}, false), nil
+	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
 	}, false), nil
 }

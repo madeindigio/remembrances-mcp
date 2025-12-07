@@ -78,21 +78,21 @@ func (tm *ToolManager) getFactHandler(ctx context.Context, request *protocol.Cal
 	}
 
 	if value == nil {
+		alt := tm.userAlternatives(ctx, "kv_memories")
+		payload := CreateEmptyResultYAML(fmt.Sprintf("No fact found for key '%s' and user '%s'", input.Key, input.UserID), alt)
 		return protocol.NewCallToolResult([]protocol.Content{
-			&protocol.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("No fact found for key '%s' and user '%s'", input.Key, input.UserID),
-			},
+			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
 	}
 
-	valueBytes, _ := json.Marshal(value)
+	response := map[string]interface{}{
+		"user_id": input.UserID,
+		"key":     input.Key,
+		"value":   value,
+	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: fmt.Sprintf("Fact '%s' for user '%s': %s", input.Key, input.UserID, string(valueBytes)),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
 	}, false), nil
 }
 
@@ -107,13 +107,22 @@ func (tm *ToolManager) listFactsHandler(ctx context.Context, request *protocol.C
 		return nil, fmt.Errorf("failed to list facts: %w", err)
 	}
 
-	factsBytes, _ := json.MarshalIndent(facts, "", "  ")
+	if len(facts) == 0 {
+		alt := tm.userAlternatives(ctx, "kv_memories")
+		payload := CreateEmptyResultYAML(fmt.Sprintf("No facts found for user '%s'", input.UserID), alt)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: payload},
+		}, false), nil
+	}
+
+	response := map[string]interface{}{
+		"user_id": input.UserID,
+		"count":   len(facts),
+		"facts":   facts,
+	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: fmt.Sprintf("Facts for user '%s':\n%s", input.UserID, string(factsBytes)),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
 	}, false), nil
 }
 

@@ -327,16 +327,8 @@ func (cmtm *CodeManipulationToolManager) codeReplaceSymbolHandler(ctx context.Co
 		},
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -389,16 +381,8 @@ func (cmtm *CodeManipulationToolManager) codeInsertAfterSymbolHandler(ctx contex
 		"inserted_after_line": sym.EndLine,
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -451,16 +435,8 @@ func (cmtm *CodeManipulationToolManager) codeInsertBeforeSymbolHandler(ctx conte
 		"inserted_before_line": sym.StartLine,
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -534,15 +510,7 @@ func (cmtm *CodeManipulationToolManager) codeDeleteSymbolHandler(ctx context.Con
 		"deleted_symbol": deletedInfo,
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }

@@ -162,16 +162,8 @@ func (ctm *CodeToolManager) codeIndexProjectHandler(ctx context.Context, req *pr
 		"created_at": job.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -228,16 +220,8 @@ func (ctm *CodeToolManager) codeIndexStatusHandler(ctx context.Context, req *pro
 		}
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -253,16 +237,15 @@ func (ctm *CodeToolManager) codeListProjectsHandler(ctx context.Context, req *pr
 		"count":    len(results),
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	if len(results) == 0 {
+		payload := CreateEmptyResultYAML("No code projects indexed", nil)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: payload},
+		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -286,16 +269,8 @@ func (ctm *CodeToolManager) codeDeleteProjectHandler(ctx context.Context, req *p
 		"project_id": input.ProjectID,
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -319,16 +294,8 @@ func (ctm *CodeToolManager) codeReindexFileHandler(ctx context.Context, req *pro
 		"file_path":  input.FilePath,
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -383,16 +350,8 @@ func (ctm *CodeToolManager) codeGetProjectStatsHandler(ctx context.Context, req 
 		result[k] = v
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -465,15 +424,17 @@ func (ctm *CodeToolManager) codeGetFileSymbolsHandler(ctx context.Context, req *
 		"total_count":   len(symbols),
 	}
 
-	resultJSON, err := json.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	if len(symbols) == 0 {
+		yamlText := CreateEmptyResultYAML(
+			fmt.Sprintf("No symbols found in file '%s' for project '%s'", input.RelativePath, input.ProjectID),
+			ctm.projectAlternatives(ctx),
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: yamlText},
+		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }

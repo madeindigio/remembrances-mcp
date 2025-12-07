@@ -221,6 +221,66 @@ func (s *SurrealDBStorage) getCount(ctx context.Context, query string, params ma
 	return 0
 }
 
+// CountByUserID returns counts grouped by user_id for a given table. It is used
+// by MCP tools to suggest alternative user_ids when a query returns zero
+// results.
+func (s *SurrealDBStorage) CountByUserID(ctx context.Context, tableName string) (map[string]int, error) {
+	counts := make(map[string]int)
+
+	if tableName == "" {
+		return counts, fmt.Errorf("table name is required")
+	}
+
+	query := fmt.Sprintf("SELECT user_id, count() AS count FROM %s WHERE user_id IS NOT NULL GROUP BY user_id ORDER BY count DESC", tableName)
+	result, err := s.query(ctx, query, nil)
+	if err != nil {
+		return counts, fmt.Errorf("failed to count user_ids for table %s: %w", tableName, err)
+	}
+
+	if result == nil || len(*result) == 0 {
+		return counts, nil
+	}
+
+	qr := (*result)[0]
+	if qr.Status != "OK" || len(qr.Result) == 0 {
+		return counts, nil
+	}
+
+	for _, row := range qr.Result {
+		uidVal, ok := row["user_id"]
+		if !ok || uidVal == nil {
+			continue
+		}
+		uid := fmt.Sprint(uidVal)
+		cntVal, ok := row["count"]
+		if !ok {
+			continue
+		}
+		switch v := cntVal.(type) {
+		case float64:
+			counts[uid] = int(v)
+		case float32:
+			counts[uid] = int(v)
+		case int:
+			counts[uid] = v
+		case int64:
+			counts[uid] = int(v)
+		case uint64:
+			counts[uid] = int(v)
+		case string:
+			if parsed, err := strconv.Atoi(v); err == nil {
+				counts[uid] = parsed
+			}
+		default:
+			if parsed, err := strconv.Atoi(fmt.Sprint(v)); err == nil {
+				counts[uid] = parsed
+			}
+		}
+	}
+
+	return counts, nil
+}
+
 // getRelationshipTables returns all relationship tables (excluding system tables)
 func (s *SurrealDBStorage) getRelationshipTables(ctx context.Context) ([]string, error) {
 	tables := []string{}

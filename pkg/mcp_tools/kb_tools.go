@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
-	"gopkg.in/yaml.v3"
 )
 
 // Knowledge Base tool definitions
@@ -201,13 +200,22 @@ func (tm *ToolManager) searchDocumentsHandler(ctx context.Context, request *prot
 		}
 	}
 
-	resultsBytes, _ := yaml.Marshal(results)
+	if len(results) == 0 {
+		payload := CreateEmptyResultYAML(fmt.Sprintf("No documents found for query '%s'", input.Query), nil)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: payload},
+		}, false), nil
+	}
+
+	response := map[string]interface{}{
+		"query":   input.Query,
+		"limit":   input.Limit,
+		"count":   len(results),
+		"results": results,
+	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: fmt.Sprintf("Found %d documents for query '%s':\n%s", len(results), input.Query, string(resultsBytes)),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
 	}, false), nil
 }
 
@@ -228,13 +236,15 @@ func (tm *ToolManager) getDocumentHandler(ctx context.Context, request *protocol
 		// Don't include embedding in response (too large)
 		doc := *document
 		doc.Embedding = nil
-		docBytes, _ := json.MarshalIndent(doc, "", "  ")
+
+		response := map[string]interface{}{
+			"source":   "database",
+			"path":     input.FilePath,
+			"document": doc,
+		}
 
 		return protocol.NewCallToolResult([]protocol.Content{
-			&protocol.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Document '%s' (from database):\n%s", input.FilePath, string(docBytes)),
-			},
+			&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
 		}, false), nil
 	}
 
@@ -245,21 +255,21 @@ func (tm *ToolManager) getDocumentHandler(ctx context.Context, request *protocol
 			slog.Warn("failed to read document from filesystem", "file_path", input.FilePath, "error", err)
 		} else if content != "" {
 			// Found in filesystem, return it as a simple content response
+			response := map[string]interface{}{
+				"source":  "filesystem",
+				"path":    input.FilePath,
+				"content": content,
+			}
 			return protocol.NewCallToolResult([]protocol.Content{
-				&protocol.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Document '%s' (from filesystem):\n%s", input.FilePath, content),
-				},
+				&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
 			}, false), nil
 		}
 	}
 
 	// Not found in either location
+	payload := CreateEmptyResultYAML(fmt.Sprintf("No document found at path '%s' in database or filesystem", input.FilePath), nil)
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: fmt.Sprintf("No document found at path '%s' in database or filesystem", input.FilePath),
-		},
+		&protocol.TextContent{Type: "text", Text: payload},
 	}, false), nil
 }
 

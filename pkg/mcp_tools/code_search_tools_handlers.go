@@ -77,16 +77,18 @@ func (cstm *CodeSearchToolManager) codeGetSymbolsOverviewHandler(ctx context.Con
 		"count":     len(topLevelSymbols),
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	if len(topLevelSymbols) == 0 {
+		yamlText := CreateEmptyResultYAML(
+			fmt.Sprintf("No symbols found in '%s' for project '%s'", input.RelativePath, input.ProjectID),
+			cstm.projectAlternatives(ctx),
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: yamlText},
+		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -199,16 +201,18 @@ func (cstm *CodeSearchToolManager) codeFindSymbolHandler(ctx context.Context, re
 		"count":   len(symbols),
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	if len(symbols) == 0 {
+		yamlText := CreateEmptyResultYAML(
+			fmt.Sprintf("No symbols matched pattern '%s' in project '%s'", input.NamePathPattern, input.ProjectID),
+			cstm.projectAlternatives(ctx),
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: yamlText},
+		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -313,16 +317,18 @@ func (cstm *CodeSearchToolManager) codeSearchSymbolsSemanticHandler(ctx context.
 		"count":   len(symbols),
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	if len(symbols) == 0 {
+		yamlText := CreateEmptyResultYAML(
+			fmt.Sprintf("No semantic matches found for query '%s' in project '%s'", input.Query, input.ProjectID),
+			cstm.projectAlternatives(ctx),
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: yamlText},
+		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -441,16 +447,18 @@ func (cstm *CodeSearchToolManager) codeSearchPatternHandler(ctx context.Context,
 		"count":    len(matches),
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	if len(matches) == 0 {
+		yamlText := CreateEmptyResultYAML(
+			fmt.Sprintf("No pattern matches found for project '%s'", input.ProjectID),
+			cstm.projectAlternatives(ctx),
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: yamlText},
+		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -554,16 +562,18 @@ func (cstm *CodeSearchToolManager) codeFindReferencesHandler(ctx context.Context
 		"count":         len(references),
 	}
 
-	resultJSON, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	if len(references) == 0 {
+		yamlText := CreateEmptyResultYAML(
+			fmt.Sprintf("No references found for symbol '%s' in project '%s'", targetName, input.ProjectID),
+			cstm.projectAlternatives(ctx),
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: yamlText},
+		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
 	}, false), nil
 }
 
@@ -776,15 +786,17 @@ func (cstm *CodeSearchToolManager) codeHybridSearchHandler(ctx context.Context, 
 		},
 	}
 
-	resultJSON, err := json.MarshalIndent(output, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result: %w", err)
+	if len(results) == 0 {
+		yamlText := CreateEmptyResultYAML(
+			fmt.Sprintf("No code results found for query '%s' in project '%s'", input.Query, input.ProjectID),
+			cstm.projectAlternatives(ctx),
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: yamlText},
+		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{
-			Type: "text",
-			Text: string(resultJSON),
-		},
+		&protocol.TextContent{Type: "text", Text: MarshalYAML(output)},
 	}, false), nil
 }
