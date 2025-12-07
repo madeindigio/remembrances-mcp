@@ -1,6 +1,10 @@
 TOOL: remembrance_hybrid_search
 ================================
 
+PURPOSE
+-------
+Run a combined search over facts, vectors, documents, and graph data for a user.
+
 Perform a hybrid search across vectors, graph, and key-value facts.
 
 DESCRIPTION

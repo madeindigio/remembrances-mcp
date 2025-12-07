@@ -1,0 +1,10 @@
+LIST_IMPORTS TOOL
+=================
+
+PURPOSE: List imports/dependencies for a given source file.
+
+USAGE:
+  Provide file path to retrieve the import graph or top-level dependencies.
+
+NOTES:
+  Helps understand coupling and identify required modules quickly.

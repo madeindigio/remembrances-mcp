@@ -1,0 +1,10 @@
+FIND_REFERENCES TOOL
+====================
+
+PURPOSE: Find all references/usages of a given symbol within the indexed project.
+
+USAGE:
+  Provide symbol name or ID to retrieve locations where it is used.
+
+NOTES:
+  Complements search_symbols; mirrors code_find_references behavior.

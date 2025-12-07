@@ -1,0 +1,10 @@
+SEARCH_CODE TOOL
+================
+
+PURPOSE: Perform a text-based search across indexed code files.
+
+USAGE:
+  Provide query terms or regex to find matching code snippets within the indexed project.
+
+NOTES:
+  Complements semantic search; use for precise string or pattern matches.

@@ -32,6 +32,8 @@ type Config struct {
 	SurrealDBPass      string `mapstructure:"surrealdb-pass"`
 	SurrealDBNamespace string `mapstructure:"surrealdb-namespace"`
 	SurrealDBDatabase  string `mapstructure:"surrealdb-database"`
+	UseEmbeddedLibs    bool   `mapstructure:"use-embedded-libs"`
+	EmbeddedLibsDir    string `mapstructure:"embedded-libs-dir"`
 	// Command to start an external SurrealDB instance when connection cannot be
 	// established. Can be set via CLI flag --surrealdb-start-cmd or
 	// environment variable GOMEM_SURREALDB_START_CMD.
@@ -82,6 +84,8 @@ func Load() (*Config, error) {
 	pflag.Bool("rest-api-serve", false, "Enable REST API server")
 	pflag.String("knowledge-base", "", "Path to the knowledge base directory")
 	pflag.String("db-path", "./remembrances.db", "Path to the embedded SurrealDB database")
+	pflag.Bool("use-embedded-libs", true, "Extract and load embedded shared libraries (libsurrealdb, libllama, ggml)")
+	pflag.String("embedded-libs-dir", "", "Destination directory for extracted embedded libraries (defaults to temporary dir)")
 	pflag.String("surrealdb-url", "", "URL for the remote SurrealDB instance")
 	pflag.String("surrealdb-user", "root", "Username for SurrealDB")
 	pflag.String("surrealdb-pass", "root", "Password for SurrealDB")

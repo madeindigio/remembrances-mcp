@@ -1,0 +1,10 @@
+INDEX_DIRECTORY TOOL
+====================
+
+PURPOSE: Index a specific directory tree within a repository.
+
+USAGE:
+  Provide the directory path to index so the code search backend processes only that subtree.
+
+NOTES:
+  Useful for narrowing indexing scope; aligns with code_index_project when targeting a subpath.

@@ -1,6 +1,10 @@
 TOOL: remembrance_get_fact
 ==========================
 
+PURPOSE
+-------
+Fetch a previously stored fact by exact key for a given user.
+
 Retrieve a key-value fact for a user by key.
 
 DESCRIPTION

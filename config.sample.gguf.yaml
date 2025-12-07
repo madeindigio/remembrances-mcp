@@ -32,6 +32,12 @@ knowledge-base: "/www/MCP/remembrances-mcp/.serena/memories"
 # Path to the embedded SurrealDB database (default: "./remembrances.db")
 db-path: "surrealkv:///www/MCP/remembrances-mcp/remembrances.db"
 
+# Use embedded shared libraries (SurrealDB + llama.cpp) via go:embed/purego (default: true)
+#use-embedded-libs: true
+
+# Optional directory to extract embedded libraries (default: temporary directory)
+#embedded-libs-dir: ""
+
 # URL for the remote SurrealDB instance (default: "")
 #surrealdb-url: "ws://localhost:8000"
 

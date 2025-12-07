@@ -1,0 +1,10 @@
+GET_INDEX_STATS TOOL
+====================
+
+PURPOSE: Retrieve statistics about an indexed project (files, symbols, embeddings, etc.).
+
+USAGE:
+  Call with project identifier to inspect index size and health indicators.
+
+NOTES:
+  Provides a quick health check before search or modification operations.

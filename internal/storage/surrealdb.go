@@ -2,11 +2,14 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
+	"runtime"
 	"time"
 
+	embeddedlibs "github.com/madeindigio/remembrances-mcp/internal/embedded"
 	embedded "github.com/madeindigio/surrealdb-embedded-golang"
 	"github.com/surrealdb/surrealdb.go"
 )
@@ -17,6 +20,9 @@ type SurrealDBStorage struct {
 	embeddedDB  *embedded.DB
 	config      *ConnectionConfig
 	useEmbedded bool
+
+	embeddedLoader *embeddedlibs.Loader
+	embeddedLibs   *embeddedlibs.ExtractResult
 }
 
 // NewSurrealDBStorage creates a new SurrealDB storage instance
@@ -49,13 +55,14 @@ func NewSurrealDBStorageFromEnv(dbPath string) *SurrealDBStorage {
 	}
 
 	config := &ConnectionConfig{
-		URL:       os.Getenv("SURREALDB_URL"),
-		Username:  os.Getenv("SURREALDB_USER"),
-		Password:  os.Getenv("SURREALDB_PASS"),
-		DBPath:    dbPath,
-		Namespace: namespace,
-		Database:  database,
-		Timeout:   30 * time.Second,
+		URL:             os.Getenv("SURREALDB_URL"),
+		Username:        os.Getenv("SURREALDB_USER"),
+		Password:        os.Getenv("SURREALDB_PASS"),
+		DBPath:          dbPath,
+		Namespace:       namespace,
+		Database:        database,
+		UseEmbeddedLibs: true,
+		Timeout:         30 * time.Second,
 	}
 
 	return NewSurrealDBStorage(config)
@@ -64,6 +71,21 @@ func NewSurrealDBStorageFromEnv(dbPath string) *SurrealDBStorage {
 // Connect establishes connection to SurrealDB (embedded or remote)
 func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 	var err error
+
+	if s.config.UseEmbeddedLibs && s.embeddedLoader == nil {
+		libs, loader, loadErr := embeddedlibs.ExtractAndLoad(ctx, s.config.EmbeddedLibsDir)
+		if loadErr != nil {
+			if errors.Is(loadErr, embeddedlibs.ErrPlatformUnsupported) {
+				slog.Warn("Embedded libraries not available for this platform; falling back to system lookup", "platform", fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH))
+			} else {
+				return fmt.Errorf("prepare embedded libraries: %w", loadErr)
+			}
+		} else {
+			s.embeddedLibs = libs
+			s.embeddedLoader = loader
+			slog.Info("Embedded libraries loaded", "platform", libs.Platform, "dir", libs.Directory)
+		}
+	}
 
 	// Priority: if DBPath is set, use embedded; otherwise use remote URL
 	if s.config.DBPath != "" && s.config.URL == "" {
@@ -113,16 +135,29 @@ func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 
 // Close closes the database connection
 func (s *SurrealDBStorage) Close() error {
+	var errs []error
+
 	if s.useEmbedded {
 		if s.embeddedDB != nil {
-			return s.embeddedDB.Close()
+			if err := s.embeddedDB.Close(); err != nil {
+				errs = append(errs, err)
+			}
 		}
 	} else {
 		if s.db != nil {
-			s.db.Close()
+			if err := s.db.Close(); err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
-	return nil
+
+	if s.embeddedLoader != nil {
+		if err := s.embeddedLoader.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errors.Join(errs...)
 }
 
 // Ping checks if the database connection is alive

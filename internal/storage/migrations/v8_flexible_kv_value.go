@@ -26,11 +26,11 @@ func (m *V8FlexibleKVValue) Apply(ctx context.Context, db *surrealdb.DB) error {
 
 	// Remove old field definition
 	removeStatement := `REMOVE FIELD value ON kv_memories;`
-	slog.Debug("Removing old field definition: %s", removeStatement)
+	slog.Debug("Removing old field definition", "stmt", removeStatement)
 	_, err := surrealdb.Query[[]map[string]interface{}](db, removeStatement, nil)
 	if err != nil {
 		// Log warning but continue - field might not exist
-		slog.Debug("Warning: Could not remove field (may not exist): %v", err)
+		slog.Debug("Could not remove field (may not exist)", "error", err)
 	}
 
 	// Redefine with FLEXIBLE keyword to allow strings with newlines
@@ -40,7 +40,7 @@ func (m *V8FlexibleKVValue) Apply(ctx context.Context, db *surrealdb.DB) error {
 		OnTable:   "kv_memories",
 	}
 
-	slog.Debug("Creating field: %s", element.Statement)
+	slog.Debug("Creating field", "stmt", element.Statement)
 	_, err = surrealdb.Query[[]map[string]interface{}](db, element.Statement, nil)
 	if err != nil {
 		return err

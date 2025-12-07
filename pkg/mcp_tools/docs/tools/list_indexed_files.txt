@@ -1,0 +1,10 @@
+LIST_INDEXED_FILES TOOL
+=======================
+
+PURPOSE: List files currently tracked in the code index for a project.
+
+USAGE:
+  Call with project identifier to retrieve the catalog of indexed files.
+
+NOTES:
+  Helps validate indexing coverage before running code search tools.

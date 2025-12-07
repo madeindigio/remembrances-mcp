@@ -4,6 +4,7 @@ go 1.23.4
 
 require (
 	github.com/ThinkInAIXYZ/go-mcp v0.2.21
+	github.com/ebitengine/purego v0.7.1
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/uuid v1.6.0
 	github.com/madeindigio/go-llama.cpp v0.0.0-00010101000000-000000000000

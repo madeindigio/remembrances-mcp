@@ -1,0 +1,10 @@
+EXTRACT_CODE_BLOCK TOOL
+=======================
+
+PURPOSE: Extract a specific code block (by location or symbol) from the indexed project.
+
+USAGE:
+  Provide file path and range or symbol to return the exact code snippet.
+
+NOTES:
+  Great for supplying minimal context to downstream tools or chat responses.

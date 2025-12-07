@@ -1,34 +1,3 @@
-# Plan Actual: Migración JSON → YAML en MCP Tools
-
-**Branch:** `feature/resolve-user-id`  
-**Fecha:** 7 diciembre 2025
-
-## Objetivo
-
-Convertir todas las respuestas de MCP tools de JSON a YAML y agregar sugerencias de user_id/project_id alternativos cuando búsquedas retornan 0 resultados.
-
-## Fases del Plan
-
-1. **Utilidad YAML** → Crear `pkg/mcp_tools/yaml_utils.go`
-2. **Count por user_id** → Implementar `CountByUserID()` en storage
-3. **Handlers user_id** → Agregar alternativas cuando count=0
-4. **Memory tools → YAML** → Convertir vector/fact/event/graph/kb tools
-5. **Code tools → YAML** → Convertir search/indexing/manipulation tools
-6. **Handlers project_id** → Agregar alternativas para code tools
-7. **Testing** → Validar todas las conversiones
-
-## Detalles Completos
-
-Ver facts guardados: `yaml_migration_phase_1` a `yaml_migration_phase_7`  
-Recuperar con: `get_fact` o `last_to_remember`
-
-## Archivos Principales
-
-- `pkg/mcp_tools/yaml_utils.go` (nuevo)
-- `internal/storage/surrealdb_stats.go`
-- `pkg/mcp_tools/*_tools.go` (10+ archivos)
-
----
 
 # Plan: Integración de Bibliotecas Embebidas con go:embed + purego
 

@@ -1,6 +1,10 @@
 TOOL: kb_add_document
 =====================
 
+PURPOSE
+-------
+Ingest a document into the knowledge base and embed it for semantic search.
+
 Add a document to the knowledge base with automatic embedding.
 
 DESCRIPTION

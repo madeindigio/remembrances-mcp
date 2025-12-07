@@ -1,5 +1,8 @@
+KNOWLEDGE BASE TOOLS GROUP
+==========================
+
 KNOWLEDGE BASE TOOLS DOCUMENTATION
-===================================
+----------------------------------
 
 The Knowledge Base (KB) provides document storage with semantic search capabilities.
 

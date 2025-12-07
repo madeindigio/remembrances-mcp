@@ -1,4 +1,4 @@
-.PHONY: all build clean test llama-cpp llama-cpp-clean help \
+.PHONY: all build build-embedded prepare-embedded-libs clean test llama-cpp llama-cpp-clean help \
 	docker-build-cuda docker-push-cuda docker-run-cuda docker-stop-cuda \
 	docker-build-cpu docker-push-cpu docker-run-cpu docker-stop-cpu \
 	docker-download-model docker-prepare-cuda docker-prepare-cpu docker-login docker-help
@@ -77,6 +77,11 @@ else
 	$(error Unsupported platform: $(UNAME_S))
 endif
 
+	EMBEDDED_LIB_PATH := internal/embedded/libs/$(PLATFORM)/$(ARCH)
+	ABS_EMBEDDED_LIB_PATH := $(abspath $(EMBEDDED_LIB_PATH))
+	ABS_BUILD_DIR := $(abspath $(BUILD_DIR))
+	TEST_PKGS := $(shell GOFLAGS=-mod=mod go list ./... | grep -v '/cmd/test-')
+
 # CGO flags for linking with llama.cpp and surrealdb-embedded
 export CGO_ENABLED := 1
 export CGO_CFLAGS := -I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include -I$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/include
@@ -90,6 +95,7 @@ help:
 	@echo ""
 	@echo "Available targets:"
 	@echo "  make build              - Build the project with GGUF and embedded SurrealDB support"
+	@echo "  make build-embedded     - Build binary embedding shared libs via go:embed/purego"
 	@echo "  make llama-cpp          - Build llama.cpp library"
 	@echo "  make llama-cpp-clean    - Clean llama.cpp build artifacts"
 	@echo "  make surrealdb-embedded - Build surrealdb-embedded library"
@@ -252,6 +258,32 @@ ifeq ($(PLATFORM),darwin)
 endif
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
+# Prepare embedded shared libraries (SurrealDB + llama.cpp) inside the
+# go:embed-friendly directory structure so they can be packaged into the
+# binary using the embedded package.
+prepare-embedded-libs: llama-cpp surrealdb-embedded
+	@echo "Preparing embedded libraries for $(PLATFORM)/$(ARCH) -> $(EMBEDDED_LIB_PATH)"
+	@mkdir -p $(EMBEDDED_LIB_PATH)
+	@for lib in libsurrealdb_embedded_rs.$(LIB_EXT) libllama.$(LIB_EXT) libggml.$(LIB_EXT) libggml-base.$(LIB_EXT) libggml-cpu.$(LIB_EXT) libmtmd.$(LIB_EXT); do \
+		found=0; \
+		for dir in $(BUILD_DIR) $(BUILD_DIR)/libs/cpu $(GO_LLAMA_DIR)/build/bin $(GO_LLAMA_DIR)/build/common $(GO_LLAMA_DIR)/build/src $(GO_LLAMA_DIR)/build/ggml $(GO_LLAMA_DIR)/build; do \
+			if [ -f "$$dir/$$lib" ]; then \
+				cp "$$dir/$$lib" $(EMBEDDED_LIB_PATH)/ && echo "✓ $$lib"; \
+				found=1; \
+				break; \
+			fi; \
+		done; \
+		if [ $$found -eq 0 ]; then echo "⚠ Missing $$lib (not copied)"; fi; \
+	done
+	@ls -lh $(EMBEDDED_LIB_PATH) || true
+
+# Build an embedded binary that ships the shared libraries via go:embed/purego.
+build-embedded: prepare-embedded-libs
+	@echo "Building $(BINARY_NAME)-embedded with embedded shared libraries..."
+	@mkdir -p $(BUILD_DIR)
+	go build -mod=mod -tags embedded -v -ldflags="$(RPATH_OPTION) $(GO_VERSION_LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-embedded ./cmd/remembrances-mcp
+	@echo "Embedded binary ready: $(BUILD_DIR)/$(BINARY_NAME)-embedded"
+
 # Run the application
 run: build
 	@echo "Running $(BINARY_NAME)..."
@@ -259,9 +291,11 @@ run: build
 	./run-remembrances.sh
 
 # Run tests
-test:
-	@echo "Running tests..."
-	go test -v ./...
+test: prepare-embedded-libs
+	@echo "Running tests with embedded libraries..."
+	@echo "  LD_LIBRARY_PATH=$(ABS_EMBEDDED_LIB_PATH):$(ABS_BUILD_DIR):$(ABS_BUILD_DIR)/libs/cpu"
+	@LD_LIBRARY_PATH=$(ABS_EMBEDDED_LIB_PATH):$(ABS_BUILD_DIR):$(ABS_BUILD_DIR)/libs/cpu:$(LD_LIBRARY_PATH) \
+		go test -mod=mod -v $(TEST_PKGS)
 
 # Build llama.cpp with specific variant and copy to build/libs/{variant}/
 build-libs-variant:

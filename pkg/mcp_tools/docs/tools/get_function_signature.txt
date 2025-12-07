@@ -1,0 +1,10 @@
+GET_FUNCTION_SIGNATURE TOOL
+==========================
+
+PURPOSE: Return the signature (name, parameters, return types) of a specified function.
+
+USAGE:
+  Provide project identifier and function reference to obtain its signature.
+
+NOTES:
+  Useful for quick API inspection without reading full bodies.

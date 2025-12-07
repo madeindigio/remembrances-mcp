@@ -1,0 +1,10 @@
+FIND_SIMILAR_CODE TOOL
+======================
+
+PURPOSE: Find code snippets semantically similar to a given example or query.
+
+USAGE:
+  Provide a code sample or description; returns matches ranked by similarity.
+
+NOTES:
+  Useful for pattern discovery, reuse, or refactoring suggestions.

@@ -1,0 +1,10 @@
+SEARCH_SYMBOLS TOOL
+===================
+
+PURPOSE: Locate symbols (functions, methods, classes, etc.) by name within an indexed project.
+
+USAGE:
+  Provide symbol name or pattern to retrieve matching declarations.
+
+NOTES:
+  Use alongside search_code for comprehensive discovery.

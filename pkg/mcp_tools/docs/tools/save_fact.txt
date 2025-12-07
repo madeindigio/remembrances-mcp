@@ -1,6 +1,10 @@
 TOOL: remembrance_save_fact
 ===========================
 
+PURPOSE
+-------
+Persist a key-value fact for a user, optimized for exact-key retrieval.
+
 Save a key-value fact for a user.
 
 DESCRIPTION

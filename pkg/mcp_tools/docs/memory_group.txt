@@ -1,5 +1,8 @@
+MEMORY TOOLS GROUP
+===================
+
 MEMORY TOOLS DOCUMENTATION
-==========================
+--------------------------
 
 This group provides a 3-layer memory system: key-value facts, semantic vectors, and knowledge graph.
 

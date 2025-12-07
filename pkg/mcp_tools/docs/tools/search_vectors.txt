@@ -1,6 +1,10 @@
 TOOL: remembrance_search_vectors
 =================================
 
+PURPOSE
+-------
+Perform semantic similarity search over stored vector memories for a user.
+
 Search remembrances by semantic similarity.
 
 DESCRIPTION

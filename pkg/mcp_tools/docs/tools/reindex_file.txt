@@ -1,0 +1,10 @@
+REINDEX_FILE TOOL
+=================
+
+PURPOSE: Refresh the index entry for a single file after modifications.
+
+USAGE:
+  Provide project identifier and file path to update the semantic and symbol index for that file.
+
+NOTES:
+  Mirrors code_reindex_file and should be run after applying code edits.

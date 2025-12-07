@@ -1,0 +1,10 @@
+GET_INDEXING_STATUS TOOL
+========================
+
+PURPOSE: Check the current status of an in-flight indexing job.
+
+USAGE:
+  Supply the job or project identifier to see progress, queued, running, or completed state.
+
+NOTES:
+  Equivalent to polling code_index_status for finer-grained feedback.

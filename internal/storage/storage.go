@@ -134,7 +134,9 @@ type ConnectionConfig struct {
 	Password string `json:"password"`
 
 	// Embedded database settings
-	DBPath string `json:"db_path"`
+	DBPath          string `json:"db_path"`
+	UseEmbeddedLibs bool   `json:"use_embedded_libs"`
+	EmbeddedLibsDir string `json:"embedded_libs_dir"`
 
 	// General settings
 	Namespace string        `json:"namespace"`

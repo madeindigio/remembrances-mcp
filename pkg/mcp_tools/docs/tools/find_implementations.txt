@@ -1,0 +1,10 @@
+FIND_IMPLEMENTATIONS TOOL
+=========================
+
+PURPOSE: Locate concrete implementations of an interface or abstract symbol.
+
+USAGE:
+  Provide the interface/abstract symbol to list implementing symbols across the project.
+
+NOTES:
+  Handy for polymorphic codebases; pairs with find_references for deeper analysis.

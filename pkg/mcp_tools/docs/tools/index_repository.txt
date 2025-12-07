@@ -1,0 +1,10 @@
+INDEX_REPOSITORY TOOL
+=====================
+
+PURPOSE: Trigger indexing of an entire repository for code search.
+
+USAGE:
+  Call the code indexing API to enqueue a repository scan and indexing job.
+
+NOTES:
+  Mirrors the behavior of code_index_project; use when you want to index a repo root.

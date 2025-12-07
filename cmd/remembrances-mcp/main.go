@@ -140,21 +140,25 @@ Choose the right tool for your data:
 	if cfg.SurrealDBURL != "" {
 		// Use remote SurrealDB
 		storageConfig := &storage.ConnectionConfig{
-			URL:       cfg.SurrealDBURL,
-			Username:  cfg.SurrealDBUser,
-			Password:  cfg.SurrealDBPass,
-			Namespace: cfg.GetSurrealDBNamespace(),
-			Database:  cfg.GetSurrealDBDatabase(),
-			Timeout:   30 * time.Second,
+			URL:             cfg.SurrealDBURL,
+			Username:        cfg.SurrealDBUser,
+			Password:        cfg.SurrealDBPass,
+			Namespace:       cfg.GetSurrealDBNamespace(),
+			Database:        cfg.GetSurrealDBDatabase(),
+			Timeout:         30 * time.Second,
+			UseEmbeddedLibs: cfg.UseEmbeddedLibs,
+			EmbeddedLibsDir: cfg.EmbeddedLibsDir,
 		}
 		storageInstance = storage.NewSurrealDBStorage(storageConfig)
 	} else {
 		// Use embedded SurrealDB
 		storageConfig := &storage.ConnectionConfig{
-			DBPath:    cfg.DbPath,
-			Namespace: cfg.GetSurrealDBNamespace(),
-			Database:  cfg.GetSurrealDBDatabase(),
-			Timeout:   30 * time.Second,
+			DBPath:          cfg.DbPath,
+			Namespace:       cfg.GetSurrealDBNamespace(),
+			Database:        cfg.GetSurrealDBDatabase(),
+			Timeout:         30 * time.Second,
+			UseEmbeddedLibs: cfg.UseEmbeddedLibs,
+			EmbeddedLibsDir: cfg.EmbeddedLibsDir,
 		}
 		storageInstance = storage.NewSurrealDBStorage(storageConfig)
 	}

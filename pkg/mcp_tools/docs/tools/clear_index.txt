@@ -1,0 +1,10 @@
+CLEAR_INDEX TOOL
+================
+
+PURPOSE: Remove all indexed data for a project.
+
+USAGE:
+  Invoke with project identifier to purge code index artifacts and start fresh.
+
+NOTES:
+  Similar intent to code_delete_project but focused on clearing index contents.

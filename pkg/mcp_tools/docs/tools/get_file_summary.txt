@@ -1,0 +1,10 @@
+GET_FILE_SUMMARY TOOL
+=====================
+
+PURPOSE: Return a concise summary of a specific file from the code index.
+
+USAGE:
+  Provide project identifier and file path to receive a structured overview of contents.
+
+NOTES:
+  Helpful for quick orientation before deeper symbol or pattern searches.

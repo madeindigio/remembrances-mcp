@@ -1,0 +1,10 @@
+GET_SYMBOL_CONTEXT TOOL
+=======================
+
+PURPOSE: Retrieve surrounding context for a specific symbol (function, method, etc.).
+
+USAGE:
+  Provide symbol identifier or name to receive the enclosing code block and relevant lines.
+
+NOTES:
+  Useful for understanding usage and implementation details during navigation.

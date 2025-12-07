@@ -1,5 +1,8 @@
+CODE TOOLS GROUP
+================
+
 CODE TOOLS DOCUMENTATION
-========================
+------------------------
 
 Code tools provide indexing, semantic search, and manipulation of source code projects.
 
