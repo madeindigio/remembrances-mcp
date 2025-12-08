@@ -1,4 +1,4 @@
-//go:build !(linux && amd64)
+//go:build !((linux && amd64 && (embedded || embedded_cpu || embedded_cuda || embedded_cuda_portable)) || (darwin && arm64 && (embedded || embedded_metal)))
 
 package embedded
 
@@ -13,11 +13,11 @@ import (
 var platformLibs embed.FS
 
 const (
+	platformOS        = runtime.GOOS
+	platformArch      = runtime.GOARCH
+	platformVariant   = ""
+	platformPortable  = false
+	platformLibExt    = ""
 	platformSupported = false
 	platformLibDir    = ""
-)
-
-var (
-	platformOS   = runtime.GOOS
-	platformArch = runtime.GOARCH
 )

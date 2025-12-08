@@ -24,6 +24,8 @@ var (
 // qualified path on disk.
 type ExtractResult struct {
 	Platform  string
+	Variant   string
+	Portable  bool
 	Directory string
 	Files     map[string]string
 }
@@ -65,13 +67,17 @@ func ExtractLibraries(ctx context.Context, destDir string) (*ExtractResult, erro
 			continue
 		}
 
+		name := entry.Name()
+		if !isLibraryFile(name) {
+			continue
+		}
+
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
 		}
 
-		name := entry.Name()
 		source := filepath.Join(platformLibDir, name)
 		target := filepath.Join(destDir, name)
 
@@ -82,8 +88,14 @@ func ExtractLibraries(ctx context.Context, destDir string) (*ExtractResult, erro
 		files[name] = target
 	}
 
+	if len(files) == 0 {
+		return nil, fmt.Errorf("no embedded libraries found for platform %s/%s variant %s", platformOS, platformArch, platformVariant)
+	}
+
 	return &ExtractResult{
 		Platform:  fmt.Sprintf("%s/%s", platformOS, platformArch),
+		Variant:   platformVariant,
+		Portable:  platformPortable,
 		Directory: destDir,
 		Files:     files,
 	}, nil
@@ -154,4 +166,12 @@ func copyEmbeddedFile(fsys fs.FS, src, dest string) error {
 	}
 
 	return os.Rename(tmp, dest)
+}
+
+func isLibraryFile(name string) bool {
+	if platformLibExt == "" {
+		return false
+	}
+
+	return strings.HasSuffix(name, platformLibExt)
 }

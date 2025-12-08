@@ -16,7 +16,7 @@ func ExtractAndLoad(ctx context.Context, destDir string) (*ExtractResult, *Loade
 	}
 
 	ldr := NewLoader()
-	if err := ldr.Load(res.Files); err != nil {
+	if err := ldr.Load(res.Files, res.Variant); err != nil {
 		return nil, nil, fmt.Errorf("load embedded libraries: %w", err)
 	}
 

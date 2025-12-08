@@ -53,7 +53,7 @@ func TestAppendLibraryPathIdempotent(t *testing.T) {
 
 func TestLoaderHandlesMissingLibrary(t *testing.T) {
 	ldr := NewLoader()
-	err := ldr.Load(map[string]string{"missing.so": "/path/does/not/exist"})
+	err := ldr.Load(map[string]string{"missing.so": "/path/does/not/exist"}, "cpu")
 	if err == nil {
 		t.Fatalf("expected error when loading missing library")
 	}
@@ -74,9 +74,37 @@ func TestLoaderCanLoadEmbedded(t *testing.T) {
 	ldr := NewLoader()
 	t.Cleanup(func() { _ = ldr.Close() })
 
-	if err := ldr.Load(res.Files); err != nil {
+	if err := ldr.Load(res.Files, res.Variant); err != nil {
 		// Loading may fail on platforms without required runtime dependencies.
 		t.Skipf("skipping load test because dlopen failed: %v", err)
+	}
+}
+
+func TestOrderedNamesPrefersVariant(t *testing.T) {
+	ext := platformLibExt
+	files := map[string]string{
+		"libggml-base" + ext: "base",
+		"libggml" + ext:      "ggml",
+		"libggml-cuda" + ext: "cuda",
+		"libllama" + ext:     "llama",
+	}
+
+	order := orderedNames(files, "cuda")
+	expected := []string{
+		"libggml-base" + ext,
+		"libggml" + ext,
+		"libggml-cuda" + ext,
+		"libllama" + ext,
+	}
+
+	if len(order) < len(expected) {
+		t.Fatalf("unexpected order length: got %d, want >= %d", len(order), len(expected))
+	}
+
+	for i, name := range expected {
+		if order[i] != name {
+			t.Fatalf("order[%d]=%s, expected %s", i, order[i], name)
+		}
 	}
 }
 
