@@ -83,7 +83,7 @@ func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 		} else {
 			s.embeddedLibs = libs
 			s.embeddedLoader = loader
-			slog.Info("Embedded libraries loaded", "platform", libs.Platform, "dir", libs.Directory)
+			slog.Info("Embedded libraries loaded", "platform", libs.Platform, "variant", libs.Variant, "portable", libs.Portable, "dir", libs.Directory)
 		}
 	}
 

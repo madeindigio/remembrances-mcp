@@ -504,61 +504,35 @@ interactive: true
 GO_LLAMA_DIR=/www/MCP/Remembrances/go-llama.cpp PORTABLE=0 ./scripts/build-cuda-libs.sh
 ```
 
-### dist
+### dist (updated flow)
 
-Create a distribution package
+Create distribution packages without overwriting CUDA portable libraries. The key change is to **build libraries first** and then use `build-binary-only` so the Go binary is produced without recompiling (and replacing) the shared libraries.
 
 ```bash
 rm -rf dist-variants/*
 
-echo "Creating distribution package linux amd64 cuda portable (AMD Ryzen compatible)..."
-xc build-llama-cpp-portable
-mkdir -p dist-variants/linux-amd64-cuda-amd-ryzen
-cp ./build/*.so ./dist-variants/linux-amd64-cuda-amd-ryzen/
-make BUILD_TYPE=cuda build
-cp ./build/remembrances-mcp ./dist-variants/linux-amd64-cuda-amd-ryzen/
-cp config.*.yaml ./dist-variants/linux-amd64-cuda-amd-ryzen/
-cd ./dist-variants/linux-amd64-cuda-amd-ryzen/
-zip -9 ../remembrances-mcp-linux-amd64-nvidia-portable.zip *
-cd ../../
+# CUDA portable (AVX2-compatible for Intel/AMD)
+make PORTABLE=1 build-libs-cuda-portable
+make BUILD_TYPE=cuda build-binary-only
+make dist-variant VARIANT=cuda-portable
 
-echo "Creating distribution package linux amd64 cuda (optimized for current CPU)..."
-xc build-llama-cpp
-mkdir -p dist-variants/linux-amd64-cuda
-cp ./build/*.so ./dist-variants/linux-amd64-cuda/
-make BUILD_TYPE=cuda build
-cp ./build/remembrances-mcp ./dist-variants/linux-amd64-cuda/
-cp config.*.yaml ./dist-variants/linux-amd64-cuda/
-cd ./dist-variants/linux-amd64-cuda/
-zip -9 ../remembrances-mcp-linux-amd64-nvidia.zip *
-cd ../../
+# CUDA optimized for current CPU
+make PORTABLE=0 build-libs-cuda
+make BUILD_TYPE=cuda build-binary-only
+make dist-variant VARIANT=cuda
 
-echo "Creating distribution package linux amd64 cpu (optimized for current CPU)..."
-xc build-llama-cpp
-mkdir -p dist-variants/linux-amd64-cpu
-cp ./build/*.so ./dist-variants/linux-amd64-cpu/
-make BUILD_TYPE=cpu build
-cp ./build/remembrances-mcp ./dist-variants/linux-amd64-cpu/
-cp config.*.yaml ./dist-variants/linux-amd64-cpu/
-cd ./dist-variants/linux-amd64-cpu/
-zip -9 ../remembrances-mcp-linux-amd64-cpu-only.zip *
-cd ../../
+# CPU-only
+make build-libs-cpu
+make build-binary-only
+make dist-variant VARIANT=cpu
 
-echo "Creating distribution package OSX arm64 metal (M1/M2 optimized)..."
-ssh mac-mini-de-digio "cd www/MCP/remembrances-mcp;pwd;/usr/local/bin/xc build-libs-osx"
-mkdir -p dist-variants/darwin-arm64-metal
-scp mac-mini-de-digio:~/www/MCP/remembrances-mcp/build/*.dylib ./dist-variants/darwin-arm64-metal/
-ssh mac-mini-de-digio "cd www/MCP/remembrances-mcp;pwd;/usr/local/bin/xc build-osx"
-scp mac-mini-de-digio:~/www/MCP/remembrances-mcp/build/remembrances-mcp ./dist-variants/darwin-arm64-metal/
-cp config.*.yaml ./dist-variants/darwin-arm64-metal/
-cd ./dist-variants/darwin-arm64-metal/
-zip -9 ../remembrances-mcp-darwin-aarch64.zip *
-cd ../../
+# macOS Metal (run on Apple Silicon host)
+make build-libs-metal
+make BUILD_TYPE=metal build-binary-only
+make dist-variant VARIANT=metal
 
-echo "Creating docker images..."
-make docker-prepare-cpu
-make docker-build-cpu
-make docker-push-cpu
+# (Optional) Docker images remain the same
+make docker-prepare-cpu && make docker-build-cpu && make docker-push-cpu
 ```
 
 ### build-osx
