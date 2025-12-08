@@ -1,159 +1,192 @@
-# Plan: Embeber bibliotecas llama.cpp con variantes GPU
+# Plan de Desarrollo: TOON Format + Levenshtein Suggestions
 
-**Fecha**: 7 de diciembre de 2025  
-**Última actualización**: 8 de diciembre de 2025  
-**Branch**: `feature/shared_surrealdb_included_inbinary`  
-**Estado**: Planificación completada (revisión 2)
+**Branch**: `feature/llama-libs-inclded-inbinary`  
+**Fecha**: 8 de diciembre de 2025  
+**Estado**: En planificación
 
-## Objetivo
+---
 
-Crear binarios autocontenidos de remembrances-mcp que incluyan las shared libraries de llama.cpp para diferentes variantes de GPU, siguiendo el patrón ya implementado para SurrealDB embedded.
+## 📋 Resumen Ejecutivo
 
-## Contexto
+Este plan implementa dos nuevas características principales para el proyecto remembrances-mcp:
 
-- Sistema actual de embedded libraries documentado en facts `embed_library_phase_1` a `embed_library_phase_8`
-- Implementación existente en `internal/embedded/` usa `go:embed` y `purego`
-- Solo está implementada la variante CPU para `linux/amd64`
-- Se requieren variantes para: CUDA (optimizado y portable), CPU-only, y Metal (macOS)
-- Script `scripts/build-cuda-libs.sh` ya soporta `PORTABLE=1` para compilación Intel/AMD compatible
+1. **Formato TOON**: Reemplazar las respuestas YAML en todas las tools MCP por el formato TOON, un formato más condensado y eficiente. Usa la librería `github.com/toon-format/toon-go`.
 
-## Cambios en Revisión 2 (8 dic 2025)
+2. **Sugerencias Levenshtein ("Quiso decir...")**: Cuando no se encuentran resultados en operaciones GET de facts, entities o knowledge base, usar el algoritmo de distancia Levenshtein para sugerir opciones similares, compatible con el sistema actual de alternativas por counts.
 
-1. **Eliminada variante darwin/amd64/cpu** - Solo soportamos Apple Silicon (M1/M2/M3) con Metal
-2. **Renombrada cuda-amd a cuda-portable** - Más descriptivo: compilación AVX2 compatible Intel/AMD
-3. **Nueva Fase 10** - Corregir bug crítico en task dist donde libs portable se sobrescriben
-4. **Integrar script build-cuda-libs.sh** - Usar script existente en lugar de duplicar lógica en Makefile
+---
 
-## Variantes Objetivo (ACTUALIZADO)
+## 🎯 Objetivos
 
-| Variante | Plataforma | Arquitectura | GPU Support | PORTABLE | Tamaño Est. |
-|----------|-----------|--------------|-------------|----------|-------------|
-| `cpu` | Linux | amd64 | Ninguno | N/A | ~80 MB |
-| `cuda` | Linux | amd64 | NVIDIA (optimizado CPU actual) | 0 | ~150 MB |
-| `cuda-portable` | Linux | amd64 | NVIDIA (Intel/AMD AVX2) | 1 | ~150 MB |
-| `metal` | Darwin | arm64 | Apple Metal | N/A | ~90 MB |
+- [ ] Todas las respuestas MCP en formato TOON
+- [ ] API REST mantiene formato JSON (sin cambios)
+- [ ] Sistema de sugerencias "did_you_mean" basado en Levenshtein
+- [ ] Compatibilidad con sistema actual de alternativas (counts de otros IDs)
+- [ ] Tests completos y documentación actualizada
 
-> **Nota**: No se incluye darwin/amd64/cpu ya que solo soportamos Apple Silicon con Metal.
+---
 
-## Bug Crítico Identificado
+## 📦 Dependencias Externas
 
-La task `dist` actual tiene un bug:
-1. `xc build-llama-cpp-portable` compila con `PORTABLE=1` → libs en `build/`
-2. Se copian las libs a `dist-variants/`
-3. `make BUILD_TYPE=cuda build` RECOMPILA las libs SIN `PORTABLE=1`, sobrescribiendo las correctas
+| Librería | Propósito | URL |
+|----------|-----------|-----|
+| `toon-go` | Serialización formato TOON | https://github.com/toon-format/toon-go |
+| `levenshtein` | Distancia de edición | https://github.com/agnivade/levenshtein |
 
-**Solución**: Separar compilación de libs de compilación de binario.
+---
 
-## Fases de Desarrollo
+## 🔄 Fases del Plan
 
-### Fase 1: Análisis y estructura de directorios (ACTUALIZADO)
-**Fact**: `embed_llama_libs_phase_1`
+Cada fase está documentada en detalle como un fact en remembrances con `user_id='plan'`.
 
-- Crear estructura `internal/embedded/libs/{linux,darwin}/{amd64,arm64}/{cpu,cuda,cuda-portable,metal}/`
-- Identificar bibliotecas necesarias por variante:
-  - **CPU**: libggml-base, libggml, libggml-cpu, libllama, libmtmd
-  - **CUDA**: + libggml-cuda
-  - **Metal**: + libggml-metal
-- Documentar tamaños estimados
-- Crear archivo de metadatos `BUILD_INFO.json` con info de PORTABLE flag
+### Fase 1: Integración del formato TOON
+**Fact**: `get_fact(user_id='plan', key='phase-1-toon-format-integration')`
 
-### Fase 2: Build tags y archivos platform por variante (ACTUALIZADO)
-**Fact**: `embed_llama_libs_phase_2`
+- Añadir dependencia toon-go
+- Crear utilidades de serialización TOON
+- Refactorizar todos los handlers MCP
+- Mantener API REST sin cambios
 
-- Crear `platform_linux_amd64_cpu.go` con `//go:build linux && amd64 && embedded_cpu`
-- Crear `platform_linux_amd64_cuda.go` con `//go:build linux && amd64 && embedded_cuda`
-- Crear `platform_linux_amd64_cuda_portable.go` con `//go:build linux && amd64 && embedded_cuda_portable`
-- Crear `platform_darwin_arm64_metal.go` con `//go:build darwin && arm64 && embedded_metal`
+### Fase 2: Integración de librería Levenshtein
+**Fact**: `get_fact(user_id='plan', key='phase-2-levenshtein-library')`
 
-> **Eliminado**: No se necesita `platform_darwin_amd64_cpu.go`
+- Seleccionar e integrar librería
+- Crear módulo de similitud de strings
+- Tests unitarios
 
-### Fase 3: Actualizar loader.go para variantes GPU
-**Fact**: `embed_llama_libs_phase_3`
+### Fase 3: Extender sistema de alternativas
+**Fact**: `get_fact(user_id='plan', key='phase-3-extend-alternatives-system')`
 
-- Actualizar `orderedNames()` para orden correcto de carga según variante
-- Añadir detección de bibliotecas CUDA
-- Implementar fallback inteligente
-- Añadir logging detallado
-- Crear función `GetLoadedVariant()`
+- Refactorizar alternatives.go
+- Crear estructura `AlternativeSuggestions`
+- Integrar con respuestas vacías
 
-### Fase 4: Modificar Makefile para build de variantes embebidas (ACTUALIZADO)
-**Fact**: `embed_llama_libs_phase_4`
+### Fase 4: Implementar sugerencias en Facts
+**Fact**: `get_fact(user_id='plan', key='phase-4-facts-suggestions')`
 
-- Añadir variable `PORTABLE` al Makefile (default: 0) junto a `BUILD_TYPE`
-- Modificar `build-libs-variant` para usar `PORTABLE` cuando se especifique
-- Crear target `build-libs-cuda-portable` que use `scripts/build-cuda-libs.sh` con `PORTABLE=1`
-- Crear targets `prepare-embedded-libs-{cpu,cuda,cuda-portable,metal}`
-- Crear targets `build-embedded-{cpu,cuda,cuda-portable,metal}` con tags apropiados
-- **Crear target `build-binary-only`** que NO recompile bibliotecas
-- Usar script `build-cuda-libs.sh` existente en lugar de duplicar lógica CMake
+- Modificar getFactHandler
+- Modificar listFactsHandler
+- Modificar deleteFactHandler
 
-### Fase 5: Gestión de dependencias CUDA
-**Fact**: `embed_llama_libs_phase_5`
+### Fase 5: Implementar sugerencias en Entities (Graph)
+**Fact**: `get_fact(user_id='plan', key='phase-5-entity-suggestions')`
 
-- Investigar qué bibliotecas CUDA pueden embeberse vs requieren instalación
-- Crear script de verificación de dependencias CUDA
-- Implementar mensajes de error claros
-- Documentar requisitos mínimos de driver NVIDIA
+- Modificar getEntityHandler
+- Modificar traverseGraphHandler
+- Modificar createRelationshipHandler
 
-### Fase 6: Implementar selección automática de variante
-**Fact**: `embed_llama_libs_phase_6`
+### Fase 6: Implementar sugerencias en Knowledge Base
+**Fact**: `get_fact(user_id='plan', key='phase-6-kb-suggestions')`
 
-- Crear `internal/embedded/detector.go`
-- Detección de GPU en Linux y macOS
-- Flag `--gpu-variant={auto,cuda,cpu,metal}`
-- Fallback automático si hardware no coincide
+- Modificar getDocumentHandler
+- Modificar deleteDocumentHandler
+- Modificar searchDocumentsHandler
 
-### Fase 7: Optimización de tamaño y compresión
-**Fact**: `embed_llama_libs_phase_7`
+### Fase 7: Implementar sugerencias en Code Tools
+**Fact**: `get_fact(user_id='plan', key='phase-7-code-tools-suggestions')`
 
-- Investigar uso de UPX para compresión
-- Strip de símbolos de debug
-- Variante "minimal"
-- `-ldflags="-s -w"` para reducir binario Go
+- Modificar code_indexing_tools.go
+- Modificar code_search_tools_handlers.go
+- Modificar code_manipulation_tools.go
 
-### Fase 8: Testing y CI/CD
-**Fact**: `embed_llama_libs_phase_8`
+### Fase 8: Implementar sugerencias en Vectors y Events
+**Fact**: `get_fact(user_id='plan', key='phase-8-vectors-events-suggestions')`
 
-- Tests unitarios para extractor con cada variante
-- Test de integración para carga de libs
-- Test de rendimiento embedded vs external
-- Actualizar GitHub Actions con matrix de builds:
-  - `linux-cpu`
-  - `linux-cuda`
-  - `linux-cuda-portable`
-  - `darwin-metal`
+- Modificar vector_tools.go
+- Modificar event_tools.go
 
-### Fase 9: Documentación y distribución
-**Fact**: `embed_llama_libs_phase_9`
+### Fase 9: Testing de integración y documentación
+**Fact**: `get_fact(user_id='plan', key='phase-9-integration-testing')`
 
-- Actualizar README
-- Documentar diferencias entre variantes (especialmente cuda vs cuda-portable)
-- Guía de troubleshooting
-- Actualizar docker images
-- Script de instalación inteligente
+- Tests de integración completos
+- Tests de rendimiento
+- Actualizar documentación
+- Cleanup
 
-### Fase 10: Corregir task dist y flujo de distribución (NUEVA)
-**Fact**: `embed_llama_libs_phase_10`
+---
 
-**Problema**: Task `dist` sobrescribe libs portable al recompilar.
+## 📊 Archivos Principales Afectados
 
-**Tareas**:
-1. Separar compilación de libs de compilación de binario
-2. Crear target `build-binary-only` que NO recompile bibliotecas
-3. Guardar libs compiladas en directorios separados (`build/libs/cuda-portable/`)
-4. Actualizar task `dist` en README.md con nuevo flujo:
-   ```bash
-   # Flujo correcto para cuda-portable:
-   PORTABLE=1 ./scripts/build-cuda-libs.sh
-   cp ./build/*.so ./build/libs/cuda-portable/
-   make build-binary-only BUILD_TYPE=cuda
-   ```
-5. Verificar que libs no se sobrescriben entre variantes
+```
+go.mod                                    # Nuevas dependencias
+pkg/mcp_tools/
+├── toon_utils.go                         # NUEVO - Utilidades TOON
+├── string_similarity.go                  # NUEVO - Levenshtein
+├── alternatives.go                       # Extender
+├── fact_tools.go                         # Modificar
+├── graph_tools.go                        # Modificar
+├── kb_tools.go                           # Modificar
+├── event_tools.go                        # Modificar
+├── vector_tools.go                       # Modificar
+├── code_indexing_tools.go                # Modificar
+├── code_search_tools_handlers.go         # Modificar
+├── code_manipulation_tools.go            # Modificar
+└── yaml_utils.go                         # Deprecar/Eliminar
 
-## Referencias
+tests/
+├── test_toon_responses.py                # NUEVO
+└── test_suggestions.py                   # NUEVO
+```
 
-- Facts previas de SurrealDB: `embed_library_phase_1` a `embed_library_phase_8`
-- Facts de llama.cpp: `embed_llama_libs_phase_1` a `embed_llama_libs_phase_10`
-- Código existente: `internal/embedded/`
-- Script de compilación: `scripts/build-cuda-libs.sh`
-- Documentación: `docs/GGUF_EMBEDDINGS.md`, `docs/GPU_COMPILATION.md`
+---
+
+## 📝 Ejemplo de Respuesta Esperada
+
+### Antes (YAML actual)
+```yaml
+message: No fact found for key 'preferencias' and user 'usr1'
+alternatives:
+  - user1 (15)
+  - user2 (8)
+```
+
+### Después (TOON con sugerencias)
+```toon
+message: No fact found for key 'preferencias' and user 'usr1'
+did_you_mean:
+  - key: preferences (distance: 2)
+  - key: preferencia (distance: 1)
+available_user_ids:
+  - user1 (15 facts)
+  - user2 (8 facts)
+```
+
+---
+
+## ⚠️ Notas Importantes
+
+1. **API REST sin cambios**: El transporte HTTP debe seguir devolviendo JSON
+2. **Compatibilidad**: El sistema actual de alternatives (counts) se mantiene
+3. **Performance**: Limitar candidatos para Levenshtein (máx 100-500)
+4. **Umbral distancia**: Sugerir solo si distancia ≤ 3-5 caracteres
+
+---
+
+## 🔗 Comandos Útiles
+
+```bash
+# Ver todas las fases del plan
+list_facts(user_id='plan')
+
+# Ver una fase específica
+get_fact(user_id='plan', key='phase-1-toon-format-integration')
+
+# Ver resumen actualizado
+last_to_remember(user_id='plan')
+```
+
+---
+
+## 📅 Progreso
+
+| Fase | Estado | Fecha Inicio | Fecha Fin |
+|------|--------|--------------|-----------|
+| 1 | ⏳ Pendiente | - | - |
+| 2 | ⏳ Pendiente | - | - |
+| 3 | ⏳ Pendiente | - | - |
+| 4 | ⏳ Pendiente | - | - |
+| 5 | ⏳ Pendiente | - | - |
+| 6 | ⏳ Pendiente | - | - |
+| 7 | ⏳ Pendiente | - | - |
+| 8 | ⏳ Pendiente | - | - |
+| 9 | ⏳ Pendiente | - | - |
