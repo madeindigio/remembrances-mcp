@@ -26,6 +26,8 @@ type Storage interface {
 	UpdateFact(ctx context.Context, userID, key string, value interface{}) error
 	DeleteFact(ctx context.Context, userID, key string) error
 	ListFacts(ctx context.Context, userID string) (map[string]interface{}, error)
+	ListFactKeys(ctx context.Context, userID string) ([]string, error)
+	ListUserIDs(ctx context.Context, table string) ([]string, error)
 
 	// Vector operations for semantic/RAG storage
 	IndexVector(ctx context.Context, userID, content string, embedding []float32, metadata map[string]interface{}) error
@@ -39,6 +41,7 @@ type Storage interface {
 	TraverseGraph(ctx context.Context, startEntity, relationshipType string, depth int) ([]GraphResult, error)
 	GetEntity(ctx context.Context, entityID string) (*Entity, error)
 	DeleteEntity(ctx context.Context, entityID string) error
+	ListEntityIDs(ctx context.Context) ([]string, error)
 
 	// Knowledge base operations for markdown documents
 	SaveDocument(ctx context.Context, filePath, content string, embedding []float32, metadata map[string]interface{}) error
@@ -46,6 +49,7 @@ type Storage interface {
 	SearchDocuments(ctx context.Context, queryEmbedding []float32, limit int) ([]DocumentResult, error)
 	DeleteDocument(ctx context.Context, filePath string) error
 	GetDocument(ctx context.Context, filePath string) (*Document, error)
+	ListDocumentPaths(ctx context.Context) ([]string, error)
 
 	// Hybrid search combining vector, key-value, and graph queries
 	HybridSearch(ctx context.Context, userID string, queryEmbedding []float32, entities []string, limit int) (*HybridSearchResult, error)

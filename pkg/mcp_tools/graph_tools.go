@@ -72,7 +72,39 @@ func (tm *ToolManager) createRelationshipHandler(ctx context.Context, request *p
 		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
-	err := tm.storage.CreateRelationship(ctx, input.FromEntity, input.ToEntity, input.RelationshipType, input.Properties.AsMap())
+	// Validate existence of source entity
+	fromEntity, err := tm.storage.GetEntity(ctx, input.FromEntity)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get source entity: %w", err)
+	}
+	if fromEntity == nil {
+		suggestions := tm.FindEntityAlternatives(ctx, input.FromEntity)
+		payload := CreateEmptyResultTOON(
+			fmt.Sprintf("No entity found with ID '%s' for from_entity", input.FromEntity),
+			suggestions,
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: payload},
+		}, false), nil
+	}
+
+	// Validate existence of destination entity
+	toEntity, err := tm.storage.GetEntity(ctx, input.ToEntity)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get destination entity: %w", err)
+	}
+	if toEntity == nil {
+		suggestions := tm.FindEntityAlternatives(ctx, input.ToEntity)
+		payload := CreateEmptyResultTOON(
+			fmt.Sprintf("No entity found with ID '%s' for to_entity", input.ToEntity),
+			suggestions,
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: payload},
+		}, false), nil
+	}
+
+	err = tm.storage.CreateRelationship(ctx, input.FromEntity, input.ToEntity, input.RelationshipType, input.Properties.AsMap())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create relationship: %w", err)
 	}
@@ -95,6 +127,22 @@ func (tm *ToolManager) traverseGraphHandler(ctx context.Context, request *protoc
 		input.Depth = 2
 	}
 
+	// Validate start entity exists to provide better guidance
+	startEntity, err := tm.storage.GetEntity(ctx, input.StartEntity)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get start entity: %w", err)
+	}
+	if startEntity == nil {
+		suggestions := tm.FindEntityAlternatives(ctx, input.StartEntity)
+		payload := CreateEmptyResultTOON(
+			fmt.Sprintf("No entity found with ID '%s' to traverse", input.StartEntity),
+			suggestions,
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: payload},
+		}, false), nil
+	}
+
 	results, err := tm.storage.TraverseGraph(ctx, input.StartEntity, input.RelationshipType, input.Depth)
 	if err != nil {
 		return nil, fmt.Errorf("failed to traverse graph: %w", err)
@@ -108,8 +156,19 @@ func (tm *ToolManager) traverseGraphHandler(ctx context.Context, request *protoc
 		"results":           results,
 	}
 
+	if len(results) == 0 {
+		suggestions := tm.FindEntityAlternatives(ctx, input.StartEntity)
+		payload := CreateEmptyResultTOON(
+			fmt.Sprintf("No relationships found from '%s'", input.StartEntity),
+			suggestions,
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: payload},
+		}, false), nil
+	}
+
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(response)},
 	}, false), nil
 }
 
@@ -125,7 +184,8 @@ func (tm *ToolManager) getEntityHandler(ctx context.Context, request *protocol.C
 	}
 
 	if entity == nil {
-		payload := CreateEmptyResultYAML(fmt.Sprintf("No entity found with ID '%s'", input.EntityID), nil)
+		suggestions := tm.FindEntityAlternatives(ctx, input.EntityID)
+		payload := CreateEmptyResultTOON(fmt.Sprintf("No entity found with ID '%s'", input.EntityID), suggestions)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
@@ -137,6 +197,6 @@ func (tm *ToolManager) getEntityHandler(ctx context.Context, request *protocol.C
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(response)},
 	}, false), nil
 }

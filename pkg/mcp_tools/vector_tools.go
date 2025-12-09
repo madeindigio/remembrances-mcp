@@ -95,7 +95,10 @@ func (tm *ToolManager) searchVectorsHandler(ctx context.Context, request *protoc
 
 	if len(results) == 0 {
 		alt := tm.userAlternatives(ctx, "vector_memories")
-		yamlText := CreateEmptyResultYAML(fmt.Sprintf("No similar remembrances found for user '%s' and query '%s'", input.UserID, input.Query), alt)
+		yamlText := CreateEmptyResultTOON(
+			fmt.Sprintf("No similar remembrances found for user '%s' and query '%s'", input.UserID, input.Query),
+			AlternativeSuggestions{OtherIDs: alt},
+		)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: yamlText},
 		}, false), nil
@@ -112,7 +115,7 @@ func (tm *ToolManager) searchVectorsHandler(ctx context.Context, request *protoc
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: MarshalYAML(payload),
+			Text: MarshalTOON(payload),
 		},
 	}, false), nil
 }

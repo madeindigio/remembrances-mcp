@@ -163,7 +163,7 @@ func (ctm *CodeToolManager) codeIndexProjectHandler(ctx context.Context, req *pr
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -221,7 +221,7 @@ func (ctm *CodeToolManager) codeIndexStatusHandler(ctx context.Context, req *pro
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -238,14 +238,14 @@ func (ctm *CodeToolManager) codeListProjectsHandler(ctx context.Context, req *pr
 	}
 
 	if len(results) == 0 {
-		payload := CreateEmptyResultYAML("No code projects indexed", nil)
+		payload := CreateEmptyResultTOON("No code projects indexed", AlternativeSuggestions{})
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -270,7 +270,7 @@ func (ctm *CodeToolManager) codeDeleteProjectHandler(ctx context.Context, req *p
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -295,7 +295,7 @@ func (ctm *CodeToolManager) codeReindexFileHandler(ctx context.Context, req *pro
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -425,9 +425,9 @@ func (ctm *CodeToolManager) codeGetFileSymbolsHandler(ctx context.Context, req *
 	}
 
 	if len(symbols) == 0 {
-		yamlText := CreateEmptyResultYAML(
+		yamlText := CreateEmptyResultTOON(
 			fmt.Sprintf("No symbols found in file '%s' for project '%s'", input.RelativePath, input.ProjectID),
-			ctm.projectAlternatives(ctx),
+			AlternativeSuggestions{OtherIDs: ctm.projectAlternatives(ctx)},
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: yamlText},
@@ -435,6 +435,6 @@ func (ctm *CodeToolManager) codeGetFileSymbolsHandler(ctx context.Context, req *
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }

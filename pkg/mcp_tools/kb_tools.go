@@ -201,7 +201,8 @@ func (tm *ToolManager) searchDocumentsHandler(ctx context.Context, request *prot
 	}
 
 	if len(results) == 0 {
-		payload := CreateEmptyResultYAML(fmt.Sprintf("No documents found for query '%s'", input.Query), nil)
+		suggestions := tm.FindDocumentAlternatives(ctx, input.Query)
+		payload := CreateEmptyResultTOON(fmt.Sprintf("No documents found for query '%s'", input.Query), suggestions)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
@@ -215,7 +216,7 @@ func (tm *ToolManager) searchDocumentsHandler(ctx context.Context, request *prot
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(response)},
 	}, false), nil
 }
 
@@ -244,7 +245,7 @@ func (tm *ToolManager) getDocumentHandler(ctx context.Context, request *protocol
 		}
 
 		return protocol.NewCallToolResult([]protocol.Content{
-			&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
+			&protocol.TextContent{Type: "text", Text: MarshalTOON(response)},
 		}, false), nil
 	}
 
@@ -261,13 +262,14 @@ func (tm *ToolManager) getDocumentHandler(ctx context.Context, request *protocol
 				"content": content,
 			}
 			return protocol.NewCallToolResult([]protocol.Content{
-				&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
+				&protocol.TextContent{Type: "text", Text: MarshalTOON(response)},
 			}, false), nil
 		}
 	}
 
 	// Not found in either location
-	payload := CreateEmptyResultYAML(fmt.Sprintf("No document found at path '%s' in database or filesystem", input.FilePath), nil)
+	suggestions := tm.FindDocumentAlternatives(ctx, input.FilePath)
+	payload := CreateEmptyResultTOON(fmt.Sprintf("No document found at path '%s' in database or filesystem", input.FilePath), suggestions)
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{Type: "text", Text: payload},
 	}, false), nil
@@ -279,10 +281,40 @@ func (tm *ToolManager) deleteDocumentHandler(ctx context.Context, request *proto
 		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
+	// Check existence before attempting deletion to provide helpful suggestions
+	dbDocument, err := tm.storage.GetDocument(ctx, input.FilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check document before delete: %w", err)
+	}
+
+	fsExists := false
+	if tm.knowledgeBasePath != "" {
+		path := input.FilePath
+		if !strings.HasSuffix(path, ".md") {
+			path = path + ".md"
+		}
+		fullPath := filepath.Join(tm.knowledgeBasePath, path)
+		if _, statErr := os.Stat(fullPath); statErr == nil {
+			fsExists = true
+		} else if !os.IsNotExist(statErr) {
+			slog.Warn("failed to stat document before delete", "file_path", input.FilePath, "error", statErr)
+		}
+	}
+
+	if dbDocument == nil && !fsExists {
+		suggestions := tm.FindDocumentAlternatives(ctx, input.FilePath)
+		payload := CreateEmptyResultTOON(
+			fmt.Sprintf("No document found at path '%s' in database or filesystem", input.FilePath),
+			suggestions,
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: payload},
+		}, false), nil
+	}
 	slog.Info("Processing delete document request", "file_path", input.FilePath)
 
 	// Delete from database
-	err := tm.storage.DeleteDocument(ctx, input.FilePath)
+	err = tm.storage.DeleteDocument(ctx, input.FilePath)
 	if err != nil {
 		slog.Error("Failed to delete document from database", "file_path", input.FilePath, "error", err)
 		return nil, fmt.Errorf("failed to delete document from database: %w", err)

@@ -64,7 +64,7 @@ func (tm *ToolManager) saveEventHandler(ctx context.Context, request *protocol.C
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -150,13 +150,16 @@ func (tm *ToolManager) searchEventsHandler(ctx context.Context, request *protoco
 
 	if len(results) == 0 {
 		alt := tm.userAlternatives(ctx, "events")
-		yamlText := CreateEmptyResultYAML(fmt.Sprintf("No events found for user '%s' with current filters", input.UserID), alt)
+		yamlText := CreateEmptyResultTOON(
+			fmt.Sprintf("No events found for user '%s' with current filters", input.UserID),
+			AlternativeSuggestions{OtherIDs: alt},
+		)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: yamlText},
 		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(response)},
 	}, false), nil
 }

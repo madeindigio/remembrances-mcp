@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
-	"gopkg.in/yaml.v3"
 )
 
 // Remember tool definitions
@@ -106,16 +105,10 @@ func (tm *ToolManager) lastToRememberHandler(ctx context.Context, request *proto
 	result["user_id"] = input.UserID
 	result["note"] = "This information may be of interest to remember what you have been working on most recently or what is important to remember"
 
-	// Convert to YAML
-	yamlBytes, err := yaml.Marshal(result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal result to YAML: %w", err)
-	}
-
 	return protocol.NewCallToolResult([]protocol.Content{
 		&protocol.TextContent{
 			Type: "text",
-			Text: string(yamlBytes),
+			Text: MarshalTOON(result),
 		},
 	}, false), nil
 }

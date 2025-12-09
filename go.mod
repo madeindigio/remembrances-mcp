@@ -4,6 +4,7 @@ go 1.23.4
 
 require (
 	github.com/ThinkInAIXYZ/go-mcp v0.2.21
+	github.com/agnivade/levenshtein v1.2.1
 	github.com/ebitengine/purego v0.7.1
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/uuid v1.6.0
@@ -14,6 +15,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/surrealdb/surrealdb.go v0.5.0
 	github.com/tmc/langchaingo v0.1.13
+	github.com/toon-format/toon-go v0.0.0-20251202084852-7ca0e27c4e8c
 	gopkg.in/yaml.v3 v3.0.1
 )
 

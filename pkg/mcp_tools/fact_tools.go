@@ -78,8 +78,11 @@ func (tm *ToolManager) getFactHandler(ctx context.Context, request *protocol.Cal
 	}
 
 	if value == nil {
-		alt := tm.userAlternatives(ctx, "kv_memories")
-		payload := CreateEmptyResultYAML(fmt.Sprintf("No fact found for key '%s' and user '%s'", input.Key, input.UserID), alt)
+		suggestions := tm.FindKeyAlternatives(ctx, input.UserID, "kv_memories", input.Key)
+		payload := CreateEmptyResultTOON(
+			fmt.Sprintf("No fact found for key '%s' and user '%s'", input.Key, input.UserID),
+			suggestions,
+		)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
@@ -92,7 +95,7 @@ func (tm *ToolManager) getFactHandler(ctx context.Context, request *protocol.Cal
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(response)},
 	}, false), nil
 }
 
@@ -108,8 +111,11 @@ func (tm *ToolManager) listFactsHandler(ctx context.Context, request *protocol.C
 	}
 
 	if len(facts) == 0 {
-		alt := tm.userAlternatives(ctx, "kv_memories")
-		payload := CreateEmptyResultYAML(fmt.Sprintf("No facts found for user '%s'", input.UserID), alt)
+		suggestions := tm.FindUserAlternatives(ctx, "kv_memories", input.UserID)
+		payload := CreateEmptyResultTOON(
+			fmt.Sprintf("No facts found for user '%s'", input.UserID),
+			suggestions,
+		)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
@@ -122,7 +128,7 @@ func (tm *ToolManager) listFactsHandler(ctx context.Context, request *protocol.C
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(response)},
 	}, false), nil
 }
 
@@ -132,7 +138,24 @@ func (tm *ToolManager) deleteFactHandler(ctx context.Context, request *protocol.
 		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
-	err := tm.storage.DeleteFact(ctx, input.UserID, input.Key)
+	// Check existence to provide suggestions when missing
+	current, err := tm.storage.GetFact(ctx, input.UserID, input.Key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check fact before delete: %w", err)
+	}
+
+	if current == nil {
+		suggestions := tm.FindKeyAlternatives(ctx, input.UserID, "kv_memories", input.Key)
+		payload := CreateEmptyResultTOON(
+			fmt.Sprintf("No fact found for key '%s' and user '%s'", input.Key, input.UserID),
+			suggestions,
+		)
+		return protocol.NewCallToolResult([]protocol.Content{
+			&protocol.TextContent{Type: "text", Text: payload},
+		}, false), nil
+	}
+
+	err = tm.storage.DeleteFact(ctx, input.UserID, input.Key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to delete fact: %w", err)
 	}
