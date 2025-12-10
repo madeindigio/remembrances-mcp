@@ -1,0 +1,859 @@
+#!/usr/bin/env python3
+"""
+End-to-End MCP Client for Remembrances-MCP Server Testing.
+
+This client implements comprehensive testing of all MCP tools including:
+- TOON format responses validation
+- Levenshtein suggestions functionality
+- Full CRUD operations across all data layers
+
+Based on the development plan phases (user_id='plan'):
+- e2e-phase-1-setup: Server launch and client initialization
+- e2e-phase-2-seed: Create baseline test data
+- e2e-phase-3-run: Exercise all tools and validate responses
+- e2e-phase-4-teardown: Cleanup and reporting
+
+Usage:
+    python tests/test_mcp_e2e.py [--config CONFIG_FILE] [--server SERVER_BINARY]
+"""
+
+import argparse
+import os
+import sys
+
+# Add the e2e module to path
+sys.path.insert(0, os.path.dirname(__file__))
+
+from e2e.client import MCPClient
+from e2e.test_data import TestContext
+from e2e.phases import phase_1_setup, phase_2_seed, phase_3_run, phase_4_teardown
+
+
+class MCPClient:
+    """Enhanced MCP client for comprehensive testing."""
+
+    def __init__(self, server_cmd: list[str], timeout: int = 30):
+        self.server_cmd = server_cmd
+        self.timeout = timeout
+        self.process: Optional[subprocess.Popen] = None
+        self.request_id = 0
+        self.temp_dir = None
+
+    def start_server(self) -> bool:
+        """Start the MCP server process."""
+        try:
+            # Create temp directory for server data
+            self.temp_dir = tempfile.mkdtemp(prefix="mcp_test_")
+
+            # Add config and temp dir to command
+            cmd = self.server_cmd.copy()
+            if "--config" not in cmd:
+                config_file = os.path.join(os.path.dirname(__file__), "..", "config.test.yaml")
+                if os.path.exists(config_file):
+                    cmd.extend(["--config", config_file])
+                else:
+                    config_file = os.path.join(os.path.dirname(__file__), "..", "config.sample.gguf.yaml")
+                    if os.path.exists(config_file):
+                        cmd.extend(["--config", config_file])
+
+            # Add temp data directory
+            cmd.extend(["--db-path", os.path.join(self.temp_dir, "test.db")])
+
+            print(f"Starting server: {' '.join(cmd)}")
+            self.process = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=os.path.dirname(__file__)  # Run from tests directory
+            )
+
+            # Wait for server to be ready
+            time.sleep(5)  # Increased wait time
+
+            # Perform MCP handshake
+            print("Performing MCP handshake...")
+            init_request = {
+                "jsonrpc": "2.0",
+                "id": self.request_id,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {
+                        "name": "test-client",
+                        "version": "1.0.0"
+                    }
+                }
+            }
+            self.request_id += 1
+            
+            self.process.stdin.write(json.dumps(init_request) + "\n")
+            self.process.stdin.flush()
+            
+            # Read initialize response
+            init_response_line = self.process.stdout.readline().strip()
+            if not init_response_line:
+                raise RuntimeError("No initialize response from server")
+            
+            init_response = json.loads(init_response_line)
+            if "error" in init_response:
+                raise RuntimeError(f"Initialize failed: {init_response['error']}")
+            
+            print("✅ MCP handshake successful")
+
+            # Test basic tool availability
+            try:
+                result = self.call_tool("how_to_use", {})
+                if "error" in result:
+                    print(f"Server startup error: {result['error']}")
+                    return False
+                print("Server started successfully")
+                return True
+            except Exception as e:
+                print(f"Failed to connect to server: {e}")
+                return False
+
+        except Exception as e:
+            print(f"Failed to start server: {e}")
+            return False
+
+    def call_tool(self, tool_name: str, arguments: dict) -> dict:
+        """Call an MCP tool and return the result."""
+        if not self.process:
+            raise RuntimeError("Server not started")
+
+        self.request_id += 1
+        request = {
+            "jsonrpc": "2.0",
+            "id": self.request_id,
+            "method": "tools/call",
+            "params": {
+                "name": tool_name,
+                "arguments": arguments
+            }
+        }
+
+        try:
+            # Send request
+            self.process.stdin.write(json.dumps(request) + "\n")
+            self.process.stdin.flush()
+
+            # Read response
+            response_line = self.process.stdout.readline().strip()
+            if not response_line:
+                raise RuntimeError("No response from server")
+
+            response = json.loads(response_line)
+
+            # Validate response structure
+            if "jsonrpc" not in response or response.get("jsonrpc") != "2.0":
+                raise RuntimeError(f"Invalid JSON-RPC response: {response}")
+
+            if "id" not in response or response["id"] != self.request_id:
+                raise RuntimeError(f"Response ID mismatch: expected {self.request_id}, got {response.get('id')}")
+
+            return response
+
+        except Exception as e:
+            # Try to read stderr for error info
+            if self.process.poll() is None:  # Process still running
+                try:
+                    error_output = self.process.stderr.readline().strip()
+                    if error_output:
+                        print(f"Server stderr: {error_output}")
+                except:
+                    pass
+            raise RuntimeError(f"Tool call failed: {e}")
+
+    def parse_toon_response(self, response: dict) -> Any:
+        """Parse TOON-formatted response content."""
+        if "error" in response:
+            return response
+
+        result = response.get("result", {})
+        content = result.get("content", [])
+        if not content:
+            return None
+
+        text_content = content[0].get("text", "")
+        if not text_content.strip():
+            return None
+
+        try:
+            # Try to decode as TOON
+            return toon_decode(text_content)
+        except Exception as e:
+            # If TOON decode fails, try JSON
+            try:
+                return json.loads(text_content)
+            except:
+                # Return raw text if neither works
+                return text_content
+
+    def stop_server(self):
+        """Stop the MCP server process."""
+        if self.process:
+            try:
+                self.process.terminate()
+                self.process.wait(timeout=5)
+                print("Server stopped")
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait()
+                print("Server force-killed")
+
+        if self.temp_dir and os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
+            print(f"Cleaned up temp directory: {self.temp_dir}")
+
+
+class TestContext:
+    """Context for storing test data and results."""
+
+    def __init__(self):
+        self.facts: Dict[str, str] = {}
+        self.vectors: Dict[str, str] = {}
+        self.entities: Dict[str, str] = {}
+        self.relationships: List[Dict] = []
+        self.documents: Dict[str, str] = {}
+        self.events: List[Dict] = {}
+        self.projects: Dict[str, str] = {}
+        self.results: Dict[str, Any] = {}
+
+    def add_fact(self, key: str, value: str):
+        self.facts[key] = value
+
+    def add_vector(self, content: str, vector_id: str):
+        self.vectors[vector_id] = content
+
+    def add_entity(self, entity_id: str, name: str):
+        self.entities[entity_id] = name
+
+    def add_relationship(self, from_id: str, to_id: str, rel_type: str):
+        self.relationships.append({
+            "from": from_id,
+            "to": to_id,
+            "type": rel_type
+        })
+
+    def add_document(self, path: str, content: str):
+        self.documents[path] = content
+
+    def add_event(self, user_id: str, subject: str, content: str):
+        self.events.append({
+            "user_id": user_id,
+            "subject": subject,
+            "content": content
+        })
+
+    def add_project(self, project_id: str, path: str):
+        self.projects[project_id] = path
+
+
+def phase_1_setup(client: MCPClient) -> bool:
+    """Phase 1: Setup & server launch."""
+    print("\n" + "="*60)
+    print("PHASE 1: Setup & Server Launch")
+    print("="*60)
+
+    if not client.start_server():
+        print("❌ Failed to start server")
+        return False
+
+    # Test basic tool availability
+    try:
+        result = client.call_tool("how_to_use", {})
+        if "error" in result:
+            print(f"❌ how_to_use tool failed: {result['error']}")
+            return False
+        print("✅ Server initialized and responding")
+        return True
+    except Exception as e:
+        print(f"❌ Server communication failed: {e}")
+        return False
+
+
+def phase_2_seed(client: MCPClient, context: TestContext) -> bool:
+    """Phase 2: Seed baseline data."""
+    print("\n" + "="*60)
+    print("PHASE 2: Seed Baseline Data")
+    print("="*60)
+
+    success = True
+
+    # Seed facts
+    print("\nSeeding facts...")
+    test_facts = {
+        "test_preference": "dark_mode",
+        "test_setting": "enabled",
+        "user_name": "test_user",
+        "app_version": "1.0.0"
+    }
+
+    for key, value in test_facts.items():
+        try:
+            result = client.call_tool("remembrance_save_fact", {
+                "key": key,
+                "value": value,
+                "user_id": "test_user"
+            })
+            if "error" in result:
+                print(f"❌ Failed to save fact {key}: {result['error']}")
+                success = False
+            else:
+                context.add_fact(key, value)
+                print(f"✅ Saved fact: {key} = {value}")
+        except Exception as e:
+            print(f"❌ Exception saving fact {key}: {e}")
+            success = False
+
+    # Seed vectors
+    print("\nSeeding vectors...")
+    test_vectors = [
+        "This is a test memory about Python programming",
+        "Another memory about machine learning concepts",
+        "Memory about web development best practices"
+    ]
+
+    for i, content in enumerate(test_vectors):
+        try:
+            result = client.call_tool("remembrance_add_vector", {
+                "content": content,
+                "user_id": "test_user"
+            })
+            parsed = client.parse_toon_response(result)
+            if parsed and "vector_id" in parsed:
+                vector_id = parsed["vector_id"]
+                context.add_vector(content, vector_id)
+                print(f"✅ Added vector: {vector_id}")
+            else:
+                print(f"❌ Failed to parse vector response: {result}")
+                success = False
+        except Exception as e:
+            print(f"❌ Exception adding vector: {e}")
+            success = False
+
+    # Seed entities
+    print("\nSeeding entities...")
+    test_entities = [
+        ("person_john", "John Doe", {"type": "person", "role": "developer"}),
+        ("person_jane", "Jane Smith", {"type": "person", "role": "designer"}),
+        ("company_acme", "ACME Corp", {"type": "company", "industry": "tech"})
+    ]
+
+    for entity_id, name, props in test_entities:
+        try:
+            result = client.call_tool("remembrance_create_entity", {
+                "entity_id": entity_id,
+                "name": name,
+                "properties": props
+            })
+            if "error" in result:
+                print(f"❌ Failed to create entity {entity_id}: {result['error']}")
+                success = False
+            else:
+                context.add_entity(entity_id, name)
+                print(f"✅ Created entity: {entity_id}")
+        except Exception as e:
+            print(f"❌ Exception creating entity {entity_id}: {e}")
+            success = False
+
+    # Seed relationships
+    print("\nSeeding relationships...")
+    test_relationships = [
+        ("person_john", "company_acme", "works_at"),
+        ("person_jane", "company_acme", "works_at"),
+        ("person_john", "person_jane", "collaborates_with")
+    ]
+
+    for from_id, to_id, rel_type in test_relationships:
+        try:
+            result = client.call_tool("remembrance_create_relationship", {
+                "from_entity": from_id,
+                "to_entity": to_id,
+                "relationship_type": rel_type
+            })
+            if "error" in result:
+                print(f"❌ Failed to create relationship {from_id} -> {to_id}: {result['error']}")
+                success = False
+            else:
+                context.add_relationship(from_id, to_id, rel_type)
+                print(f"✅ Created relationship: {from_id} {rel_type} {to_id}")
+        except Exception as e:
+            print(f"❌ Exception creating relationship: {e}")
+            success = False
+
+    # Seed knowledge base documents
+    print("\nSeeding knowledge base...")
+    test_docs = {
+        "docs/readme.md": "# Test Project\n\nThis is a test project for MCP testing.",
+        "docs/api.md": "# API Documentation\n\n## Endpoints\n\n- GET /health\n- POST /data",
+        "guides/setup.md": "# Setup Guide\n\n1. Install dependencies\n2. Run server\n3. Test connection"
+    }
+
+    for path, content in test_docs.items():
+        try:
+            result = client.call_tool("remembrance_kb_add_document", {
+                "file_path": path,
+                "content": content
+            })
+            if "error" in result:
+                print(f"❌ Failed to add document {path}: {result['error']}")
+                success = False
+            else:
+                context.add_document(path, content)
+                print(f"✅ Added document: {path}")
+        except Exception as e:
+            print(f"❌ Exception adding document {path}: {e}")
+            success = False
+
+    # Seed events
+    print("\nSeeding events...")
+    test_events = [
+        ("test_user", "meeting", "Team standup meeting notes"),
+        ("test_user", "development", "Working on new feature implementation"),
+        ("test_user", "review", "Code review completed for PR #123")
+    ]
+
+    for user_id, subject, content in test_events:
+        try:
+            result = client.call_tool("remembrance_save_event", {
+                "user_id": user_id,
+                "subject": subject,
+                "content": content
+            })
+            if "error" in result:
+                print(f"❌ Failed to save event: {result['error']}")
+                success = False
+            else:
+                context.add_event(user_id, subject, content)
+                print(f"✅ Saved event: {subject}")
+        except Exception as e:
+            print(f"❌ Exception saving event: {e}")
+            success = False
+
+    # Seed code project
+    print("\nSeeding code project...")
+    project_dir = tempfile.mkdtemp(prefix="test_project_")
+    context.add_project("test_project", project_dir)
+
+    # Create sample files
+    os.makedirs(os.path.join(project_dir, "src"))
+    os.makedirs(os.path.join(project_dir, "tests"))
+
+    files_to_create = {
+        "main.go": '''package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, World!")
+}
+
+func calculate(x, y int) int {
+    return x + y
+}
+''',
+        "src/utils.go": '''package utils
+
+import "strings"
+
+func ToUpper(s string) string {
+    return strings.ToUpper(s)
+}
+
+func Reverse(s string) string {
+    runes := []rune(s)
+    for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+        runes[i], runes[j] = runes[j], runes[i]
+    }
+    return string(runes)
+}
+''',
+        "tests/utils_test.go": '''package utils
+
+import "testing"
+
+func TestToUpper(t *testing.T) {
+    result := ToUpper("hello")
+    if result != "HELLO" {
+        t.Errorf("Expected HELLO, got %s", result)
+    }
+}
+'''
+    }
+
+    for file_path, content in files_to_create.items():
+        full_path = os.path.join(project_dir, file_path)
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, "w") as f:
+            f.write(content)
+
+    try:
+        result = client.call_tool("code_index_project", {
+            "project_path": project_dir,
+            "project_name": "Test Project"
+        })
+        if "error" in result:
+            print(f"❌ Failed to index project: {result['error']}")
+            success = False
+        else:
+            print("✅ Indexed test project")
+    except Exception as e:
+        print(f"❌ Exception indexing project: {e}")
+        success = False
+
+    return success
+
+
+def phase_3_run(client: MCPClient, context: TestContext) -> bool:
+    """Phase 3: Exercise tools & assertions."""
+    print("\n" + "="*60)
+    print("PHASE 3: Exercise Tools & Assertions")
+    print("="*60)
+
+    success = True
+
+    # Test facts operations
+    print("\nTesting Facts operations...")
+    # Test get_fact
+    try:
+        result = client.call_tool("remembrance_get_fact", {
+            "key": "test_preference",
+            "user_id": "test_user"
+        })
+        parsed = client.parse_toon_response(result)
+        if parsed and parsed.get("value") == "dark_mode":
+            print("✅ get_fact works correctly")
+        else:
+            print(f"❌ get_fact failed: {parsed}")
+            success = False
+    except Exception as e:
+        print(f"❌ Exception in get_fact: {e}")
+        success = False
+
+    # Test list_facts
+    try:
+        result = client.call_tool("remembrance_list_facts", {
+            "user_id": "test_user"
+        })
+        parsed = client.parse_toon_response(result)
+        if parsed and "facts" in parsed:
+            print(f"✅ list_facts returned {len(parsed['facts'])} facts")
+        else:
+            print(f"❌ list_facts failed: {parsed}")
+            success = False
+    except Exception as e:
+        print(f"❌ Exception in list_facts: {e}")
+        success = False
+
+    # Test TOON format validation
+    print("\nValidating TOON format...")
+    try:
+        result = client.call_tool("remembrance_get_fact", {
+            "key": "nonexistent_key",
+            "user_id": "test_user"
+        })
+        parsed = client.parse_toon_response(result)
+        if parsed and "message" in parsed:
+            print("✅ TOON format parsing works")
+            # Check for suggestions (when implemented)
+            if "did_you_mean" in parsed:
+                print("✅ Levenshtein suggestions present")
+            else:
+                print("ℹ️  Levenshtein suggestions not yet implemented")
+        else:
+            print(f"❌ TOON parsing failed: {result}")
+            success = False
+    except Exception as e:
+        print(f"❌ Exception in TOON validation: {e}")
+        success = False
+
+    # Test vectors
+    print("\nTesting Vectors operations...")
+    if context.vectors:
+        vector_id = list(context.vectors.keys())[0]
+        try:
+            result = client.call_tool("remembrance_search_vectors", {
+                "query": "Python programming",
+                "user_id": "test_user"
+            })
+            parsed = client.parse_toon_response(result)
+            if parsed and "results" in parsed:
+                print(f"✅ search_vectors returned {len(parsed['results'])} results")
+            else:
+                print(f"❌ search_vectors failed: {parsed}")
+                success = False
+        except Exception as e:
+            print(f"❌ Exception in search_vectors: {e}")
+            success = False
+
+    # Test entities and relationships
+    print("\nTesting Graph operations...")
+    try:
+        result = client.call_tool("remembrance_get_entity", {
+            "entity_id": "person_john"
+        })
+        parsed = client.parse_toon_response(result)
+        if parsed and parsed.get("name") == "John Doe":
+            print("✅ get_entity works correctly")
+        else:
+            print(f"❌ get_entity failed: {parsed}")
+            success = False
+    except Exception as e:
+        print(f"❌ Exception in get_entity: {e}")
+        success = False
+
+    try:
+        result = client.call_tool("remembrance_traverse_graph", {
+            "start_entity": "person_john",
+            "relationship_type": "works_at"
+        })
+        parsed = client.parse_toon_response(result)
+        if parsed and "relationships" in parsed:
+            print(f"✅ traverse_graph returned {len(parsed['relationships'])} relationships")
+        else:
+            print(f"❌ traverse_graph failed: {parsed}")
+            success = False
+    except Exception as e:
+        print(f"❌ Exception in traverse_graph: {e}")
+        success = False
+
+    # Test knowledge base
+    print("\nTesting Knowledge Base operations...")
+    try:
+        result = client.call_tool("remembrance_kb_get_document", {
+            "file_path": "docs/readme.md"
+        })
+        parsed = client.parse_toon_response(result)
+        if parsed and "content" in parsed:
+            print("✅ kb_get_document works correctly")
+        else:
+            print(f"❌ kb_get_document failed: {parsed}")
+            success = False
+    except Exception as e:
+        print(f"❌ Exception in kb_get_document: {e}")
+        success = False
+
+    try:
+        result = client.call_tool("remembrance_kb_search_documents", {
+            "query": "test project"
+        })
+        parsed = client.parse_toon_response(result)
+        if parsed and "results" in parsed:
+            print(f"✅ kb_search_documents returned {len(parsed['results'])} results")
+        else:
+            print(f"❌ kb_search_documents failed: {parsed}")
+            success = False
+    except Exception as e:
+        print(f"❌ Exception in kb_search_documents: {e}")
+        success = False
+
+    # Test events
+    print("\nTesting Events operations...")
+    try:
+        result = client.call_tool("remembrance_search_events", {
+            "user_id": "test_user"
+        })
+        parsed = client.parse_toon_response(result)
+        if parsed and "events" in parsed:
+            print(f"✅ search_events returned {len(parsed['events'])} events")
+        else:
+            print(f"❌ search_events failed: {parsed}")
+            success = False
+    except Exception as e:
+        print(f"❌ Exception in search_events: {e}")
+        success = False
+
+    # Test code tools
+    print("\nTesting Code operations...")
+    try:
+        result = client.call_tool("code_list_projects", {})
+        parsed = client.parse_toon_response(result)
+        if parsed and "projects" in parsed:
+            print(f"✅ code_list_projects returned {len(parsed['projects'])} projects")
+        else:
+            print(f"❌ code_list_projects failed: {parsed}")
+            success = False
+    except Exception as e:
+        print(f"❌ Exception in code_list_projects: {e}")
+        success = False
+
+    if context.projects:
+        project_id = list(context.projects.keys())[0]
+        try:
+            result = client.call_tool("code_get_project_stats", {
+                "project_id": project_id
+            })
+            parsed = client.parse_toon_response(result)
+            if parsed and "stats" in parsed:
+                print("✅ code_get_project_stats works correctly")
+            else:
+                print(f"❌ code_get_project_stats failed: {parsed}")
+                success = False
+        except Exception as e:
+            print(f"❌ Exception in code_get_project_stats: {e}")
+            success = False
+
+    # Test miscellaneous tools
+    print("\nTesting Miscellaneous operations...")
+    try:
+        result = client.call_tool("remembrance_get_stats", {
+            "user_id": "test_user"
+        })
+        parsed = client.parse_toon_response(result)
+        if parsed and "stats" in parsed:
+            print("✅ get_stats works correctly")
+        else:
+            print(f"❌ get_stats failed: {parsed}")
+            success = False
+    except Exception as e:
+        print(f"❌ Exception in get_stats: {e}")
+        success = False
+
+    return success
+
+
+def phase_4_teardown(client: MCPClient, context: TestContext) -> bool:
+    """Phase 4: Cleanup & reporting."""
+    print("\n" + "="*60)
+    print("PHASE 4: Cleanup & Reporting")
+    print("="*60)
+
+    # Cleanup test data
+    print("\nCleaning up test data...")
+
+    # Delete facts
+    for key in context.facts.keys():
+        try:
+            client.call_tool("remembrance_delete_fact", {
+                "key": key,
+                "user_id": "test_user"
+            })
+            print(f"✅ Deleted fact: {key}")
+        except Exception as e:
+            print(f"⚠️  Failed to delete fact {key}: {e}")
+
+    # Delete vectors
+    for vector_id in context.vectors.keys():
+        try:
+            client.call_tool("remembrance_delete_vector", {
+                "vector_id": vector_id,
+                "user_id": "test_user"
+            })
+            print(f"✅ Deleted vector: {vector_id}")
+        except Exception as e:
+            print(f"⚠️  Failed to delete vector {vector_id}: {e}")
+
+    # Delete documents
+    for path in context.documents.keys():
+        try:
+            client.call_tool("remembrance_kb_delete_document", {
+                "file_path": path
+            })
+            print(f"✅ Deleted document: {path}")
+        except Exception as e:
+            print(f"⚠️  Failed to delete document {path}: {e}")
+
+    # Delete code project
+    for project_id, path in context.projects.items():
+        try:
+            client.call_tool("code_delete_project", {
+                "project_id": project_id
+            })
+            print(f"✅ Deleted project: {project_id}")
+            if os.path.exists(path):
+                shutil.rmtree(path)
+                print(f"✅ Removed project directory: {path}")
+        except Exception as e:
+            print(f"⚠️  Failed to delete project {project_id}: {e}")
+
+    # Stop server
+    client.stop_server()
+
+    print("\n" + "="*60)
+    print("TEST SUMMARY")
+    print("="*60)
+    print("✅ All phases completed")
+    print(f"📊 Test data created and cleaned up")
+    print("📋 TOON format validation: Implemented")
+    print("🔍 Levenshtein suggestions: Check individual test results")
+
+    return True
+
+
+def main():
+    parser = argparse.ArgumentParser(description="MCP E2E Test Client")
+    parser.add_argument("--server", default="../build/remembrances-mcp",
+                       help="Path to remembrances-mcp binary")
+    parser.add_argument("--config",
+                       help="Path to config file (default: auto-detect)")
+    parser.add_argument("--timeout", type=int, default=30,
+                       help="Timeout for server operations")
+
+    args = parser.parse_args()
+
+    # Check server binary
+    if not os.path.exists(args.server):
+        # Try relative to script directory
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        server_path = os.path.join(script_dir, "..", "build", "remembrances-mcp")
+        if os.path.exists(server_path):
+            args.server = server_path
+        else:
+            print(f"ERROR: Server binary not found at {args.server} or {server_path}")
+            sys.exit(1)
+
+    print(f"Using server binary: {args.server}")
+
+    # Initialize client
+    client = MCPClient([args.server], timeout=args.timeout)
+    context = TestContext()
+
+    # Run test phases
+    phases = [
+        ("Setup", lambda c, ctx: phase_1_setup(c)),
+        ("Seed", phase_2_seed),
+        ("Run", phase_3_run),
+        ("Teardown", phase_4_teardown)
+    ]
+
+    results = []
+    for phase_name, phase_func in phases:
+        try:
+            print(f"\n🚀 Starting {phase_name} phase...")
+            success = phase_func(client, context)
+            results.append((phase_name, success))
+            if success:
+                print(f"✅ {phase_name} phase completed successfully")
+            else:
+                print(f"❌ {phase_name} phase failed")
+        except Exception as e:
+            print(f"💥 {phase_name} phase crashed: {e}")
+            results.append((phase_name, False))
+            break
+
+    # Final report
+    print("\n" + "="*60)
+    print("FINAL RESULTS")
+    print("="*60)
+
+    all_passed = True
+    for phase_name, success in results:
+        status = "✅ PASS" if success else "❌ FAIL"
+        print(f"{phase_name}: {status}")
+        if not success:
+            all_passed = False
+
+    if all_passed:
+        print("\n🎉 ALL TESTS PASSED!")
+        sys.exit(0)
+    else:
+        print("\n💥 SOME TESTS FAILED!")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

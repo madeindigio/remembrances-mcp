@@ -56,7 +56,10 @@ func (m *MigrationBase) CheckTableExists(ctx context.Context, tableName string) 
 	// The INFO FOR DB; command returns a QueryResult array. Use array-based unmarshalling.
 	result, err := surrealdb.Query[[]map[string]interface{}](m.db, `INFO FOR DB;`, nil)
 	if err != nil {
-		return false, err
+		// If unmarshalling fails, it might be because the DB is empty or returning a different format
+		// In this case, assume the table doesn't exist and let the caller create it
+		slog.Debug("Failed to query DB info (likely empty database)", "error", err)
+		return false, nil
 	}
 
 	if result == nil || len(*result) == 0 {

@@ -17,29 +17,29 @@
 #sse-addr: "3000"
 
 # Enable HTTP JSON API transport (default: false)
-#http: false
+http: false
 
 # Address to bind HTTP transport (host:port) (default: ":8080")
-#http-addr: "8080"
+http-addr: "127.0.0.1:8081"
 
 # Enable REST API server (default: false)
 #rest-api-serve: false
 
 # Path to the knowledge base directory (default: "")
-knowledge-base: "/www/MCP/remembrances-mcp/.serena/memories"
+#knowledge-base: "/www/MCP/remembrances-mcp/.serena/memories"
 
 # ========== SurrealDB Configuration ==========
 # Path to the embedded SurrealDB database (default: "./remembrances.db")
-db-path: "surrealkv:///www/MCP/remembrances-mcp/remembrances.db"
+#db-path: "surrealkv:///tmp/remembrances_test.db"
 
 # Use embedded shared libraries (SurrealDB + llama.cpp) via go:embed/purego (default: true)
-#use-embedded-libs: true
+use-embedded-libs: false
 
 # Optional directory to extract embedded libraries (default: temporary directory)
 #embedded-libs-dir: ""
 
 # URL for the remote SurrealDB instance (default: "")
-#surrealdb-url: "ws://localhost:8000"
+surrealdb-url: "ws://localhost:8000"
 
 # Username for SurrealDB (default: "root")
 surrealdb-user: "root"
@@ -54,26 +54,26 @@ surrealdb-namespace: "test"
 surrealdb-database: "test"
 
 # External command to start SurrealDB when connection fails (default: "")
-#surrealdb-start-cmd: "surreal start --user root --pass root surrealkv:///www/MCP/remembrances-mcp/remembrances.db"
+surrealdb-start-cmd: "surreal start --user root --pass root surrealkv:///tmp/remembrances_test.db"
 
 # ========== GGUF Local Model Configuration ==========
 # Path to GGUF model file for local embeddings (default: "")
 # When set, this takes priority over Ollama and OpenAI
 # Example: "/path/to/nomic-embed-text-v1.5.Q4_K_M.gguf"
-gguf-model-path: "/www/Remembrances/nomic-embed-text-v1.5.Q4_K_M.gguf"
+#gguf-model-path: "/www/MCP/remembrances-mcp/models/nomic-embed-text-v1.5.Q4_K_M.gguf"
 
 # Number of threads for GGUF model (0 = auto-detect) (default: 0)
 #gguf-threads: 0
 
 # Number of GPU layers for GGUF model (0 = CPU only) (default: 0)
 # Higher values offload more computation to GPU
-gguf-gpu-layers: 32
+#gguf-gpu-layers: 32
 # ========== Ollama Configuration ==========
 # URL for the Ollama server (default: "http://localhost:11434")
-#ollama-url: "http://localhost:11434"
+ollama-url: "http://localhost:11434"
 
 # Ollama model to use for embeddings (default: "")
-#ollama-model: "nomic-embed-text:latest"
+ollama-model: "nomic-embed-text:latest"
 # ========== OpenAI Configuration ==========
 # OpenAI API key (default: "")
 #openai-key: ""
@@ -97,10 +97,10 @@ gguf-gpu-layers: 32
 #code-gguf-model-path: "/www/Remembrances/coderankembed.Q4_K_M.gguf"
 
 # Path to GGUF model for code embeddings (default: uses default gguf-model-path)
-code-gguf-model-path: "/www/Remembrances/coderankembed.Q4_K_M.gguf"
+#code-gguf-model-path: "/www/Remembrances/coderankembed.Q4_K_M.gguf"
 
 # Ollama model for code embeddings (default: uses default ollama-model)
-#code-ollama-model: ""
+code-ollama-model: "hf.co/limcheekin/CodeRankEmbed-GGUF:Q4_K_M"
 
 # OpenAI model for code embeddings (default: uses default openai-model)
 #code-openai-model: ""
@@ -118,4 +118,4 @@ code-gguf-model-path: "/www/Remembrances/coderankembed.Q4_K_M.gguf"
 
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
-log: "/www/MCP/remembrances-mcp/remembrances-mcp.log"
+log: "/www/MCP/remembrances-mcp/remembrances-mcp-test.log"

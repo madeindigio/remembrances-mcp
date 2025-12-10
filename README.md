@@ -378,20 +378,9 @@ Runs the test suite
 interactive: true
 
 ```bash
-./tests/run_all.sh
-```
+make test
 
-### run-tests-all
-
-Runs the full Go unit tests plus the MCP integration tests executed above.
-
-interactive: true
-
-```bash
-go test ./...
-python3 tests/test_user_stats.py
-python3 tests/test_kb_simple.py
-python3 tests/test_kb_comprehensive.py
+python3 tests/test_mcp_e2e.py --config config.test.yaml
 ```
 
 ### tag

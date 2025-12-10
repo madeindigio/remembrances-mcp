@@ -15,16 +15,16 @@ func (s *SurrealDBStorage) CreateEntity(ctx context.Context, entityType, name st
 
 	query := `
         INSERT INTO entities {
-            type: $type,
+            entity_type: $entity_type,
             name: $name,
             properties: $properties
         } RETURN id
     `
 
 	params := map[string]interface{}{
-		"type":       entityType,
-		"name":       name,
-		"properties": properties,
+		"entity_type": entityType,
+		"name":        name,
+		"properties":  properties,
 	}
 
 	result, err := s.query(ctx, query, params)
