@@ -2,7 +2,7 @@
   "mcpServers": {
     "remembrances-mcp": {
       "type": "stdio",
-      "command": "remembrances-mcp",
+      "command": "remembrances-mcp-beta",
       "args": ["--config", "/www/MCP/remembrances-mcp/config.sample.gguf.yaml"],
       "env": {}
     }

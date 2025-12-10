@@ -29,7 +29,7 @@
     "remembrances": {
       "env": {},
       "enabled": true,
-      "command": "remembrances-mcp",
+      "command": "remembrances-mcp-beta",
       "args": [
         "--config",
         "/www/MCP/remembrances-mcp/.ai/remembrances.config.yaml"

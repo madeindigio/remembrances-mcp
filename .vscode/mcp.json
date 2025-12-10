@@ -15,17 +15,9 @@
         "BRAVE_API_KEY": "${input:brave-api-key}"
       }
     },
-    "mycommandmcp": {
-      "type": "stdio",
-      "command": "mycommandmcp",
-      "args": [
-        "--config",
-        ".ai/mycommand-mcp.yaml"
-      ]
-    },
     "remembrances": {
       "type": "stdio",
-      "command": "remembrances-mcp",
+      "command": "remembrances-mcp-beta",
       "args": [
         "--config",
         "./.ai/remembrances.config.yaml"
