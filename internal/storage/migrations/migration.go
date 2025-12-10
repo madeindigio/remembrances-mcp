@@ -54,7 +54,7 @@ func (m *MigrationBase) checkSchemaElementExists(ctx context.Context, element Sc
 // CheckTableExists checks if a table exists
 func (m *MigrationBase) CheckTableExists(ctx context.Context, tableName string) (bool, error) {
 	// The INFO FOR DB; command returns a QueryResult array. Use array-based unmarshalling.
-	result, err := surrealdb.Query[[]map[string]interface{}](m.db, `INFO FOR DB;`, nil)
+	result, err := surrealdb.Query[[]map[string]interface{}](ctx, m.db, `INFO FOR DB;`, nil)
 	if err != nil {
 		// If unmarshalling fails, it might be because the DB is empty or returning a different format
 		// In this case, assume the table doesn't exist and let the caller create it
@@ -98,7 +98,7 @@ func (m *MigrationBase) CheckTableExists(ctx context.Context, tableName string) 
 // checkFieldExists checks if a field exists on a table
 func (m *MigrationBase) checkFieldExists(ctx context.Context, tableName, fieldName string) (bool, error) {
 	query := fmt.Sprintf("INFO FOR TABLE %s;", tableName)
-	result, err := surrealdb.Query[[]map[string]interface{}](m.db, query, nil)
+	result, err := surrealdb.Query[[]map[string]interface{}](ctx, m.db, query, nil)
 	if err != nil {
 		return false, err
 	}
@@ -137,7 +137,7 @@ func (m *MigrationBase) checkFieldExists(ctx context.Context, tableName, fieldNa
 // checkIndexExists checks if an index exists on a table
 func (m *MigrationBase) checkIndexExists(ctx context.Context, tableName, indexName string) (bool, error) {
 	query := fmt.Sprintf("INFO FOR TABLE %s;", tableName)
-	result, err := surrealdb.Query[[]map[string]interface{}](m.db, query, nil)
+	result, err := surrealdb.Query[[]map[string]interface{}](ctx, m.db, query, nil)
 	if err != nil {
 		return false, err
 	}
@@ -226,7 +226,7 @@ func (m *MigrationBase) ApplyElements(ctx context.Context, elements []SchemaElem
 
 		if !exists {
 			slog.Debug("Creating schema element", "type", element.Type, "statement", element.Statement)
-			_, err := surrealdb.Query[[]map[string]interface{}](m.db, element.Statement, nil)
+			_, err := surrealdb.Query[[]map[string]interface{}](ctx, m.db, element.Statement, nil)
 			if err != nil {
 				// Log warning but don't fail for "already exists" type errors
 				if m.IsAlreadyExistsError(err) {

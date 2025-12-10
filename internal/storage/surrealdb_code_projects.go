@@ -17,12 +17,6 @@ import (
 func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *treesitter.CodeProject) error {
 	slog.Debug("CreateCodeProject called", "project_id", project.ProjectID, "status", project.IndexingStatus)
 
-	// Convert last_indexed_at to ISO string format for SurrealDB compatibility
-	var lastIndexedAtStr interface{}
-	if project.LastIndexedAt != nil {
-		lastIndexedAtStr = project.LastIndexedAt.Format("2006-01-02T15:04:05Z07:00")
-	}
-
 	// Convert language_stats map to a plain map[string]interface{} for SurrealDB
 	// Always use empty map instead of nil to avoid SurrealDB NULL errors
 	langStats := make(map[string]interface{})
@@ -37,36 +31,49 @@ func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *trees
 		watcherEnabled = existingProject.WatcherEnabled
 	}
 
-	// Use INSERT with ON DUPLICATE KEY UPDATE for atomic upsert
-	// This handles the unique index on project_id properly
+	// Build query dynamically to handle optional last_indexed_at field
+	// SurrealDB remote server doesn't accept NULL for option<datetime> fields without DEFAULT
+	// We must omit the field entirely when it's nil
 	slog.Debug("INSERT ON DUPLICATE KEY UPDATE", "project_id", project.ProjectID, "status", project.IndexingStatus)
-	query := `
-		INSERT INTO code_projects {
-			project_id: $project_id,
+
+	insertFields := `project_id: $project_id,
 			name: $name,
 			root_path: $root_path,
 			language_stats: $language_stats,
-			last_indexed_at: $last_indexed_at,
 			indexing_status: $indexing_status,
-			watcher_enabled: $watcher_enabled
-		}
-		ON DUPLICATE KEY UPDATE
-			name = $input.name,
+			watcher_enabled: $watcher_enabled`
+
+	updateFields := `name = $input.name,
 			root_path = $input.root_path,
 			language_stats = $input.language_stats,
-			last_indexed_at = $input.last_indexed_at,
 			indexing_status = $input.indexing_status,
-			updated_at = time::now()
-	`
+			updated_at = time::now()`
+
 	params := map[string]interface{}{
 		"project_id":      project.ProjectID,
 		"name":            project.Name,
 		"root_path":       project.RootPath,
 		"language_stats":  langStats,
-		"last_indexed_at": lastIndexedAtStr,
 		"indexing_status": string(project.IndexingStatus),
 		"watcher_enabled": watcherEnabled,
 	}
+
+	// Only add last_indexed_at if it's not nil
+	if project.LastIndexedAt != nil {
+		insertFields += `,
+			last_indexed_at: $last_indexed_at`
+		updateFields += `,
+			last_indexed_at = $input.last_indexed_at`
+		params["last_indexed_at"] = *project.LastIndexedAt
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO code_projects {
+			%s
+		}
+		ON DUPLICATE KEY UPDATE
+			%s
+	`, insertFields, updateFields)
 
 	result, err := s.query(ctx, query, params)
 	if err != nil {

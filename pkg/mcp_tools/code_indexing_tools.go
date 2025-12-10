@@ -339,7 +339,7 @@ func (ctm *CodeToolManager) codeGetProjectStatsHandler(ctx context.Context, req 
 		"project_id":      project.ProjectID,
 		"name":            project.Name,
 		"root_path":       project.RootPath,
-		"indexing_status": project.IndexingStatus,
+		"indexing_status": string(project.IndexingStatus),
 		"language_stats":  project.LanguageStats,
 	}
 	if project.LastIndexedAt != nil {

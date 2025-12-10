@@ -236,8 +236,11 @@ func (s *SurrealDBStorage) SaveDocumentChunks(ctx context.Context, filePath stri
 
 	// First, delete any existing chunks for this file
 	deleteQuery := "DELETE FROM knowledge_base WHERE source_file = $file_path OR file_path = $file_path"
-	if _, err := s.query(ctx, deleteQuery, map[string]interface{}{
-		"file_path": filePath,
+	if err := s.withTxnRetry(ctx, func(ctx context.Context) error {
+		_, err := s.query(ctx, deleteQuery, map[string]interface{}{
+			"file_path": filePath,
+		})
+		return err
 	}); err != nil {
 		return fmt.Errorf("failed to delete existing chunks: %w", err)
 	}

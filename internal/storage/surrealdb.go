@@ -105,13 +105,13 @@ func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 	} else if s.config.URL != "" {
 		// Use remote SurrealDB
 		slog.Info("Connecting to remote SurrealDB", "url", s.config.URL)
-		s.db, err = surrealdb.New(s.config.URL)
+		s.db, err = surrealdb.FromEndpointURLString(ctx, s.config.URL)
 		if err != nil {
 			return fmt.Errorf("failed to connect to remote SurrealDB: %w", err)
 		}
 
 		if s.config.Username != "" && s.config.Password != "" {
-			_, err = s.db.SignIn(map[string]interface{}{
+			_, err = s.db.SignIn(ctx, map[string]interface{}{
 				"user": s.config.Username,
 				"pass": s.config.Password,
 			})
@@ -120,7 +120,7 @@ func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 			}
 		}
 
-		if err = s.db.Use(s.config.Namespace, s.config.Database); err != nil {
+		if err = s.db.Use(ctx, s.config.Namespace, s.config.Database); err != nil {
 			return fmt.Errorf("failed to use namespace/database: %w", err)
 		}
 
@@ -145,7 +145,7 @@ func (s *SurrealDBStorage) Close() error {
 		}
 	} else {
 		if s.db != nil {
-			if err := s.db.Close(); err != nil {
+			if err := s.db.Close(context.Background()); err != nil {
 				errs = append(errs, err)
 			}
 		}
@@ -173,7 +173,7 @@ func (s *SurrealDBStorage) Ping(ctx context.Context) error {
 		if s.db == nil {
 			return fmt.Errorf("database connection not established")
 		}
-		_, err := surrealdb.Query[[]map[string]interface{}](s.db, "SELECT 1", nil)
+		_, err := surrealdb.Query[[]map[string]interface{}](ctx, s.db, "SELECT 1", nil)
 		return err
 	}
 }

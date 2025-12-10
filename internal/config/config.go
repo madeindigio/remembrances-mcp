@@ -348,7 +348,7 @@ func (c *Config) SetupLogging() error {
 
 	// Create a text handler with the multi-writer
 	handler := slog.NewTextHandler(multiWriter, &slog.HandlerOptions{
-		Level:     slog.LevelInfo,
+		Level:     slog.LevelInfo, // Change this to desired log level
 		AddSource: false,
 	})
 

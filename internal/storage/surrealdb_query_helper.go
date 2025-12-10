@@ -139,7 +139,7 @@ func (s *SurrealDBStorage) queryRemote(ctx context.Context, query string, params
 		return nil, fmt.Errorf("remote database not initialized")
 	}
 
-	result, err := surrealdb.Query[[]map[string]interface{}](s.db, query, params)
+	result, err := surrealdb.Query[[]map[string]interface{}](ctx, s.db, query, params)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func (s *SurrealDBStorage) create(ctx context.Context, resource string, data int
 	if s.db == nil {
 		return nil, fmt.Errorf("remote database not initialized")
 	}
-	return surrealdb.Create[map[string]interface{}](s.db, resource, data)
+	return surrealdb.Create[map[string]interface{}](ctx, s.db, resource, data)
 }
 
 // update updates a record on either embedded or remote backend
@@ -186,7 +186,7 @@ func (s *SurrealDBStorage) update(ctx context.Context, resource string, data int
 	if s.db == nil {
 		return nil, fmt.Errorf("remote database not initialized")
 	}
-	return surrealdb.Update[map[string]interface{}](s.db, resource, data)
+	return surrealdb.Update[map[string]interface{}](ctx, s.db, resource, data)
 }
 
 // delete deletes a record on either embedded or remote backend
@@ -201,7 +201,7 @@ func (s *SurrealDBStorage) delete(ctx context.Context, resource string) (interfa
 	if s.db == nil {
 		return nil, fmt.Errorf("remote database not initialized")
 	}
-	return surrealdb.Delete[map[string]interface{}](s.db, resource)
+	return surrealdb.Delete[map[string]interface{}](ctx, s.db, resource)
 }
 
 // unmarshalResult helps unmarshal results consistently

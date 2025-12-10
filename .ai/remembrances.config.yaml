@@ -120,7 +120,7 @@ code-indexing-auto-reindex: true
 
 # Maximum number of concurrent indexing workers (default: 4)
 # Higher values speed up indexing but use more CPU
-#code-indexing-workers: 4
+code-indexing-workers: 8
 
 # Maximum symbol size before chunking (default: 1500 characters)
 # Symbols larger than this are split into chunks for embedding

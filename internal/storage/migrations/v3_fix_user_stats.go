@@ -46,7 +46,7 @@ func (m *MigrationV3) Apply(ctx context.Context, db *surrealdb.DB) error {
 	// Execute drop statements
 	for _, stmt := range dropStatements {
 		slog.Debug("Executing drop statement", "stmt", stmt)
-		_, err := surrealdb.Query[[]map[string]interface{}](db, stmt, nil)
+		_, err := surrealdb.Query[[]map[string]interface{}](ctx, db, stmt, nil)
 		if err != nil {
 			// Log warning but continue - field might not exist
 			slog.Debug("Failed to drop field (may not exist)", "error", err)
@@ -65,7 +65,7 @@ func (m *MigrationV3) Apply(ctx context.Context, db *surrealdb.DB) error {
 	// Apply the corrected field definitions
 	for i, element := range elements {
 		slog.Debug("Creating corrected field", "stmt", element.Statement)
-		_, err := surrealdb.Query[[]map[string]interface{}](db, element.Statement, nil)
+		_, err := surrealdb.Query[[]map[string]interface{}](ctx, db, element.Statement, nil)
 		if err != nil {
 			// This should succeed since we removed the old definitions
 			return fmt.Errorf("failed to execute migration v3 statement %d '%s': %w", i+1, element.Statement, err)
