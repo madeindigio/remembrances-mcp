@@ -5,8 +5,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
 )
@@ -15,27 +13,9 @@ import (
 
 // SaveCodeSymbol saves or updates a code symbol
 func (s *SurrealDBStorage) SaveCodeSymbol(ctx context.Context, symbol *treesitter.CodeSymbol) error {
-	// Retry logic for transaction conflicts (common with external SurrealDB)
-	var lastErr error
-	for attempt := 0; attempt < 3; attempt++ {
-		err := s.saveCodeSymbolAttempt(ctx, symbol)
-		if err == nil {
-			return nil
-		}
-		
-		// Check if it's a retryable transaction conflict
-		if strings.Contains(err.Error(), "read or write conflict") || strings.Contains(err.Error(), "transaction") {
-			lastErr = err
-			if attempt < 2 {
-				// Exponential backoff: 10ms, 20ms
-				time.Sleep(time.Millisecond * time.Duration(10*(attempt+1)))
-				continue
-			}
-		}
-		// Non-retryable error, return immediately
-		return err
-	}
-	return lastErr
+	return s.withTxnRetry(ctx, func(ctx context.Context) error {
+		return s.saveCodeSymbolAttempt(ctx, symbol)
+	})
 }
 
 func (s *SurrealDBStorage) saveCodeSymbolAttempt(ctx context.Context, symbol *treesitter.CodeSymbol) error {

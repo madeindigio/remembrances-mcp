@@ -13,26 +13,9 @@ import (
 
 // SaveCodeChunk saves a single code chunk with retry logic for transaction conflicts
 func (s *SurrealDBStorage) SaveCodeChunk(ctx context.Context, chunk *CodeChunk) error {
-	maxRetries := 3
-	baseDelay := 10 * time.Millisecond
-
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		err := s.saveCodeChunkAttempt(ctx, chunk)
-		if err == nil {
-			return nil
-		}
-
-		// Check if it's a transaction conflict
-		if strings.Contains(err.Error(), "read or write conflict") && attempt < maxRetries-1 {
-			delay := baseDelay * time.Duration(1<<uint(attempt))
-			time.Sleep(delay)
-			continue
-		}
-
-		return err
-	}
-
-	return fmt.Errorf("failed to save code chunk after %d attempts", maxRetries)
+	return s.withTxnRetry(ctx, func(ctx context.Context) error {
+		return s.saveCodeChunkAttempt(ctx, chunk)
+	})
 }
 
 // saveCodeChunkAttempt performs a single attempt to save a code chunk
@@ -127,18 +110,44 @@ func (s *SurrealDBStorage) SaveCodeChunks(ctx context.Context, chunks []*CodeChu
 // DeleteChunksBySymbol deletes all chunks for a symbol
 func (s *SurrealDBStorage) DeleteChunksBySymbol(ctx context.Context, symbolID string) error {
 	query := `DELETE FROM code_chunks WHERE symbol_id = $symbol_id;`
-	_, err := s.query(ctx, query, map[string]interface{}{"symbol_id": symbolID})
-	return err
+	return s.withTxnRetry(ctx, func(ctx context.Context) error {
+		_, err := s.query(ctx, query, map[string]interface{}{"symbol_id": symbolID})
+		return err
+	})
 }
 
 // DeleteChunksByFile deletes all chunks for a file
 func (s *SurrealDBStorage) DeleteChunksByFile(ctx context.Context, projectID, filePath string) error {
 	query := `DELETE FROM code_chunks WHERE project_id = $project_id AND file_path = $file_path;`
-	_, err := s.query(ctx, query, map[string]interface{}{
+	params := map[string]interface{}{
 		"project_id": projectID,
 		"file_path":  filePath,
+	}
+
+	return s.withTxnRetry(ctx, func(ctx context.Context) error {
+		_, err := s.query(ctx, query, params)
+		return err
 	})
-	return err
+}
+
+// withTxnRetry retries operations that can fail with SurrealDB read/write conflicts.
+// It uses exponential backoff (20ms, 40ms, 80ms, 160ms, 320ms) for up to 5 attempts.
+func (s *SurrealDBStorage) withTxnRetry(ctx context.Context, fn func(context.Context) error) error {
+	const maxRetries = 5
+	const baseDelay = 20 * time.Millisecond
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		if err := fn(ctx); err != nil {
+			if strings.Contains(err.Error(), "read or write conflict") && attempt < maxRetries-1 {
+				time.Sleep(baseDelay * time.Duration(1<<uint(attempt)))
+				continue
+			}
+			return err
+		}
+		return nil
+	}
+
+	return fmt.Errorf("operation failed after %d attempts", maxRetries)
 }
 
 // GetChunksBySymbol retrieves all chunks for a symbol

@@ -27,7 +27,7 @@ func (m *V8FlexibleKVValue) Apply(ctx context.Context, db *surrealdb.DB) error {
 	// Remove old field definition
 	removeStatement := `REMOVE FIELD value ON kv_memories;`
 	slog.Debug("Removing old field definition", "stmt", removeStatement)
-	_, err := surrealdb.Query[[]map[string]interface{}](db, removeStatement, nil)
+	_, err := surrealdb.Query[[]map[string]interface{}](ctx, db, removeStatement, nil)
 	if err != nil {
 		// Log warning but continue - field might not exist
 		slog.Debug("Could not remove field (may not exist)", "error", err)
@@ -41,7 +41,7 @@ func (m *V8FlexibleKVValue) Apply(ctx context.Context, db *surrealdb.DB) error {
 	}
 
 	slog.Debug("Creating field", "stmt", element.Statement)
-	_, err = surrealdb.Query[[]map[string]interface{}](db, element.Statement, nil)
+	_, err = surrealdb.Query[[]map[string]interface{}](ctx, db, element.Statement, nil)
 	if err != nil {
 		return err
 	}

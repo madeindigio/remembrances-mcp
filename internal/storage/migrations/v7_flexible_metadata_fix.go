@@ -36,7 +36,7 @@ func (m *V7FlexibleMetadataFix) Apply(ctx context.Context, db *surrealdb.DB) err
 
 	for _, stmt := range removeStatements {
 		slog.Debug("Removing old field definition", "stmt", stmt)
-		_, err := surrealdb.Query[[]map[string]interface{}](db, stmt, nil)
+		_, err := surrealdb.Query[[]map[string]interface{}](ctx, db, stmt, nil)
 		if err != nil {
 			// Log warning but continue - field might not exist
 			slog.Debug("Could not remove field (may not exist)", "error", err)

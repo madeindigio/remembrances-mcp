@@ -62,12 +62,19 @@ func normalizeSurrealDBDatetimes(data interface{}) interface{} {
 	dataType := fmt.Sprintf("%T", data)
 	if strings.Contains(dataType, "RecordID") {
 		slog.Debug("NORMALIZE: processing RecordID type", "type", dataType, "value", data)
-		
-		// Direct check for RecordID struct - it has Table and ID fields
+
+		// Direct check for RecordID struct (and pointers to it) - it has Table and ID fields
 		val := reflect.ValueOf(data)
+		for val.Kind() == reflect.Pointer {
+			if val.IsNil() {
+				return ""
+			}
+			val = val.Elem()
+		}
+
 		if val.Kind() == reflect.Struct {
 			typ := val.Type()
-			
+
 			// Try to get Table and ID fields
 			var tableField, idField reflect.Value
 			for i := 0; i < val.NumField(); i++ {
@@ -79,7 +86,7 @@ func normalizeSurrealDBDatetimes(data interface{}) interface{} {
 					idField = val.Field(i)
 				}
 			}
-			
+
 			// If we have both fields, construct the string representation
 			if tableField.IsValid() && idField.IsValid() {
 				tableStr := fmt.Sprintf("%v", tableField.Interface())
@@ -89,8 +96,23 @@ func normalizeSurrealDBDatetimes(data interface{}) interface{} {
 				return result
 			}
 		}
+
+		// Fallback: try to parse the string representation like "{Table:code_files ID:abc}" or "map[Table:code_files ID:abc]"
+		s := fmt.Sprintf("%v", data)
+		s = strings.TrimPrefix(s, "map[")
+		s = strings.TrimSuffix(s, "]")
+		s = strings.TrimPrefix(s, "{")
+		s = strings.TrimSuffix(s, "}")
+		parts := strings.Fields(s)
+		if len(parts) >= 2 {
+			tablePart := strings.TrimPrefix(parts[0], "Table:")
+			idPart := strings.TrimPrefix(parts[1], "ID:")
+			if tablePart != "" && idPart != "" {
+				return tablePart + ":" + idPart
+			}
+		}
 	}
-	
+
 	switch v := data.(type) {
 	case []interface{}:
 		result := make([]interface{}, len(v))
@@ -117,7 +139,7 @@ func normalizeSurrealDBDatetimes(data interface{}) interface{} {
 				slog.Debug("NORMALIZE: Processing map with Table and ID", "map", v, "len", len(v))
 			}
 		}
-		
+
 		// Check if this is a SurrealDB Datetime object
 		// Format: {"Datetime": "2025-..."} or {"Time": "2025-..."}
 		if datetime, ok := v["Datetime"]; ok && len(v) == 1 {
@@ -130,7 +152,7 @@ func normalizeSurrealDBDatetimes(data interface{}) interface{} {
 				return dtStr
 			}
 		}
-		
+
 		// Check if this is a SurrealDB Record ID object
 		// Format 1: {"id": "xxx", "tb": "table"} (embedded SurrealDB / Go driver lowercase)
 		// Format 2: {"ID": "xxx", "Table": "table"} (external SurrealDB / Go driver uppercase)
@@ -148,24 +170,16 @@ func normalizeSurrealDBDatetimes(data interface{}) interface{} {
 		if id, hasID := v["ID"]; hasID {
 			if tb, hasTB := v["Table"]; hasTB {
 				slog.Debug("NORMALIZE: Found potential Record ID with uppercase", "keys", len(v), "id", id, "table", tb, "map", v)
-				if len(v) == 2 {
-					if idStr, ok := id.(string); ok {
-						if tbStr, ok := tb.(string); ok {
-							result := tbStr + ":" + idStr
-							slog.Debug("NORMALIZE: Converting Record ID", "from", v, "to", result)
-							return result
-						} else {
-							slog.Warn("NORMALIZE: table is not string", "type", fmt.Sprintf("%T", tb))
-						}
-					} else {
-						slog.Warn("NORMALIZE: id is not string", "type", fmt.Sprintf("%T", id))
+				if idStr, ok := id.(string); ok {
+					if tbStr, ok := tb.(string); ok {
+						result := tbStr + ":" + idStr
+						slog.Debug("NORMALIZE: Converting Record ID", "from", v, "to", result)
+						return result
 					}
-				} else {
-					slog.Warn("NORMALIZE: Record ID object has unexpected number of keys", "expected", 2, "got", len(v), "keys", v)
 				}
 			}
 		}
-		
+
 		// Recursively process all map values
 		result := make(map[string]interface{}, len(v))
 		for key, val := range v {

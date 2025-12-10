@@ -30,10 +30,10 @@ knowledge-base: "/www/MCP/remembrances-mcp/.serena/memories"
 
 # ========== SurrealDB Configuration ==========
 # Path to the embedded SurrealDB database (default: "./remembrances.db")
-db-path: "surrealkv:///www/MCP/remembrances-mcp/remembrances.db"
+#db-path: "surrealkv:///www/MCP/remembrances-mcp/remembrances.db"
 
 # URL for the remote SurrealDB instance (default: "")
-#surrealdb-url: "ws://localhost:8000"
+surrealdb-url: "ws://localhost:8000"
 
 # Username for SurrealDB (default: "root")
 surrealdb-user: "root"

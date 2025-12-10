@@ -64,7 +64,7 @@ func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *trees
 			last_indexed_at: $last_indexed_at`
 		updateFields += `,
 			last_indexed_at = $input.last_indexed_at`
-		params["last_indexed_at"] = project.LastIndexedAt.Format("2006-01-02T15:04:05Z07:00")
+		params["last_indexed_at"] = *project.LastIndexedAt
 	}
 
 	query := fmt.Sprintf(`
