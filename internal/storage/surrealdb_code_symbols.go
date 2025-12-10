@@ -5,6 +5,8 @@ package storage
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
 )
@@ -13,6 +15,30 @@ import (
 
 // SaveCodeSymbol saves or updates a code symbol
 func (s *SurrealDBStorage) SaveCodeSymbol(ctx context.Context, symbol *treesitter.CodeSymbol) error {
+	// Retry logic for transaction conflicts (common with external SurrealDB)
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		err := s.saveCodeSymbolAttempt(ctx, symbol)
+		if err == nil {
+			return nil
+		}
+		
+		// Check if it's a retryable transaction conflict
+		if strings.Contains(err.Error(), "read or write conflict") || strings.Contains(err.Error(), "transaction") {
+			lastErr = err
+			if attempt < 2 {
+				// Exponential backoff: 10ms, 20ms
+				time.Sleep(time.Millisecond * time.Duration(10*(attempt+1)))
+				continue
+			}
+		}
+		// Non-retryable error, return immediately
+		return err
+	}
+	return lastErr
+}
+
+func (s *SurrealDBStorage) saveCodeSymbolAttempt(ctx context.Context, symbol *treesitter.CodeSymbol) error {
 	// Check if symbol exists (same pattern as SaveDocument)
 	existsQuery := "SELECT id FROM code_symbols WHERE project_id = $project_id AND name_path = $name_path"
 	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{
@@ -32,22 +58,7 @@ func (s *SurrealDBStorage) SaveCodeSymbol(ctx context.Context, symbol *treesitte
 		}
 	}
 
-	var sourceCode, signature, docString *string
-	if symbol.SourceCode != "" {
-		sourceCode = &symbol.SourceCode
-	}
-	if symbol.Signature != "" {
-		signature = &symbol.Signature
-	}
-	if symbol.DocString != "" {
-		docString = &symbol.DocString
-	}
-
-	var embedding interface{}
-	if len(symbol.Embedding) > 0 {
-		embedding = symbol.Embedding
-	}
-
+	// Build params with only non-empty optional fields
 	params := map[string]interface{}{
 		"project_id":  symbol.ProjectID,
 		"file_path":   symbol.FilePath,
@@ -59,59 +70,65 @@ func (s *SurrealDBStorage) SaveCodeSymbol(ctx context.Context, symbol *treesitte
 		"end_line":    symbol.EndLine,
 		"start_byte":  symbol.StartByte,
 		"end_byte":    symbol.EndByte,
-		"source_code": sourceCode,
-		"signature":   signature,
-		"doc_string":  docString,
-		"embedding":   embedding,
-		"parent_id":   symbol.ParentID,
-		"metadata":    symbol.Metadata,
+	}
+
+	// Only add optional fields if they have values
+	if symbol.SourceCode != "" {
+		params["source_code"] = symbol.SourceCode
+	}
+	if symbol.Signature != "" {
+		params["signature"] = symbol.Signature
+	}
+	if symbol.DocString != "" {
+		params["doc_string"] = symbol.DocString
+	}
+	if len(symbol.Embedding) > 0 {
+		params["embedding"] = symbol.Embedding
+	}
+	if symbol.ParentID != nil && *symbol.ParentID != "" {
+		params["parent_id"] = *symbol.ParentID
+	}
+	if symbol.Metadata != nil {
+		params["metadata"] = symbol.Metadata
 	}
 
 	if isNewSymbol {
-		query := `
-			CREATE code_symbols CONTENT {
-				project_id: $project_id,
-				file_path: $file_path,
-				language: $language,
-				symbol_type: $symbol_type,
-				name: $name,
-				name_path: $name_path,
-				start_line: $start_line,
-				end_line: $end_line,
-				start_byte: $start_byte,
-				end_byte: $end_byte,
-				source_code: $source_code,
-				signature: $signature,
-				doc_string: $doc_string,
-				embedding: $embedding,
-				parent_id: $parent_id,
-				metadata: $metadata,
-				updated_at: time::now()
-			}
-		`
-		if _, err := s.query(ctx, query, params); err != nil {
+		// Build content map for CREATE
+		content := make(map[string]interface{})
+		for k, v := range params {
+			content[k] = v
+		}
+
+		query := `CREATE code_symbols CONTENT $content`
+		queryParams := map[string]interface{}{
+			"content": content,
+		}
+
+		if _, err := s.query(ctx, query, queryParams); err != nil {
 			return fmt.Errorf("failed to create symbol: %w", err)
 		}
 	} else {
-		query := `
+		// Build update fields dynamically, excluding project_id and name_path
+		updateFields := ""
+		first := true
+		for k := range params {
+			if k == "project_id" || k == "name_path" {
+				continue
+			}
+			if !first {
+				updateFields += ", "
+			}
+			updateFields += fmt.Sprintf("%s = $%s", k, k)
+			first = false
+		}
+
+		query := fmt.Sprintf(`
 			UPDATE code_symbols SET
-				file_path = $file_path,
-				language = $language,
-				symbol_type = $symbol_type,
-				name = $name,
-				start_line = $start_line,
-				end_line = $end_line,
-				start_byte = $start_byte,
-				end_byte = $end_byte,
-				source_code = $source_code,
-				signature = $signature,
-				doc_string = $doc_string,
-				embedding = $embedding,
-				parent_id = $parent_id,
-				metadata = $metadata,
+				%s,
 				updated_at = time::now()
 			WHERE project_id = $project_id AND name_path = $name_path
-		`
+		`, updateFields)
+
 		if _, err := s.query(ctx, query, params); err != nil {
 			return fmt.Errorf("failed to update symbol: %w", err)
 		}
@@ -158,8 +175,8 @@ func (s *SurrealDBStorage) GetCodeSymbol(ctx context.Context, projectID, namePat
 // FindSymbolsByName finds symbols by name (partial or exact match)
 func (s *SurrealDBStorage) FindSymbolsByName(ctx context.Context, projectID, name string, symbolTypes []treesitter.SymbolType, limit int) ([]CodeSymbol, error) {
 	query := `
-		SELECT * FROM code_symbols 
-		WHERE project_id = $project_id 
+		SELECT * FROM code_symbols
+		WHERE project_id = $project_id
 		AND name CONTAINS $name
 	`
 
@@ -222,9 +239,9 @@ func (s *SurrealDBStorage) FindChildSymbols(ctx context.Context, projectID, pare
 // SearchSymbolsBySimilarity performs semantic search on code symbols
 func (s *SurrealDBStorage) SearchSymbolsBySimilarity(ctx context.Context, projectID string, queryEmbedding []float32, symbolTypes []treesitter.SymbolType, limit int) ([]CodeSymbolSearchResult, error) {
 	query := `
-		SELECT *, vector::similarity::cosine(embedding, $embedding) AS similarity 
-		FROM code_symbols 
-		WHERE project_id = $project_id 
+		SELECT *, vector::similarity::cosine(embedding, $embedding) AS similarity
+		FROM code_symbols
+		WHERE project_id = $project_id
 		AND embedding != NONE
 	`
 

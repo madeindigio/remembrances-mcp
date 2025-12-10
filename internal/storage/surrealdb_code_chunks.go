@@ -5,12 +5,38 @@ package storage
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 )
 
 // ===== CODE CHUNK OPERATIONS =====
 
-// SaveCodeChunk saves a single code chunk
+// SaveCodeChunk saves a single code chunk with retry logic for transaction conflicts
 func (s *SurrealDBStorage) SaveCodeChunk(ctx context.Context, chunk *CodeChunk) error {
+	maxRetries := 3
+	baseDelay := 10 * time.Millisecond
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		err := s.saveCodeChunkAttempt(ctx, chunk)
+		if err == nil {
+			return nil
+		}
+
+		// Check if it's a transaction conflict
+		if strings.Contains(err.Error(), "read or write conflict") && attempt < maxRetries-1 {
+			delay := baseDelay * time.Duration(1<<uint(attempt))
+			time.Sleep(delay)
+			continue
+		}
+
+		return err
+	}
+
+	return fmt.Errorf("failed to save code chunk after %d attempts", maxRetries)
+}
+
+// saveCodeChunkAttempt performs a single attempt to save a code chunk
+func (s *SurrealDBStorage) saveCodeChunkAttempt(ctx context.Context, chunk *CodeChunk) error {
 	// Check if chunk exists (same pattern as SaveDocument)
 	existsQuery := "SELECT id FROM code_chunks WHERE symbol_id = $symbol_id AND chunk_index = $chunk_index"
 	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{

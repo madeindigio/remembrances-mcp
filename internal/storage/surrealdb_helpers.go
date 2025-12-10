@@ -25,6 +25,14 @@ func decodeResult[T any](result *[]QueryResult) ([]T, error) {
 		return nil, nil
 	}
 
+	// Debug: log the raw result before normalization
+	if len(queryResult.Result) > 0 {
+		firstItem := queryResult.Result[0]
+		if idVal, hasID := firstItem["id"]; hasID {
+			slog.Debug("decodeResult: raw id value", "type", fmt.Sprintf("%T", idVal), "value", idVal)
+		}
+	}
+
 	// Pre-process results to convert SurrealDB datetime objects to ISO strings
 	processedResult := normalizeSurrealDBDatetimes(queryResult.Result)
 
@@ -34,8 +42,12 @@ func decodeResult[T any](result *[]QueryResult) ([]T, error) {
 		return nil, fmt.Errorf("failed to marshal result: %w", err)
 	}
 
+	// Debug logging
+	slog.Debug("decodeResult: normalized JSON", "json", string(jsonData))
+
 	var items []T
 	if err := json.Unmarshal(jsonData, &items); err != nil {
+		slog.Error("decodeResult: unmarshal failed", "error", err, "json", string(jsonData))
 		return nil, fmt.Errorf("failed to unmarshal result: %w", err)
 	}
 
@@ -46,6 +58,39 @@ func decodeResult[T any](result *[]QueryResult) ([]T, error) {
 // from {"Datetime": "2025-..."} format to plain ISO8601 strings for proper JSON unmarshaling.
 // Also normalizes SurrealDB record IDs from {"id": "xxx", "tb": "table"} to "table:xxx".
 func normalizeSurrealDBDatetimes(data interface{}) interface{} {
+	// Log the type we're processing for debugging
+	dataType := fmt.Sprintf("%T", data)
+	if strings.Contains(dataType, "RecordID") {
+		slog.Debug("NORMALIZE: processing RecordID type", "type", dataType, "value", data)
+		
+		// Direct check for RecordID struct - it has Table and ID fields
+		val := reflect.ValueOf(data)
+		if val.Kind() == reflect.Struct {
+			typ := val.Type()
+			
+			// Try to get Table and ID fields
+			var tableField, idField reflect.Value
+			for i := 0; i < val.NumField(); i++ {
+				fieldName := typ.Field(i).Name
+				if fieldName == "Table" {
+					tableField = val.Field(i)
+				}
+				if fieldName == "ID" {
+					idField = val.Field(i)
+				}
+			}
+			
+			// If we have both fields, construct the string representation
+			if tableField.IsValid() && idField.IsValid() {
+				tableStr := fmt.Sprintf("%v", tableField.Interface())
+				idStr := fmt.Sprintf("%v", idField.Interface())
+				result := tableStr + ":" + idStr
+				slog.Debug("NORMALIZE: Converting RecordID", "from", data, "to", result)
+				return result
+			}
+		}
+	}
+	
 	switch v := data.(type) {
 	case []interface{}:
 		result := make([]interface{}, len(v))
@@ -66,13 +111,30 @@ func normalizeSurrealDBDatetimes(data interface{}) interface{} {
 		}
 		return result
 	case map[string]interface{}:
+		// Log what we're processing
+		if _, hasTable := v["Table"]; hasTable {
+			if _, hasID := v["ID"]; hasID {
+				slog.Debug("NORMALIZE: Processing map with Table and ID", "map", v, "len", len(v))
+			}
+		}
+		
 		// Check if this is a SurrealDB Datetime object
+		// Format: {"Datetime": "2025-..."} or {"Time": "2025-..."}
 		if datetime, ok := v["Datetime"]; ok && len(v) == 1 {
 			if dtStr, ok := datetime.(string); ok {
 				return dtStr
 			}
 		}
-		// Check if this is a SurrealDB Record ID object {"id": "xxx", "tb": "table"}
+		if timeVal, ok := v["Time"]; ok && len(v) == 1 {
+			if dtStr, ok := timeVal.(string); ok {
+				return dtStr
+			}
+		}
+		
+		// Check if this is a SurrealDB Record ID object
+		// Format 1: {"id": "xxx", "tb": "table"} (embedded SurrealDB / Go driver lowercase)
+		// Format 2: {"ID": "xxx", "Table": "table"} (external SurrealDB / Go driver uppercase)
+		// Handle lowercase format
 		if id, hasID := v["id"]; hasID {
 			if tb, hasTB := v["tb"]; hasTB && len(v) == 2 {
 				if idStr, ok := id.(string); ok {
@@ -82,6 +144,28 @@ func normalizeSurrealDBDatetimes(data interface{}) interface{} {
 				}
 			}
 		}
+		// Handle uppercase format (external SurrealDB)
+		if id, hasID := v["ID"]; hasID {
+			if tb, hasTB := v["Table"]; hasTB {
+				slog.Debug("NORMALIZE: Found potential Record ID with uppercase", "keys", len(v), "id", id, "table", tb, "map", v)
+				if len(v) == 2 {
+					if idStr, ok := id.(string); ok {
+						if tbStr, ok := tb.(string); ok {
+							result := tbStr + ":" + idStr
+							slog.Debug("NORMALIZE: Converting Record ID", "from", v, "to", result)
+							return result
+						} else {
+							slog.Warn("NORMALIZE: table is not string", "type", fmt.Sprintf("%T", tb))
+						}
+					} else {
+						slog.Warn("NORMALIZE: id is not string", "type", fmt.Sprintf("%T", id))
+					}
+				} else {
+					slog.Warn("NORMALIZE: Record ID object has unexpected number of keys", "expected", 2, "got", len(v), "keys", v)
+				}
+			}
+		}
+		
 		// Recursively process all map values
 		result := make(map[string]interface{}, len(v))
 		for key, val := range v {
