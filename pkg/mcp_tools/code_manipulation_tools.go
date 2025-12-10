@@ -328,7 +328,7 @@ func (cmtm *CodeManipulationToolManager) codeReplaceSymbolHandler(ctx context.Co
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -382,7 +382,7 @@ func (cmtm *CodeManipulationToolManager) codeInsertAfterSymbolHandler(ctx contex
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -436,7 +436,7 @@ func (cmtm *CodeManipulationToolManager) codeInsertBeforeSymbolHandler(ctx conte
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -511,6 +511,6 @@ func (cmtm *CodeManipulationToolManager) codeDeleteSymbolHandler(ctx context.Con
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }

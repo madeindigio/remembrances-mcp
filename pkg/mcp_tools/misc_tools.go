@@ -51,8 +51,11 @@ func (tm *ToolManager) hybridSearchHandler(ctx context.Context, request *protoco
 	}
 
 	if results.TotalResults == 0 {
-		alt := tm.userAlternatives(ctx, "vector_memories")
-		yamlText := CreateEmptyResultYAML(fmt.Sprintf("Hybrid search for '%s' returned no results for user '%s'", input.Query, input.UserID), alt)
+		suggestions := tm.FindUserAlternatives(ctx, "vector_memories", input.UserID)
+		yamlText := CreateEmptyResultTOON(
+			fmt.Sprintf("Hybrid search for '%s' returned no results for user '%s'", input.Query, input.UserID),
+			suggestions,
+		)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: yamlText},
 		}, false), nil
@@ -71,7 +74,7 @@ func (tm *ToolManager) hybridSearchHandler(ctx context.Context, request *protoco
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(response)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(response)},
 	}, false), nil
 }
 
@@ -87,6 +90,6 @@ func (tm *ToolManager) getStatsHandler(ctx context.Context, request *protocol.Ca
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(stats)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(stats)},
 	}, false), nil
 }

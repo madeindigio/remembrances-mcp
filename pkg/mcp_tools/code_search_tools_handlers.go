@@ -78,12 +78,13 @@ func (cstm *CodeSearchToolManager) codeGetSymbolsOverviewHandler(ctx context.Con
 	}
 
 	if len(topLevelSymbols) == 0 {
-		yamlText := CreateEmptyResultYAML(
+		suggestions := cstm.FindProjectAlternatives(ctx, input.ProjectID)
+		payload := CreateEmptyResultTOON(
 			fmt.Sprintf("No symbols found in '%s' for project '%s'", input.RelativePath, input.ProjectID),
-			cstm.projectAlternatives(ctx),
+			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
-			&protocol.TextContent{Type: "text", Text: yamlText},
+			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
 	}
 
@@ -202,12 +203,13 @@ func (cstm *CodeSearchToolManager) codeFindSymbolHandler(ctx context.Context, re
 	}
 
 	if len(symbols) == 0 {
-		yamlText := CreateEmptyResultYAML(
+		suggestions := cstm.FindProjectAlternatives(ctx, input.ProjectID)
+		payload := CreateEmptyResultTOON(
 			fmt.Sprintf("No symbols matched pattern '%s' in project '%s'", input.NamePathPattern, input.ProjectID),
-			cstm.projectAlternatives(ctx),
+			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
-			&protocol.TextContent{Type: "text", Text: yamlText},
+			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
 	}
 
@@ -318,12 +320,13 @@ func (cstm *CodeSearchToolManager) codeSearchSymbolsSemanticHandler(ctx context.
 	}
 
 	if len(symbols) == 0 {
-		yamlText := CreateEmptyResultYAML(
+		suggestions := cstm.FindProjectAlternatives(ctx, input.ProjectID)
+		payload := CreateEmptyResultTOON(
 			fmt.Sprintf("No semantic matches found for query '%s' in project '%s'", input.Query, input.ProjectID),
-			cstm.projectAlternatives(ctx),
+			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
-			&protocol.TextContent{Type: "text", Text: yamlText},
+			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
 	}
 
@@ -441,19 +444,19 @@ func (cstm *CodeSearchToolManager) codeSearchPatternHandler(ctx context.Context,
 	}
 
 	result := map[string]interface{}{
-		"pattern":  input.Pattern,
-		"is_regex": input.IsRegex,
-		"matches":  matches,
-		"count":    len(matches),
+		"pattern": input.Pattern,
+		"matches": matches,
+		"count":   len(matches),
 	}
 
 	if len(matches) == 0 {
-		yamlText := CreateEmptyResultYAML(
+		suggestions := cstm.FindProjectAlternatives(ctx, input.ProjectID)
+		payload := CreateEmptyResultTOON(
 			fmt.Sprintf("No pattern matches found for project '%s'", input.ProjectID),
-			cstm.projectAlternatives(ctx),
+			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
-			&protocol.TextContent{Type: "text", Text: yamlText},
+			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
 	}
 
@@ -563,12 +566,13 @@ func (cstm *CodeSearchToolManager) codeFindReferencesHandler(ctx context.Context
 	}
 
 	if len(references) == 0 {
-		yamlText := CreateEmptyResultYAML(
+		suggestions := cstm.FindProjectAlternatives(ctx, input.ProjectID)
+		payload := CreateEmptyResultTOON(
 			fmt.Sprintf("No references found for symbol '%s' in project '%s'", targetName, input.ProjectID),
-			cstm.projectAlternatives(ctx),
+			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
-			&protocol.TextContent{Type: "text", Text: yamlText},
+			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
 	}
 
@@ -787,12 +791,13 @@ func (cstm *CodeSearchToolManager) codeHybridSearchHandler(ctx context.Context, 
 	}
 
 	if len(results) == 0 {
-		yamlText := CreateEmptyResultYAML(
+		suggestions := cstm.FindProjectAlternatives(ctx, input.ProjectID)
+		payload := CreateEmptyResultTOON(
 			fmt.Sprintf("No code results found for query '%s' in project '%s'", input.Query, input.ProjectID),
-			cstm.projectAlternatives(ctx),
+			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
-			&protocol.TextContent{Type: "text", Text: yamlText},
+			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
 	}
 

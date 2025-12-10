@@ -80,7 +80,7 @@ func (ctm *CodeToolManager) codeActivateProjectWatchHandler(ctx context.Context,
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -114,7 +114,7 @@ func (ctm *CodeToolManager) codeDeactivateProjectWatchHandler(ctx context.Contex
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -155,13 +155,14 @@ func (ctm *CodeToolManager) codeGetWatchStatusHandler(ctx context.Context, req *
 	}
 
 	if projects, ok := result["projects"].([]map[string]interface{}); ok && len(projects) == 0 {
-		payload := CreateEmptyResultYAML("No watched projects", nil)
+		suggestions := ctm.FindProjectAlternatives(ctx, input.ProjectID)
+		payload := CreateEmptyResultTOON("No watched projects", suggestions)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }

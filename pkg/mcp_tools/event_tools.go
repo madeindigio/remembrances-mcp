@@ -149,10 +149,10 @@ func (tm *ToolManager) searchEventsHandler(ctx context.Context, request *protoco
 	}
 
 	if len(results) == 0 {
-		alt := tm.userAlternatives(ctx, "events")
+		suggestions := tm.FindUserAlternatives(ctx, "events", input.UserID)
 		yamlText := CreateEmptyResultTOON(
 			fmt.Sprintf("No events found for user '%s' with current filters", input.UserID),
-			AlternativeSuggestions{OtherIDs: alt},
+			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: yamlText},

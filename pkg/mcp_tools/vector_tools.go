@@ -94,10 +94,10 @@ func (tm *ToolManager) searchVectorsHandler(ctx context.Context, request *protoc
 	}
 
 	if len(results) == 0 {
-		alt := tm.userAlternatives(ctx, "vector_memories")
+		suggestions := tm.FindUserAlternatives(ctx, "vector_memories", input.UserID)
 		yamlText := CreateEmptyResultTOON(
 			fmt.Sprintf("No similar remembrances found for user '%s' and query '%s'", input.UserID, input.Query),
-			AlternativeSuggestions{OtherIDs: alt},
+			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: yamlText},

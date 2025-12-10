@@ -238,7 +238,8 @@ func (ctm *CodeToolManager) codeListProjectsHandler(ctx context.Context, req *pr
 	}
 
 	if len(results) == 0 {
-		payload := CreateEmptyResultTOON("No code projects indexed", AlternativeSuggestions{})
+		suggestions := ctm.FindProjectAlternatives(ctx, "")
+		payload := CreateEmptyResultTOON("No code projects indexed", suggestions)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil
@@ -351,7 +352,7 @@ func (ctm *CodeToolManager) codeGetProjectStatsHandler(ctx context.Context, req 
 	}
 
 	return protocol.NewCallToolResult([]protocol.Content{
-		&protocol.TextContent{Type: "text", Text: MarshalYAML(result)},
+		&protocol.TextContent{Type: "text", Text: MarshalTOON(result)},
 	}, false), nil
 }
 
@@ -425,9 +426,10 @@ func (ctm *CodeToolManager) codeGetFileSymbolsHandler(ctx context.Context, req *
 	}
 
 	if len(symbols) == 0 {
+		suggestions := ctm.FindProjectAlternatives(ctx, input.ProjectID)
 		yamlText := CreateEmptyResultTOON(
 			fmt.Sprintf("No symbols found in file '%s' for project '%s'", input.RelativePath, input.ProjectID),
-			AlternativeSuggestions{OtherIDs: ctm.projectAlternatives(ctx)},
+			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: yamlText},
