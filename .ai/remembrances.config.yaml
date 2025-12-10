@@ -30,10 +30,10 @@ knowledge-base: "/www/MCP/remembrances-mcp/.serena/memories"
 
 # ========== SurrealDB Configuration ==========
 # Path to the embedded SurrealDB database (default: "./remembrances.db")
-db-path: "surrealkv:///www/MCP/remembrances-mcp/remembrances.db"
+#db-path: "surrealkv:///www/MCP/remembrances-mcp/remembrances.db"
 
 # URL for the remote SurrealDB instance (default: "")
-#surrealdb-url: "ws://localhost:8000"
+surrealdb-url: "ws://localhost:8000"
 
 # Username for SurrealDB (default: "root")
 surrealdb-user: "root"
@@ -48,7 +48,7 @@ surrealdb-namespace: "test"
 surrealdb-database: "test"
 
 # External command to start SurrealDB when connection fails (default: "")
-#surrealdb-start-cmd: "surreal start --user root --pass root surrealkv:///www/Remembrances/programming"
+surrealdb-start-cmd: "surreal start --user root --pass root surrealkv:///www/MCP/remembrances-mcp/remembrances.db"
 
 # ========== GGUF Local Model Configuration ==========
 # Path to GGUF model file for local embeddings (default: "")

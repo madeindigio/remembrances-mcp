@@ -12,19 +12,13 @@
     "hyper-mcp": {
       "enabled": true,
       "command": "hyper-mcp",
-      "args": [
-        "--config-file",
-        "/home/sevir/.config/hyper-mcp/assistant.yaml"
-      ]
+      "args": ["--config-file", "/home/sevir/.config/hyper-mcp/assistant.yaml"]
     },
     "mycommandmcp": {
       "env": {},
       "enabled": true,
       "command": "mycommandmcp",
-      "args": [
-        "--config",
-        "/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"
-      ]
+      "args": ["--config", "/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"]
     },
     "remembrances": {
       "env": {},
