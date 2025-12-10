@@ -356,7 +356,7 @@ interactive: true
 ```bash
 make BUILD_TYPE=cuda build
 cp ./build/libs/cuda/*.so ./build/
-rm -f ~/bin/remembrances-mcp
+rm -f ~/bin/remembrances-mcp-beta
 cp ./build/libs/cuda/*.so ~/bin/
 cp ./build/remembrances-mcp ~/bin/remembrances-mcp-beta
 rm -f *.log

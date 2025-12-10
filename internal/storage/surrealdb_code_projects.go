@@ -24,15 +24,10 @@ func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *trees
 	}
 
 	// Convert language_stats map to a plain map[string]interface{} for SurrealDB
-	var langStats interface{}
-	if len(project.LanguageStats) > 0 {
-		ls := make(map[string]interface{})
-		for lang, count := range project.LanguageStats {
-			ls[string(lang)] = count
-		}
-		langStats = ls
-	} else {
-		langStats = nil
+	// Always use empty map instead of nil to avoid SurrealDB NULL errors
+	langStats := make(map[string]interface{})
+	for lang, count := range project.LanguageStats {
+		langStats[string(lang)] = count
 	}
 
 	// Check if project exists to get watcher_enabled value
@@ -125,7 +120,7 @@ func (s *SurrealDBStorage) ListCodeProjects(ctx context.Context) ([]CodeProject,
 // UpdateProjectStatus updates the indexing status of a project
 func (s *SurrealDBStorage) UpdateProjectStatus(ctx context.Context, projectID string, status treesitter.IndexingStatus) error {
 	query := `
-		UPDATE code_projects SET 
+		UPDATE code_projects SET
 			indexing_status = $status,
 			updated_at = time::now()
 		WHERE project_id = $project_id;
@@ -142,7 +137,7 @@ func (s *SurrealDBStorage) UpdateProjectStatus(ctx context.Context, projectID st
 // UpdateProjectWatcher updates the watcher_enabled field of a project
 func (s *SurrealDBStorage) UpdateProjectWatcher(ctx context.Context, projectID string, enabled bool) error {
 	query := `
-		UPDATE code_projects SET 
+		UPDATE code_projects SET
 			watcher_enabled = $enabled,
 			updated_at = time::now()
 		WHERE project_id = $project_id;

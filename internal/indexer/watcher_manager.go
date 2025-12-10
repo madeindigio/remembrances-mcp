@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 
+	"github.com/agnivade/levenshtein"
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
 )
 
@@ -29,6 +31,65 @@ func NewWatcherManager(indexer *Indexer, storage storage.FullStorage) *WatcherMa
 	}
 }
 
+// findSimilarProject searches for a project by name similarity using Levenshtein distance.
+// Returns the project if exactly one similar match is found with low distance, otherwise nil.
+func (wm *WatcherManager) findSimilarProject(ctx context.Context, queryProjectID string) (*storage.CodeProject, error) {
+	projects, err := wm.storage.ListCodeProjects(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	const maxDistance = 3
+	type match struct {
+		project  storage.CodeProject
+		distance int
+	}
+
+	var matches []match
+	normalizedQuery := strings.ToLower(strings.TrimSpace(queryProjectID))
+
+	for _, project := range projects {
+		// Check by name similarity
+		normalizedName := strings.ToLower(strings.TrimSpace(project.Name))
+		distance := levenshtein.ComputeDistance(normalizedQuery, normalizedName)
+
+		if distance <= maxDistance {
+			matches = append(matches, match{project: project, distance: distance})
+		}
+	}
+
+	// Return the project only if we have exactly one match
+	if len(matches) == 1 {
+		slog.Info("found similar project by name",
+			"query", queryProjectID,
+			"found_name", matches[0].project.Name,
+			"found_id", matches[0].project.ProjectID,
+			"distance", matches[0].distance)
+		return &matches[0].project, nil
+	}
+
+	return nil, nil
+}
+
+// formatProjectsList creates a formatted string with available projects.
+func (wm *WatcherManager) formatProjectsList(ctx context.Context) string {
+	projects, err := wm.storage.ListCodeProjects(ctx)
+	if err != nil {
+		return ""
+	}
+
+	if len(projects) == 0 {
+		return "No projects available"
+	}
+
+	var sb strings.Builder
+	sb.WriteString("Available projects:\n")
+	for _, p := range projects {
+		sb.WriteString(fmt.Sprintf("  - Name: %s, ID: %s\n", p.Name, p.ProjectID))
+	}
+	return sb.String()
+}
+
 // ActivateProject starts monitoring a code project.
 // If another project is already being monitored, it will be deactivated first.
 // Returns the number of outdated files found during initial scan.
@@ -48,8 +109,27 @@ func (wm *WatcherManager) ActivateProject(ctx context.Context, projectID string)
 	if err != nil {
 		return 0, "", fmt.Errorf("failed to get project: %w", err)
 	}
+
+	// If project not found by ID, try to find by name similarity
 	if project == nil {
-		return 0, "", fmt.Errorf("project not found: %s", projectID)
+		similarProject, err := wm.findSimilarProject(ctx, projectID)
+		if err != nil {
+			return 0, "", fmt.Errorf("failed to search for similar projects: %w", err)
+		}
+
+		if similarProject != nil {
+			// Found exactly one similar project, use it
+			slog.Info("activating similar project instead",
+				"requested", projectID,
+				"activating", similarProject.ProjectID,
+				"name", similarProject.Name)
+			project = similarProject
+			projectID = similarProject.ProjectID // Update projectID to the found one
+		} else {
+			// No similar project found, return error with available projects list
+			projectsList := wm.formatProjectsList(ctx)
+			return 0, "", fmt.Errorf("project not found: %s\n\n%s", projectID, projectsList)
+		}
 	}
 
 	// Check if project is properly indexed (not pending or failed)
