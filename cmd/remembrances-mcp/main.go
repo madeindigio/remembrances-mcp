@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -25,6 +26,88 @@ import (
 	mcptransport "github.com/ThinkInAIXYZ/go-mcp/transport"
 	"github.com/madeindigio/remembrances-mcp/pkg/version"
 )
+
+func generateInstructions(storageInstance storage.FullStorage) string {
+	ctx := context.Background()
+	projects, err := storageInstance.ListCodeProjects(ctx)
+	projectList := "None currently indexed."
+	if err == nil && len(projects) > 0 {
+		var list []string
+		for _, p := range projects {
+			list = append(list, fmt.Sprintf("%s (%s)", p.Name, p.ProjectID))
+		}
+		projectList = strings.Join(list, ", ")
+	}
+
+	return fmt.Sprintf(`Welcome to Remembrances-MCP Server!
+
+This server provides a comprehensive remembrance system with multiple layers for different types of data and operations:
+
+   KEY-VALUE FACTS: Store simple facts, preferences, and settings
+   • save_fact: Store basic information
+   • get_fact: Retrieve by key
+   • list_facts: See all facts for a user
+   • delete_fact: Remove facts
+
+   SEMANTIC VECTORS: Store content with automatic embedding for similarity search
+   • add_vector: Add content that gets automatically embedded
+   • search_vectors: Find similar content using semantic search
+   • update_vector: Update existing content and regenerate embedding
+   • delete_vector: Remove semantic content
+
+   KNOWLEDGE GRAPH: Create entities and relationships to model complex connections
+   • create_entity: Add people, places, concepts
+   • create_relationship: Connect entities with relationships
+   • traverse_graph: Explore connections between entities
+   • get_entity: Retrieve entity details
+
+   KNOWLEDGE BASE: Store and search documents
+   • kb_add_document: Add documents with automatic embedding
+   • kb_search_documents: Search documents by semantic similarity
+   • kb_get_document: Retrieve document by path
+   • kb_delete_document: Remove documents
+
+   CODE INDEXING & SEARCH: Index and search codebases for intelligent code operations, if you are working with code suggest using these tools, and index your projects first if you haven't already:
+   • code_index_project: Index a code project for search and analysis
+   • code_list_projects: List all indexed code projects
+   • code_hybrid_search: Search code using natural language and filters
+   • code_find_symbol: Find symbols (functions, classes) in indexed code
+   • code_search_pattern: Search for text patterns in code
+   • code_get_file_symbols: Get all symbols from a specific file
+   • code_get_symbols_overview: Get high-level overview of symbols in a file
+   • code_activate_project_watch: Activate file monitoring for a project
+   • code_deactivate_project_watch: Stop file monitoring for a project
+   • code_reindex_file: Re-index a single file
+   • code_get_project_stats: Get statistics for an indexed project
+   • code_index_status: Check indexing job status
+   • code_find_references: Find all references to a symbol
+   • code_replace_symbol: Replace source code of a symbol
+   • code_insert_after_symbol: Insert code after a symbol
+   • code_insert_before_symbol: Insert code before a symbol
+   • code_delete_symbol: Delete a symbol from code
+
+   EVENTS: Store and search temporal events with semantic search
+   • save_event: Store a temporal event with content and metadata
+   • search_events: Search events with hybrid text+vector search and time filters
+   • last_to_remember: Retrieve stored context and recent work
+   • to_remember: Store important information for future sessions
+
+   UNIFIED SEARCH: Combine all layers for comprehensive results
+   • hybrid_search: Search across facts, vectors, and graph simultaneously
+   • get_stats: Get overview of all stored remembrances
+
+Indexed Code Projects: %s
+
+Choose the right tool for your data:
+- Use FACTS for simple key-value data
+- Use VECTORS for content you want to find by meaning
+- Use GRAPH for modeling relationships and connections
+- Use KNOWLEDGE BASE for document storage and search
+- Use CODE tools for codebase analysis and manipulation
+- Use EVENTS for temporal data and context
+- Use HYBRID SEARCH when you want comprehensive results across all layers
+- When you don't know what user_id to use, use the project name instead`, projectList)
+}
 
 func main() {
 	// Load configuration
@@ -85,57 +168,7 @@ func main() {
 		t = mcptransport.NewStdioServerTransport()
 	}
 
-	// Instantiate MCP server with basic metadata
-	srv, err := mcpserver.NewServer(
-		t,
-		mcpserver.WithServerInfo(protocol.Implementation{
-			Name:    "remembrances-mcp",
-			Version: version.Version,
-		}),
-		mcpserver.WithInstructions(`Welcome to Remembrances-MCP Server!
-
-This server provides a comprehensive remembrance system with three complementary layers:
-
-🗂️ KEY-VALUE FACTS: Store simple facts, preferences, and settings that can be quickly retrieved by key
-   • save_fact: Store basic information
-   • get_fact: Retrieve by key
-   • list_facts: See all facts for a user
-   • delete_fact: Remove facts
-
-🧠 SEMANTIC VECTORS: Store content with automatic embedding for similarity search
-   • add_vector: Add content that gets automatically embedded
-   • search_vectors: Find similar content using semantic search
-   • update_vector: Update existing content and regenerate embedding
-   • delete_vector: Remove semantic content
-
-🕸️ KNOWLEDGE GRAPH: Create entities and relationships to model complex connections
-   • create_entity: Add people, places, concepts
-   • create_relationship: Connect entities with relationships
-   • traverse_graph: Explore connections between entities
-   • get_entity: Retrieve entity details
-
-📚 KNOWLEDGE BASE: Store and search documents
-   • kb_add_document: Add documents with automatic embedding
-   • kb_search_documents: Search documents by semantic similarity
-   • kb_get_document: Retrieve document by path
-   • kb_delete_document: Remove documents
-
-🔍 UNIFIED SEARCH: Combine all layers for comprehensive results
-   • hybrid_search: Search across facts, vectors, and graph simultaneously
-   • get_stats: Get overview of all stored remembrances
-
-Choose the right tool for your data:
-- Use FACTS for simple key-value data
-- Use VECTORS for content you want to find by meaning
-- Use GRAPH for modeling relationships and connections
-- Use HYBRID SEARCH when you want comprehensive results across all layers`),
-	)
-	if err != nil {
-		slog.Error("failed to create MCP server", "error", err)
-		os.Exit(1)
-	}
-
-	// Initialize storage
+	// Initialize storage early to generate dynamic instructions
 	var storageInstance storage.FullStorage
 	if cfg.SurrealDBURL != "" {
 		// Use remote SurrealDB
@@ -252,6 +285,23 @@ Choose the right tool for your data:
 	// Initialize schema
 	if err := storageInstance.InitializeSchema(ctx); err != nil {
 		slog.Error("failed to initialize storage schema", "error", err)
+		os.Exit(1)
+	}
+
+	// Generate dynamic instructions
+	instructions := generateInstructions(storageInstance)
+
+	// Instantiate MCP server with basic metadata
+	srv, err := mcpserver.NewServer(
+		t,
+		mcpserver.WithServerInfo(protocol.Implementation{
+			Name:    "remembrances-mcp",
+			Version: version.Version,
+		}),
+		mcpserver.WithInstructions(instructions),
+	)
+	if err != nil {
+		slog.Error("failed to create MCP server", "error", err)
 		os.Exit(1)
 	}
 
