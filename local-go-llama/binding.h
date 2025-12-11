@@ -49,3 +49,5 @@ int llama_predict(void* params_ptr, void* state_pr, char* result, bool debug);
 std::vector<std::string> create_vector(const char** strings, int count);
 void delete_vector(std::vector<std::string>* vec);
 #endif
+
+void* load_model(const char *fname, int n_ctx, int n_seed, bool memory_f16, bool mlock, bool embeddings, bool mmap, bool low_vram, int n_gpu_layers, int n_batch, int n_ubatch, const char *maingpu, const char *tensorsplit, bool numa, float rope_freq_base, float rope_freq_scale, bool mul_mat_q, const char *lora, const char *lora_base, bool perplexity);

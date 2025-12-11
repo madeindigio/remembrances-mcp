@@ -34,6 +34,14 @@ void sigint_handler(int signo) {
 }
 #endif
 
+// State structure for binding - holds model and context with smart pointers
+struct llama_binding_state {
+    llama_context_ptr context;
+    llama_model_ptr model;
+    std::vector<llama_adapter_lora_ptr> lora;
+    common_params* params = nullptr;
+};
+
 
 int get_embeddings(void* params_ptr, void* state_pr, float * res_embeddings) {
     common_params* params = (common_params*) params_ptr;
@@ -268,15 +276,17 @@ void* load_binding_model_custom(const char *fname, int n_ctx, int n_seed, bool m
 
 // Temporary workaround for https://github.com/go-skynet/go-llama.cpp/issues/218
 #ifdef GGML_USE_CUBLAS
-    lparams = create_common_params_cuda(fname_str);
+    lparams = new common_params();
+    lparams->model.path = fname_str;
 #else
-    lparams = create_common_params(fname_str, lora_str, lora_base_str);
+    lparams = new common_params();
+    lparams->model.path = fname_str;
 #endif
     
     llama_binding_state * state = new llama_binding_state;
     
     lparams->n_ctx      = n_ctx;
-    lparams->seed       = n_seed;
+    lparams->sampling.seed       = n_seed;
     // lparams->memory_f16     = memory_f16; // Removed in newer llama.cpp? Check common_params definition if needed. 
     // common_params usually has bool f16_kv? No, it has enum.
     // Let's assume memory_f16 maps to something or ignore if not critical for now.
@@ -290,7 +300,7 @@ void* load_binding_model_custom(const char *fname, int n_ctx, int n_seed, bool m
     lparams->embedding  = embeddings;
     lparams->use_mlock  = mlock;
     lparams->n_gpu_layers = n_gpu_layers;
-    lparams->perplexity = perplexity;
+
     lparams->use_mmap = mmap;
 
     // lparams->low_vram = low_vram; // Not in common_params?
@@ -319,9 +329,9 @@ void* load_binding_model_custom(const char *fname, int n_ctx, int n_seed, bool m
             const std::regex regex{R"([,/]+)"};
             std::sregex_token_iterator it{arg_next.begin(), arg_next.end(), regex, -1};
             std::vector<std::string> split_arg{it, {}};
-            GGML_ASSERT(split_arg.size() <= LLAMA_MAX_DEVICES);
+            GGML_ASSERT(split_arg.size() <= 128);
 
-            for (size_t i = 0; i < LLAMA_MAX_DEVICES; ++i) {
+            for (size_t i = 0; i < 128; ++i) {
                 if (i < split_arg.size()) {
                     lparams->tensor_split[i] = std::stof(split_arg[i]);
                 } else {
@@ -358,9 +368,15 @@ void* load_binding_model_custom(const char *fname, int n_ctx, int n_seed, bool m
         return nullptr;
     }
     
-    state->ctx = result.context; // shared_ptr assignment
-    state->model = result.model; // shared_ptr assignment
+    state->context = std::move(result.context); // unique_ptr move
+    state->model = std::move(result.model); // unique_ptr move
+    state->lora = std::move(result.lora); // vector move
     state->params = lparams;
     
     return state;
+}
+
+// Wrapper function for compatibility - calls load_model_custom
+void* load_model(const char *fname, int n_ctx, int n_seed, bool memory_f16, bool mlock, bool embeddings, bool mmap, bool low_vram, int n_gpu_layers, int n_batch, int n_ubatch, const char *maingpu, const char *tensorsplit, bool numa, float rope_freq_base, float rope_freq_scale, bool mul_mat_q, const char *lora, const char *lora_base, bool perplexity) {
+   return load_model_custom(fname, n_ctx, n_seed, memory_f16, mlock, embeddings, mmap, low_vram, n_gpu_layers, n_batch, n_ubatch, maingpu, tensorsplit, numa, rope_freq_base, rope_freq_scale, mul_mat_q, lora, lora_base, perplexity);
 }
