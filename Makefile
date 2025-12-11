@@ -3,7 +3,8 @@
 	clean test llama-cpp llama-cpp-clean help \
 	docker-build-cuda docker-push-cuda docker-run-cuda docker-stop-cuda \
 	docker-build-cpu docker-push-cpu docker-run-cpu docker-stop-cpu \
-	docker-download-model docker-prepare-cuda docker-prepare-cpu docker-login docker-help build-libs-cuda-portable
+	docker-download-model docker-prepare-cuda docker-prepare-cpu docker-login docker-help build-libs-cuda-portable \
+	build-cuda-full build-cuda-system dist-cuda-full dist-cuda-system build-cuda-both dist-cuda-both
 
 # Default target
 all: build
@@ -137,6 +138,12 @@ help:
 	@echo "  make build-variant VARIANT=cuda  - Build single variant binary (remembrances-mcp-cuda)"
 	@echo "  make build-all-variants          - Build all variant binaries (cpu, cuda, hipblas, etc.)"
 	@echo ""
+	@echo "CUDA variant builds:"
+	@echo "  make build BUILD_TYPE=cuda BUNDLE_CUDA=1  - Build with bundled CUDA libs (~1.6GB)"
+	@echo "  make build BUILD_TYPE=cuda BUNDLE_CUDA=0  - Build without CUDA libs (~300MB)"
+	@echo "  make dist-cuda-full                       - Package CUDA with bundled libraries"
+	@echo "  make dist-cuda-system                     - Package CUDA for system libraries"
+	@echo ""
 	@echo "Distribution packaging:"
 	@echo "  make dist-variant VARIANT=cuda   - Package single variant with libraries as zip"
 	@echo "  make dist-all                    - Package all variants as separate zip files"
@@ -264,6 +271,60 @@ build: llama-cpp surrealdb-embedded
 	@echo "Shared libraries copied successfully"
 	@ls -lh $(BUILD_DIR)/libsurrealdb_embedded_rs.* 2>/dev/null && echo "✓ SurrealDB embedded library copied" || echo "⚠ SurrealDB embedded library not found in build/"
 	@ls -lh $(BUILD_DIR)/libllama.* 2>/dev/null && echo "✓ llama.cpp libraries copied" || echo "⚠ llama.cpp libraries not found in build/"
+	@# Copy CUDA libraries if BUILD_TYPE is cuda or cublas AND BUNDLE_CUDA=1
+ifeq ($(BUILD_TYPE),cuda)
+ifeq ($(BUNDLE_CUDA),1)
+	@echo "Copying CUDA runtime libraries (BUNDLE_CUDA=1)..."
+	@# Detect CUDA version from libggml-cuda.so dependencies
+	@CUDA_VER=$$(ldd $(BUILD_DIR)/libggml-cuda.so 2>/dev/null | grep libcudart | sed -n 's/.*libcudart\.so\.\([0-9]*\).*/\1/p' | head -1); \
+	if [ -z "$$CUDA_VER" ]; then CUDA_VER=12; fi; \
+	echo "Detected CUDA version: $$CUDA_VER"; \
+	CUDA_PATH=""; \
+	if [ -d "/usr/local/cuda-$$CUDA_VER/targets/x86_64-linux/lib" ]; then \
+		CUDA_PATH="/usr/local/cuda-$$CUDA_VER/targets/x86_64-linux/lib"; \
+	elif [ -d "/usr/local/cuda/targets/x86_64-linux/lib" ]; then \
+		CUDA_PATH="/usr/local/cuda/targets/x86_64-linux/lib"; \
+	fi; \
+	if [ -n "$$CUDA_PATH" ]; then \
+		echo "Copying from $$CUDA_PATH..."; \
+		for lib in libcudart libcublas libcublasLt; do \
+			latest=$$(ls -1 $$CUDA_PATH/$${lib}.so.$$CUDA_VER.* 2>/dev/null | sort -V | tail -1); \
+			if [ -n "$$latest" ]; then \
+				cp -L $$latest $(BUILD_DIR)/ 2>/dev/null || true; \
+				ln -sf $$(basename $$latest) $(BUILD_DIR)/$${lib}.so.$$CUDA_VER 2>/dev/null || true; \
+			fi; \
+		done; \
+		echo "✓ CUDA $$CUDA_VER libraries bundled"; \
+	else \
+		echo "⚠ Warning: CUDA $$CUDA_VER libraries not found."; \
+	fi
+else
+	@echo "Skipping CUDA library bundling (BUNDLE_CUDA=0)"
+	@echo "Note: Target system must have CUDA $$CUDA_VER runtime installed"
+endif
+endif
+ifeq ($(BUILD_TYPE),cublas)
+	@echo "Copying CUDA runtime libraries..."
+	@# Detect CUDA version from libggml-cuda.so dependencies
+	@CUDA_VER=$$(ldd $(BUILD_DIR)/libggml-cuda.so 2>/dev/null | grep libcudart | sed -n 's/.*libcudart\.so\.\([0-9]*\).*/\1/p' | head -1); \
+	if [ -z "$$CUDA_VER" ]; then CUDA_VER=12; fi; \
+	echo "Detected CUDA version: $$CUDA_VER"; \
+	CUDA_PATH=""; \
+	if [ -d "/usr/local/cuda-$$CUDA_VER/targets/x86_64-linux/lib" ]; then \
+		CUDA_PATH="/usr/local/cuda-$$CUDA_VER/targets/x86_64-linux/lib"; \
+	elif [ -d "/usr/local/cuda/targets/x86_64-linux/lib" ]; then \
+		CUDA_PATH="/usr/local/cuda/targets/x86_64-linux/lib"; \
+	fi; \
+	if [ -n "$$CUDA_PATH" ]; then \
+		echo "Copying from $$CUDA_PATH..."; \
+		cp -L $$CUDA_PATH/libcudart.so.$$CUDA_VER* $(BUILD_DIR)/ 2>/dev/null || true; \
+		cp -L $$CUDA_PATH/libcublas.so.$$CUDA_VER* $(BUILD_DIR)/ 2>/dev/null || true; \
+		cp -L $$CUDA_PATH/libcublasLt.so.$$CUDA_VER* $(BUILD_DIR)/ 2>/dev/null || true; \
+		echo "✓ CUDA $$CUDA_VER libraries copied"; \
+	else \
+		echo "⚠ Warning: CUDA $$CUDA_VER libraries not found."; \
+	fi
+endif
 ifeq ($(PLATFORM),darwin)
 	@# Fix RPATH for macOS - add @executable_path and update library references
 	@echo "Fixing macOS library paths..."
@@ -1252,6 +1313,77 @@ docker-clean:
 	-docker rm remembrances-mcp-cpu 2>/dev/null || true
 	-docker rm remembrances-mcp-cuda 2>/dev/null || true
 	-docker rmi $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CPU) 2>/dev/null || true
+
+# ============================================================
+# CUDA Distribution Variants
+# ============================================================
+
+# Build CUDA variant with bundled libraries (~1.6GB)
+build-cuda-full:
+	@echo "Building CUDA variant with bundled libraries..."
+	$(MAKE) clean
+	$(MAKE) build BUILD_TYPE=cuda BUNDLE_CUDA=1
+	@echo ""
+	@echo "✓ CUDA Full build complete!"
+	@du -sh $(BUILD_DIR)
+	@echo "This variant includes all CUDA runtime libraries and is portable."
+
+# Build CUDA variant for system libraries (~300MB)
+build-cuda-system:
+	@echo "Building CUDA variant for system libraries..."
+	$(MAKE) clean
+	$(MAKE) build BUILD_TYPE=cuda BUNDLE_CUDA=0
+	@echo ""
+	@echo "✓ CUDA System build complete!"
+	@du -sh $(BUILD_DIR)
+	@echo "This variant requires CUDA 12 runtime installed on target system."
+
+# Package CUDA full variant (with bundled libraries)
+dist-cuda-full: build-cuda-full
+	@echo "Creating CUDA full distribution package..."
+	@DIST_NAME=remembrances-mcp-cuda-full-$(PLATFORM)-$(ARCH); \
+	DIST_DIR=dist-variants/$$DIST_NAME; \
+	rm -rf $$DIST_DIR; \
+	mkdir -p $$DIST_DIR; \
+	cp $(BUILD_DIR)/$(BINARY_NAME) $$DIST_DIR/; \
+	cp run-remembrances.sh $$DIST_DIR/; \
+	cp $(BUILD_DIR)/*.so* $$DIST_DIR/ 2>/dev/null || true; \
+	cp $(BUILD_DIR)/*.dylib $$DIST_DIR/ 2>/dev/null || true; \
+	cp README.md $$DIST_DIR/; \
+	cp config.sample.yaml $$DIST_DIR/; \
+	cd dist-variants && zip -r $$DIST_NAME.zip $$DIST_NAME/ && ls -lh $$DIST_NAME.zip; \
+	echo ""; \
+	echo "✓ Distribution package created"
+
+# Package CUDA system variant (without bundled libraries)
+dist-cuda-system: build-cuda-system
+	@echo "Creating CUDA system distribution package..."
+	@DIST_NAME=remembrances-mcp-cuda-system-$(PLATFORM)-$(ARCH); \
+	DIST_DIR=dist-variants/$$DIST_NAME; \
+	rm -rf $$DIST_DIR; \
+	mkdir -p $$DIST_DIR; \
+	cp $(BUILD_DIR)/$(BINARY_NAME) $$DIST_DIR/; \
+	cp run-remembrances.sh $$DIST_DIR/; \
+	cp $(BUILD_DIR)/libggml*.so* $$DIST_DIR/ 2>/dev/null || true; \
+	cp $(BUILD_DIR)/libllama.so* $$DIST_DIR/ 2>/dev/null || true; \
+	cp $(BUILD_DIR)/libcommon.so* $$DIST_DIR/ 2>/dev/null || true; \
+	cp $(BUILD_DIR)/libsurrealdb*.so* $$DIST_DIR/ 2>/dev/null || true; \
+	cp README.md $$DIST_DIR/; \
+	cp config.sample.yaml $$DIST_DIR/; \
+	echo "CUDA Runtime Required: CUDA 12.x must be installed on target system" > $$DIST_DIR/REQUIREMENTS.txt; \
+	cd dist-variants && zip -r $$DIST_NAME.zip $$DIST_NAME/ && ls -lh $$DIST_NAME.zip; \
+	echo ""; \
+	echo "✓ Distribution package created"; \
+	echo "⚠ Note: This variant requires CUDA 12.x installed on target system"
+
+# Build both CUDA variants
+build-cuda-both: build-cuda-full build-cuda-system
+	@echo "✓ Both CUDA variants built successfully"
+
+# Package both CUDA variants
+dist-cuda-both: dist-cuda-full dist-cuda-system
+	@echo "✓ Both CUDA distribution packages created"
+	@ls -lh dist-variants/*.zip
 	-docker rmi $(DOCKER_FULL_IMAGE):$(DOCKER_TAG_CUDA) 2>/dev/null || true
 	-docker rmi $(DOCKER_FULL_IMAGE):$(VERSION)-cpu 2>/dev/null || true
 	-docker rmi $(DOCKER_FULL_IMAGE):$(VERSION)-cuda 2>/dev/null || true

@@ -334,6 +334,47 @@ go run ./cmd/remembrances-mcp/main.go --knowledge-base ./kb --rest-api-serve
 
 See [LICENSE.txt](LICENSE.txt).
 
+## CUDA Build Variants
+
+The project supports two CUDA build variants:
+
+#### 1. CUDA Full (Bundled Libraries) - Recommended for Distribution
+- **Size**: ~880MB compressed
+- **Portability**: ✅ Fully portable, no system CUDA required
+- **Includes**: All CUDA runtime libraries (libcudart, libcublas, libcublasLt)
+- **Use case**: Distributing to systems without CUDA installed
+
+```bash
+make build BUILD_TYPE=cuda BUNDLE_CUDA=1
+# or use the shortcut:
+make build-cuda-full
+# Package for distribution:
+make dist-cuda-full
+```
+
+#### 2. CUDA System (System Libraries) - Recommended for Development
+- **Size**: ~93MB compressed
+- **Portability**: ⚠️ Requires CUDA 12.x installed on target system
+- **Includes**: Only project libraries (libggml-cuda, libllama, libsurrealdb)
+- **Use case**: Development or deployment to GPU servers with CUDA pre-installed
+
+```bash
+make build BUILD_TYPE=cuda BUNDLE_CUDA=0
+# or use the shortcut:
+make build-cuda-system
+# Package for distribution:
+make dist-cuda-system
+```
+
+#### Build Both Variants
+```bash
+make dist-cuda-both
+```
+
+This creates both distribution packages:
+- `dist-variants/remembrances-mcp-cuda-full-linux-amd64.zip` (880MB)
+- `dist-variants/remembrances-mcp-cuda-system-linux-amd64.zip` (93MB)
+
 ## Tasks
 
 ### build
@@ -346,6 +387,8 @@ go build -o dist/remembrances-mcp ./cmd/remembrances-mcp
 #try to copy to project root if error, remove the binary in the project root first
 cp dist/remembrances-mcp ./remembrances-mcp || (rm -f ./remembrances-mcp && cp dist/remembrances-mcp ./remembrances-mcp)
 ```
+
+
 
 ### build-and-copy
 
@@ -501,17 +544,19 @@ Create distribution packages without overwriting CUDA portable libraries. The ke
 rm -rf dist-variants/*
 
 make BUILD_TYPE=cuda llama-cpp
+# CUDA optimized for current CPU
+make PORTABLE=0 build-libs-cuda
+make BUILD_TYPE=cuda build
+cd build
+zip -9 remembrances-mcp-linux-x64-nvidia.zip remembrances-mcp *.so
+mv remembrances-mcp-linux-x64-nvidia.zip ../dist-variants/
+cd ..
 
 # CUDA portable (AVX2-compatible for Intel/AMD)
 make PORTABLE=1 build-libs-cuda-portable
-make BUILD_TYPE=cuda build-binary-only
+make BUILD_TYPE=cuda build
 make dist-variant VARIANT=cuda-portable
 
-# CUDA optimized for current CPU
-make BUILD_TYPE=cuda llama-cpp
-make PORTABLE=0 build-libs-cuda
-make BUILD_TYPE=cuda build-binary-only
-make dist-variant VARIANT=cuda
 
 # CPU-only
 make build-libs-cpu

@@ -13,7 +13,7 @@ NC='\033[0m' # No Color
 # Directorios
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-GO_LLAMA_DIR="${GO_LLAMA_DIR:-~/www/MCP/Remembrances/go-llama.cpp}"
+GO_LLAMA_DIR="${GO_LLAMA_DIR:-$HOME/www/MCP/Remembrances/go-llama.cpp}"
 BUILD_DIR="$PROJECT_ROOT/build"
 
 echo -e "${GREEN}=== Compilación de llama.cpp con soporte CUDA ===${NC}"

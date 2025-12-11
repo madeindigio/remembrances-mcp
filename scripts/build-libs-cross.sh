@@ -5,8 +5,8 @@
 set -e
 
 PROJECT_ROOT="${PROJECT_ROOT:-/go/src/github.com/madeindigio/remembrances-mcp}"
-LLAMA_CPP_DIR="${LLAMA_CPP_DIR:-~/www/MCP/Remembrances/go-llama.cpp}"
-SURREALDB_DIR="${SURREALDB_DIR:-~/www/MCP/Remembrances/surrealdb-embedded}"
+LLAMA_CPP_DIR="${LLAMA_CPP_DIR:-$HOME/www/MCP/Remembrances/go-llama.cpp}"
+SURREALDB_DIR="${SURREALDB_DIR:-$HOME/www/MCP/Remembrances/surrealdb-embedded}"
 DIST_LIBS_DIR="${PROJECT_ROOT}/dist/libs"
 
 # Colors for output
