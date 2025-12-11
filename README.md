@@ -516,9 +516,8 @@ make build-binary-only
 make dist-variant VARIANT=cpu
 
 # macOS Metal (run on Apple Silicon host)
-make build-libs-metal
-make BUILD_TYPE=metal build-binary-only
-make dist-variant VARIANT=metal
+./scripts/build-osx-remote.sh
+./scripts/copy-osx-build.sh
 
 # (Optional) Docker images remain the same
 make docker-prepare-cpu && make docker-build-cpu && make docker-push-cpu
