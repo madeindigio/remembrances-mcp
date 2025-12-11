@@ -500,12 +500,15 @@ Create distribution packages without overwriting CUDA portable libraries. The ke
 ```bash
 rm -rf dist-variants/*
 
+make BUILD_TYPE=cuda llama-cpp
+
 # CUDA portable (AVX2-compatible for Intel/AMD)
 make PORTABLE=1 build-libs-cuda-portable
 make BUILD_TYPE=cuda build-binary-only
 make dist-variant VARIANT=cuda-portable
 
 # CUDA optimized for current CPU
+make BUILD_TYPE=cuda llama-cpp
 make PORTABLE=0 build-libs-cuda
 make BUILD_TYPE=cuda build-binary-only
 make dist-variant VARIANT=cuda

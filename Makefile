@@ -195,9 +195,18 @@ llama-cpp:
 	@# Check for already built libraries (platform-specific extension)
 	@if [ ! -f "$(GO_LLAMA_DIR)/build/bin/libllama.$(LIB_EXT)" ]; then \
 		echo "llama.cpp not built. Building now for $(PLATFORM)/$(ARCH)..."; \
-		echo "Note: If this fails, please build manually:"; \
-		echo "  cd $(GO_LLAMA_DIR) && cmake -B build llama.cpp -DLLAMA_STATIC=OFF && cmake --build build --config Release -j"; \
-		cd "$(GO_LLAMA_DIR)" && BUILD_TYPE=$(BUILD_TYPE) cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
+		echo "Build type: $(BUILD_TYPE)"; \
+		if [ "$(BUILD_TYPE)" = "cuda" ]; then \
+			echo "Building with CUDA support..."; \
+			echo "Note: Make sure you have CUDA Toolkit installed"; \
+			cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
+		elif [ "$(BUILD_TYPE)" = "metal" ]; then \
+			echo "Building with Metal support (macOS)..."; \
+			cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DGGML_METAL=ON -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
+		else \
+			echo "Building with CPU only..."; \
+			cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
+		fi \
 	else \
 		echo "llama.cpp library already built at $(GO_LLAMA_DIR)/build/bin/"; \
 	fi
