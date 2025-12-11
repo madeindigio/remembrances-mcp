@@ -1,5 +1,19 @@
 # Changelog
 
+### [v1.16.4](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.3...v1.16.4) (2025-12-11)
+
+#### Features
+
+* Add initial instructions with the indexed projects
+([e5f1252](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/e5f125243a626372c2ad693cc4ae3523be06ddd3))
+
+#### Fixes
+
+* Fix compilation cuda libs
+([5412122](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/54121228b4a0141fdb60e6bd7d407860b4a51d3c))
+* error lost compilation with go-llama
+([dc192b7](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/dc192b713131ad677fc3f80e33ba57dc687e7328))
+
 ### [v1.16.3](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.14.1...v1.16.3) (2025-12-11)
 
 #### Features
