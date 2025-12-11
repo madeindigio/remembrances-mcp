@@ -31,7 +31,6 @@ BUILD_VERSION := $(VERSION)$(GIT_DIRTY)
 # Go ldflags for version injection
 VERSION_PKG := github.com/madeindigio/remembrances-mcp/pkg/version
 GO_VERSION_LDFLAGS := -X $(VERSION_PKG).Version=$(BUILD_VERSION) -X $(VERSION_PKG).CommitHash=$(COMMIT_HASH)
-
 # Detect OS and architecture
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
@@ -85,6 +84,7 @@ EMBEDDED_VARIANT ?= cpu
 EMBEDDED_VARIANT_TAG := embedded_$(subst -,_,$(EMBEDDED_VARIANT))
 EMBEDDED_TAGS := embedded $(EMBEDDED_VARIANT_TAG)
 
+EMBEDDED_RPATH_OPTION := -extldflags "-Wl,-rpath,\$$ORIGIN -Wl,-rpath,\$$ORIGIN/embedded-libs/$(EMBEDDED_VARIANT)"
 EMBEDDED_LIB_PATH := internal/embedded/libs/$(PLATFORM)/$(ARCH)/$(EMBEDDED_VARIANT)
 ABS_EMBEDDED_LIB_PATH := $(abspath $(EMBEDDED_LIB_PATH))
 ABS_BUILD_DIR := $(abspath $(BUILD_DIR))
@@ -271,6 +271,9 @@ endif
 # Build only the Go binary using previously compiled libraries (does not rebuild llama.cpp or surrealdb)
 build-binary-only:
 	@echo "Building $(BINARY_NAME) without rebuilding shared libraries..."
+	@echo "  Target: $(PLATFORM)/$(ARCH)"
+	@echo "  Version: $(BUILD_VERSION)"
+	@echo "  Commit: $(COMMIT_HASH)"
 	@mkdir -p $(BUILD_DIR)
 	go build -mod=mod -v -ldflags="$(RPATH_OPTION) $(GO_VERSION_LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Binary ready: $(BUILD_DIR)/$(BINARY_NAME)"
@@ -319,8 +322,16 @@ prepare-embedded-libs-metal: prepare-embedded-libs
 # Build an embedded binary that ships the shared libraries via go:embed/purego.
 build-embedded: prepare-embedded-libs
 	@echo "Building $(BINARY_NAME)-embedded with embedded shared libraries (variant=$(EMBEDDED_VARIANT))..."
+	@echo "  Target: $(PLATFORM)/$(ARCH)"
+	@echo "  Version: $(BUILD_VERSION)"
+	@echo "  Commit: $(COMMIT_HASH)"
 	@mkdir -p $(BUILD_DIR)
-	go build -mod=mod -tags "$(EMBEDDED_TAGS)" -v -ldflags="$(RPATH_OPTION) $(GO_VERSION_LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-embedded ./cmd/remembrances-mcp
+	go build -mod=mod -tags "$(EMBEDDED_TAGS)" -v -ldflags="$(EMBEDDED_RPATH_OPTION) $(GO_VERSION_LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-embedded ./cmd/remembrances-mcp
+	@echo "Copying embedded libraries next to binary for loader resolution..."
+	@cp $(EMBEDDED_LIB_PATH)/*.$(LIB_EXT) $(BUILD_DIR)/ 2>/dev/null || echo "⚠ Warning: Could not copy embedded libraries to $(BUILD_DIR)/"
+	@echo "Copying embedded libraries into embedded-libs/$(EMBEDDED_VARIANT) for RPATH lookup..."
+	@mkdir -p $(BUILD_DIR)/embedded-libs/$(EMBEDDED_VARIANT)
+	@cp $(EMBEDDED_LIB_PATH)/*.$(LIB_EXT) $(BUILD_DIR)/embedded-libs/$(EMBEDDED_VARIANT)/ 2>/dev/null || echo "⚠ Warning: Could not copy embedded libraries to $(BUILD_DIR)/embedded-libs/$(EMBEDDED_VARIANT)/"
 	@echo "Embedded binary ready: $(BUILD_DIR)/$(BINARY_NAME)-embedded"
 
 build-embedded-cpu: EMBEDDED_VARIANT=cpu

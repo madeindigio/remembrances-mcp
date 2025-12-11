@@ -31,13 +31,16 @@ func ExtractAndLoad(ctx context.Context, destDir string) (*ExtractResult, *Loade
 		return nil, nil, err
 	}
 
+	// Ensure the extraction directory is visible to the dynamic loader before
+	// attempting to dlopen the libraries, so transitive dependencies located in
+	// the same directory can be resolved.
+	if err := AppendLibraryPath(res.Directory); err != nil {
+		return nil, nil, fmt.Errorf("update library path: %w", err)
+	}
+
 	ldr = NewLoader()
 	if err := ldr.Load(res.Files, res.Variant); err != nil {
 		return nil, nil, fmt.Errorf("load embedded libraries: %w", err)
-	}
-
-	if err := AppendLibraryPath(res.Directory); err != nil {
-		return nil, nil, fmt.Errorf("update library path: %w", err)
 	}
 
 	slog.Info("Loaded libraries from embedded extraction", "dir", res.Directory, "variant", res.Variant)
@@ -75,14 +78,17 @@ func tryLoadFromBinaryDir(ctx context.Context) (*ExtractResult, *Loader, error) 
 		return nil, nil, fmt.Errorf("no libraries found in binary directory: %s", binDir)
 	}
 
+	// Ensure the binary directory is part of the loader search path before
+	// attempting to dlopen, so dependent libraries in the same directory are
+	// discoverable.
+	if err := AppendLibraryPath(binDir); err != nil {
+		return nil, nil, fmt.Errorf("update library path: %w", err)
+	}
+
 	// Try to load the libraries
 	ldr := NewLoader()
 	if err := ldr.Load(files, platformVariant); err != nil {
 		return nil, nil, fmt.Errorf("load libraries from binary dir: %w", err)
-	}
-
-	if err := AppendLibraryPath(binDir); err != nil {
-		return nil, nil, fmt.Errorf("update library path: %w", err)
 	}
 
 	return &ExtractResult{
