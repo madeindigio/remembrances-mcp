@@ -1,16 +1,18 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 
-	embedded "github.com/madeindigio/surrealdb-embedded-golang"
+	"github.com/madeindigio/remembrances-mcp/internal/surrealembedded"
 )
 
 func main() {
+	ctx := context.Background()
 	// Connect to embedded DB
-	db, err := embedded.NewRocksDB("~/www/MCP/remembrances-mcp/remembrances.db")
+	db, err := surrealembedded.NewFromURL(ctx, "~/www/MCP/remembrances-mcp/remembrances.db")
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}

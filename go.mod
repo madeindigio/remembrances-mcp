@@ -8,7 +8,6 @@ require (
 	github.com/ebitengine/purego v0.7.1
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/uuid v1.6.0
-	github.com/madeindigio/surrealdb-embedded-golang v0.0.0-00010101000000-000000000000
 	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
 	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.20.1
@@ -42,15 +41,3 @@ require (
 	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-// Local development replacements
-// These use absolute paths expanded at build time. For portable builds, create a go.work file:
-//   go work init .
-//   go work use $HOME/www/MCP/Remembrances/surrealdb-embedded
-//
-// Or set environment variables before building:
-//   export SURREALDB_DIR=$HOME/www/MCP/Remembrances/surrealdb-embedded
-//   go mod edit -replace github.com/madeindigio/surrealdb-embedded-golang=$SURREALDB_DIR
-
-// Default paths for the main development environment
-replace github.com/madeindigio/surrealdb-embedded-golang => /Users/digio/www/MCP/Remembrances/surrealdb-embedded
