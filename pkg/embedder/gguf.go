@@ -5,77 +5,66 @@ import (
 	"fmt"
 	"sync"
 
-	llama "github.com/madeindigio/go-llama.cpp"
+	"github.com/madeindigio/remembrances-mcp/internal/llama"
 )
 
-// GGUFEmbedder implementa la interfaz Embedder utilizando modelos GGUF locales
-// a través de go-llama.cpp para generar embeddings.
+// GGUFEmbedder implements Embedder using local GGUF models via llama.cpp.
 type GGUFEmbedder struct {
-	model     *llama.LLama
+	model     *llama.Model
 	modelPath string
 	dimension int
 	threads   int
 	gpuLayers int
-	mu        sync.Mutex // Protege el acceso al modelo
+	mu        sync.Mutex // Protects access to the model/context
 }
 
-// GGUFConfig contiene la configuración para el embedder GGUF.
+// GGUFConfig holds configuration for the GGUF embedder.
 type GGUFConfig struct {
-	ModelPath string // Ruta al archivo GGUF del modelo
-	Threads   int    // Número de threads a usar (0 = auto-detect)
-	GPULayers int    // Número de capas a cargar en GPU (0 = solo CPU)
+	ModelPath string // Path to the GGUF model file
+	Threads   int    // Threads to use (<=0 uses a reasonable default)
+	GPULayers int    // GPU layers to offload (0 = CPU only)
 }
 
-// NewGGUFEmbedder crea una nueva instancia de GGUFEmbedder.
-// modelPath: ruta al archivo GGUF del modelo (ej: "/path/to/nomic-embed-text-v1.5.Q4_K_M.gguf")
-// threads: número de threads a usar (0 para auto-detect)
-// gpuLayers: número de capas a cargar en GPU (0 para solo CPU)
+// NewGGUFEmbedder creates a new GGUFEmbedder.
 func NewGGUFEmbedder(modelPath string, threads, gpuLayers int) (*GGUFEmbedder, error) {
 	if modelPath == "" {
 		return nil, fmt.Errorf("model path is required")
 	}
 
-	// Configurar opciones del modelo optimizadas para embeddings
-	// Context 2048 matches model training, batch sizes allow processing typical documents
-	opts := []llama.ModelOption{
-		llama.EnableEmbeddings,
-		llama.EnableF16Memory,
-		llama.SetContext(2048), // Match model's training context
-		llama.SetNBatch(2048),  // Allow processing complete documents
-		llama.SetNUBatch(2048), // Match batch size for efficiency
+	if threads <= 0 {
+		threads = 8
 	}
 
-	// Añadir capas GPU si se especifican
-	if gpuLayers > 0 {
-		opts = append(opts, llama.SetGPULayers(gpuLayers))
-	}
-
-	// Cargar el modelo
-	model, err := llama.New(modelPath, opts...)
+	model, err := llama.LoadModel(context.Background(), modelPath, llama.Options{
+		Threads:     threads,
+		ThreadsBatch: threads,
+		GPULayers:   gpuLayers,
+		ContextSize: 2048,
+		BatchSize:   2048,
+		UBatchSize:  2048,
+		Pooling:     llama.PoolingMean,
+		Attention:   llama.AttentionNonCausal,
+		Normalize:   2,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load GGUF model from %s: %w", modelPath, err)
-	}
-
-	// Por defecto, usar el número de CPUs disponibles si threads no se especifica
-	if threads <= 0 {
-		threads = 8 // Default razonable
 	}
 
 	return &GGUFEmbedder{
 		model:     model,
 		modelPath: modelPath,
-		dimension: 0, // Se detectará automáticamente en la primera llamada
+		dimension: 0, // Detected on first call
 		threads:   threads,
 		gpuLayers: gpuLayers,
 	}, nil
 }
 
-// NewGGUFEmbedderFromConfig crea un GGUFEmbedder desde una configuración.
+// NewGGUFEmbedderFromConfig creates a GGUF embedder from a config struct.
 func NewGGUFEmbedderFromConfig(cfg GGUFConfig) (*GGUFEmbedder, error) {
 	return NewGGUFEmbedder(cfg.ModelPath, cfg.Threads, cfg.GPULayers)
 }
 
-// EmbedDocuments crea embeddings para un lote de textos.
+// EmbedDocuments generates embeddings for a batch of texts.
 func (g *GGUFEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]float32, error) {
 	if len(texts) == 0 {
 		return [][]float32{}, nil
@@ -89,8 +78,7 @@ func (g *GGUFEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]
 
 	result := make([][]float32, len(texts))
 
-	// Procesar cada texto secuencialmente
-	// Nota: llama.cpp maneja el paralelismo internamente con threads
+	// Process sequentially; llama.cpp handles parallelism internally.
 	for i, text := range texts {
 		// Check context cancellation
 		select {
@@ -120,7 +108,7 @@ func (g *GGUFEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]
 	return result, nil
 }
 
-// EmbedQuery crea un embedding para un único texto (una consulta).
+// EmbedQuery generates an embedding for a single text query.
 func (g *GGUFEmbedder) EmbedQuery(ctx context.Context, text string) ([]float32, error) {
 	if text == "" {
 		return nil, fmt.Errorf("text cannot be empty")
@@ -135,8 +123,8 @@ func (g *GGUFEmbedder) EmbedQuery(ctx context.Context, text string) ([]float32, 
 	return g.embedSingle(ctx, text)
 }
 
-// embedSingle genera un embedding para un único texto.
-// Usa un mutex para asegurar acceso thread-safe al modelo.
+// embedSingle generates an embedding for a single text.
+// A mutex is used to ensure the underlying llama context is accessed safely.
 func (g *GGUFEmbedder) embedSingle(ctx context.Context, text string) ([]float32, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -148,8 +136,7 @@ func (g *GGUFEmbedder) embedSingle(ctx context.Context, text string) ([]float32,
 	default:
 	}
 
-	// Generar embeddings usando llama.cpp
-	embeddings, err := g.model.Embeddings(text, llama.SetThreads(g.threads))
+	embeddings, err := g.model.Embed(ctx, text, g.threads)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate embeddings: %w", err)
 	}
@@ -162,46 +149,45 @@ func (g *GGUFEmbedder) embedSingle(ctx context.Context, text string) ([]float32,
 	return embeddings, nil
 }
 
-// Dimension devuelve la dimensionalidad de los vectores generados.
+// Dimension returns the embedding vector dimension.
 func (g *GGUFEmbedder) Dimension() int {
-	// Si aún no se ha detectado, intentar obtenerla del modelo
+	// If not detected yet, try to infer it.
 	if g.dimension == 0 {
-		// Generar un embedding de prueba para detectar la dimensión
+		// Generate a test embedding to detect the dimension.
 		testEmbed, err := g.embedSingle(context.Background(), "test")
 		if err == nil && len(testEmbed) > 0 {
 			g.dimension = len(testEmbed)
 		} else {
-			// Si falla, devolver una dimensión por defecto común
-			// (768 para nomic-embed-text, 1024 para algunos otros)
+			// Common fallback for many embedding models.
 			return 768
 		}
 	}
 	return g.dimension
 }
 
-// Close libera los recursos del modelo.
+// Close releases model resources.
 func (g *GGUFEmbedder) Close() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
 	if g.model != nil {
-		g.model.Free()
+		_ = g.model.Close()
 		g.model = nil
 	}
 	return nil
 }
 
-// ModelPath devuelve la ruta al archivo del modelo.
+// ModelPath returns the model file path.
 func (g *GGUFEmbedder) ModelPath() string {
 	return g.modelPath
 }
 
-// Threads devuelve el número de threads configurados.
+// Threads returns the configured number of threads.
 func (g *GGUFEmbedder) Threads() int {
 	return g.threads
 }
 
-// GPULayers devuelve el número de capas GPU configuradas.
+// GPULayers returns the configured number of GPU layers.
 func (g *GGUFEmbedder) GPULayers() int {
 	return g.gpuLayers
 }

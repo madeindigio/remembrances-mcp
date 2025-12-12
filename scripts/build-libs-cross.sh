@@ -114,6 +114,51 @@ build_llama_cpp() {
     log_info "llama.cpp build complete for ${platform}-${arch}"
 }
 
+build_llama_shim() {
+    local platform=$1
+    local arch=$2
+    local cc=$3
+
+    local output_dir="${DIST_LIBS_DIR}/${platform}-${arch}"
+    local shim_src="${PROJECT_ROOT}/internal/llama_shim/llama_shim.c"
+    local shim_inc="${PROJECT_ROOT}/internal/llama_shim"
+
+    log_info "Building libllama_shim for ${platform}-${arch}..."
+
+    if [ ! -f "${shim_src}" ]; then
+        log_error "llama shim source not found at ${shim_src}"
+        return 1
+    fi
+
+    case "${platform}" in
+        linux)
+            "${cc}" -shared -fPIC -O3 \
+                -I"${shim_inc}" \
+                -L"${output_dir}" -lllama \
+                -Wl,-rpath,'$ORIGIN' \
+                -o "${output_dir}/libllama_shim.so" \
+                "${shim_src}" -lm
+            ;;
+        darwin)
+            "${cc}" -dynamiclib -O3 \
+                -I"${shim_inc}" \
+                -L"${output_dir}" -lllama \
+                -Wl,-rpath,@loader_path \
+                -Wl,-install_name,@rpath/libllama_shim.dylib \
+                -o "${output_dir}/libllama_shim.dylib" \
+                "${shim_src}" -lm
+            ;;
+        windows)
+            log_warn "Skipping libllama_shim for Windows (not currently supported)"
+            ;;
+        *)
+            log_warn "Unknown platform ${platform}; skipping libllama_shim"
+            ;;
+    esac
+
+    log_info "libllama_shim build complete for ${platform}-${arch}"
+}
+
 # Function to build surrealdb-embedded for a specific platform
 build_surrealdb_embedded() {
     local platform=$1
@@ -200,6 +245,9 @@ build_for_platform() {
 
     # Build llama.cpp
     build_llama_cpp "${platform}" "${arch}" "${cc}" "${cxx}" || log_error "Failed to build llama.cpp"
+
+    # Build llama shim (depends on libllama)
+    build_llama_shim "${platform}" "${arch}" "${cc}" || log_error "Failed to build libllama_shim"
 
     # Build surrealdb-embedded
     build_surrealdb_embedded "${platform}" "${arch}" || log_error "Failed to build surrealdb-embedded"

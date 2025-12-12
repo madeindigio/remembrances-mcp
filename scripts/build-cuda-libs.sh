@@ -205,6 +205,26 @@ fi
 
 echo -e "${GREEN}✓ $COPIED librerías copiadas a $BUILD_DIR/${NC}"
 
+# Compilar la shim (libllama_shim.so) junto a las librerías copiadas.
+echo ""
+echo -e "${YELLOW}Compilando libllama_shim...${NC}"
+
+SHIM_SRC="$PROJECT_ROOT/internal/llama_shim/llama_shim.c"
+SHIM_INC="$PROJECT_ROOT/internal/llama_shim"
+
+if [ -f "$SHIM_SRC" ]; then
+    cc_bin="${CC:-gcc}"
+    "$cc_bin" -shared -fPIC -O3 \
+        -I"$SHIM_INC" \
+        -L"$BUILD_DIR" -lllama \
+        -Wl,-rpath,'$ORIGIN' \
+        -o "$BUILD_DIR/libllama_shim.so" \
+        "$SHIM_SRC" -lm
+    echo -e "${GREEN}✓ libllama_shim.so creada en $BUILD_DIR/${NC}"
+else
+    echo -e "${YELLOW}Advertencia: fuente de shim no encontrado en $SHIM_SRC (omitido)${NC}"
+fi
+
 # Mostrar resumen
 echo ""
 echo -e "${GREEN}=== Compilación completada exitosamente ===${NC}"
