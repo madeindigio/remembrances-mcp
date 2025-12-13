@@ -20,6 +20,8 @@ type ToolManager struct {
 	embedder          embedder.Embedder
 	codeEmbedder      embedder.Embedder // Embedder for code indexing (may be same as default)
 	knowledgeBasePath string            // Path to knowledge base directory for markdown files
+	kbChunkSize       int               // Chunk size used by kb_* tools when embedding long documents
+	kbChunkOverlap    int               // Overlap used by kb_* tools when embedding long documents
 }
 
 // NewToolManager creates a new tool manager
@@ -29,6 +31,8 @@ func NewToolManager(storage storage.StorageWithStats, embedder embedder.Embedder
 		embedder:          embedder,
 		codeEmbedder:      embedder, // Default to same embedder for backwards compatibility
 		knowledgeBasePath: knowledgeBasePath,
+		kbChunkSize:       1500,
+		kbChunkOverlap:    200,
 	}
 }
 
@@ -39,6 +43,23 @@ func NewToolManagerWithCodeEmbedder(storage storage.StorageWithStats, embedder e
 		embedder:          embedder,
 		codeEmbedder:      codeEmbedder,
 		knowledgeBasePath: knowledgeBasePath,
+		kbChunkSize:       1500,
+		kbChunkOverlap:    200,
+	}
+}
+
+// SetKBChunking configures chunking behavior for kb_* tools.
+// Values <= 0 fall back to safe defaults.
+func (tm *ToolManager) SetKBChunking(chunkSize, chunkOverlap int) {
+	if chunkSize <= 0 {
+		tm.kbChunkSize = 1500
+	} else {
+		tm.kbChunkSize = chunkSize
+	}
+	if chunkOverlap < 0 {
+		tm.kbChunkOverlap = 200
+	} else {
+		tm.kbChunkOverlap = chunkOverlap
 	}
 }
 

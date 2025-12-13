@@ -1,4 +1,4 @@
-//go:build !((linux && amd64 && (embedded || embedded_cpu || embedded_cuda || embedded_cuda_portable)) || (darwin && arm64 && (embedded || embedded_metal)))
+//go:build !(embedded && ((linux && amd64 && (embedded_cpu || embedded_cuda || embedded_cuda_portable)) || (darwin && arm64 && embedded_metal)))
 
 package embedded
 

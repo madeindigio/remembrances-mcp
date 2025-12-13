@@ -1,4 +1,4 @@
-//go:build linux && amd64 && embedded_cuda_portable
+//go:build linux && amd64 && embedded && embedded_cuda_portable
 
 package embedded
 

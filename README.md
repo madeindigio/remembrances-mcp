@@ -592,3 +592,22 @@ interactive: true
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH
 make dist-darwin-arm64
 ```
+
+### new-build
+
+```
+./scripts/build-variant-libs.sh
+./scripts/build-cuda-libs.sh
+./scripts/build-libs-cross.sh
+```
+
+### new-embedded
+
+```
+# Optional if you don't use the default paths in the Makefile:
+#export GO_LLAMA_DIR=/path/to/go-llama.cpp
+#export SURREALDB_EMBEDDED_DIR=/path/to/surrealdb-embedded
+
+#BUNDLE_CUDA=1 make build-embedded-cuda
+make build-embedded-cuda
+```
