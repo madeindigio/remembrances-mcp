@@ -374,13 +374,18 @@ git push
 ```
 
 
-### dist (updated flow)
+### dist
 
 Create distribution packages without overwriting CUDA portable libraries. The key change is to **build libraries first** and then use `build-binary-only` so the Go binary is produced without recompiling (and replacing) the shared libraries.
 
 ```bash
+echo "Cleaning previous dist-variants..."
 rm -rf dist-variants/*
 
+echo "Building Linux distribution variants with libs..."
+echo "-----------------------------------"
+
+echo "Building CUDA optimized for current CPU"
 make BUILD_TYPE=cuda llama-cpp
 # CUDA optimized for current CPU
 make PORTABLE=0 build-libs-cuda
@@ -390,20 +395,58 @@ zip -9 remembrances-mcp-linux-x64-nvidia.zip remembrances-mcp *.so
 mv remembrances-mcp-linux-x64-nvidia.zip ../dist-variants/
 cd ..
 
+echo "Building CUDA portable (AVX2-compatible for Intel/AMD)"
 # CUDA portable (AVX2-compatible for Intel/AMD)
 make PORTABLE=1 build-libs-cuda-portable
 make BUILD_TYPE=cuda build
 make dist-variant VARIANT=cuda-portable
+cd build
+zip -9 remembrances-mcp-linux-x64-nvidia-portable.zip remembrances-mcp *.so
+mv remembrances-mcp-linux-x64-nvidia-portable.zip ../dist-variants/
+cd ..
 
-
+echo "building CPU-only"
 # CPU-only
 make build-libs-cpu
 make build-binary-only
 make dist-variant VARIANT=cpu
+cd build
+zip -9 remembrances-mcp-linux-x64-cpu.zip remembrances-mcp *.so
+mv remembrances-mcp-linux-x64-cpu.zip ../dist-variants/
+cd ..
 
-# macOS Metal (run on Apple Silicon host)
-./scripts/build-osx-remote.sh
-./scripts/copy-osx-build.sh
+echo "Building embedded libraries variants only for CUDA"
+echo "Building embedded CUDA libraries..."
+make build-embedded-cuda
+cd build
+rm build/remembrances-mcp  # remove existing binary to avoid confusion
+mv build/remembrances-mcp-embedded remembrances-mcp
+zip -9 remembrances-mcp-linux-x64-nvidia-embedded.zip remembrances-mcp
+mv remembrances-mcp-linux-x64-nvidia-embedded.zip ../dist-variants/
+cd ..
+
+echo "Building embedded CUDA portable libraries..."
+make build-embedded-cuda-portable
+cd build
+rm build/remembrances-mcp  # remove existing binary to avoid confusion
+mv build/remembrances-mcp-embedded remembrances-mcp
+zip -9 remembrances-mcp-linux-x64-nvidia-embedded-portable.zip remembrances-mcp
+mv remembrances-mcp-linux-x64-nvidia-embedded-portable.zip ../dist-variants/
+cd ..
+
+echo "-----------------------------------"
+echo "Checking if memote osx is available..."
+# if ssh connection with mac-mini-de-digio is available, build macos metal version
+if ssh -o BatchMode=yes -o ConnectTimeout=5 mac-mini-de-digio 'echo 2>&1' && [ $? -eq 0 ]; then
+    echo "Building macOS Metal variant on remote host..."
+    make BUILD_TYPE=metal build-libs-osx
+    make BUILD_TYPE=metal build-binary-only
+    ./scripts/build-osx-remote.sh
+    ./scripts/copy-osx-build.sh
+    make dist-variant VARIANT=osx-metal
+else
+    echo "Skipping macOS Metal build - remote host not available."
+fi 
 
 # (Optional) Docker images remain the same
 make docker-prepare-cpu && make docker-build-cpu && make docker-push-cpu
