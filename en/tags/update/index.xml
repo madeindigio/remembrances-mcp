@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Update on Remembrances</title><link>https://madeindigio.github.io/remembrances-mcp/en/tags/update/</link><description>Recent content in Update on Remembrances</description><generator>Hugo</generator><language>en</language><lastBuildDate>Sun, 14 Dec 2025 00:00:00 +0000</lastBuildDate><atom:link href="https://madeindigio.github.io/remembrances-mcp/en/tags/update/index.xml" rel="self" type="application/rss+xml"/><item><title>Release 1.16.8</title><link>https://madeindigio.github.io/remembrances-mcp/en/blog/2025/release-1.16.8/</link><pubDate>Sun, 14 Dec 2025 00:00:00 +0000</pubDate><guid>https://madeindigio.github.io/remembrances-mcp/en/blog/2025/release-1.16.8/</guid><description>&lt;p>Version &lt;strong>1.16.8&lt;/strong> of Remembrances-MCP is now available! This update brings important new features and improvements since version 1.14.1.&lt;/p>
+&lt;h2 id="why-update-benefits-for-you">Why update? Benefits for you&lt;/h2>
+&lt;ul>
+&lt;li>&lt;strong>Get the most from your hardware:&lt;/strong> Remembrances-MCP now leverages the power of AMD Ryzen processors and CUDA graphics cards, delivering superior performance and faster responses.&lt;/li>
+&lt;li>&lt;strong>Easier installation and updates:&lt;/strong> New scripts and processes make setup and upgrades easier than ever, even on Mac and Docker environments.&lt;/li>
+&lt;li>&lt;strong>More compatibility and flexibility:&lt;/strong> The system works with both embedded and external databases, adapting to your needs and environment.&lt;/li>
+&lt;li>&lt;strong>More useful and personalized responses:&lt;/strong> When information is missing, the system now suggests alternatives and presents results in clearer, more user-friendly formats (YAML and &amp;ldquo;toon&amp;rdquo;), making decision-making easier.&lt;/li>
+&lt;li>&lt;strong>All-in-one package:&lt;/strong> New versions include all necessary libraries, simplifying installation and reducing compatibility issues.&lt;/li>
+&lt;/ul>
+&lt;p>See all details and download the new version here:&lt;/p></description></item><item><title>Release 1.14.1</title><link>https://madeindigio.github.io/remembrances-mcp/en/blog/2025/release-1.14.1/</link><pubDate>Wed, 03 Dec 2025 00:00:00 +0000</pubDate><guid>https://madeindigio.github.io/remembrances-mcp/en/blog/2025/release-1.14.1/</guid><description>&lt;p>Version &lt;strong>1.14.1&lt;/strong> of Remembrances-MCP is now available! This update brings new features, improvements, and important fixes since version 1.11.0.&lt;/p>
+&lt;h2 id="why-update-benefits-for-you">Why update? Benefits for you&lt;/h2>
+&lt;ul>
+&lt;li>&lt;strong>Smart automation:&lt;/strong> The system now detects and updates your code changes automatically. Forget manual tasks and enjoy peace of mind knowing everything is always in sync.&lt;/li>
+&lt;li>&lt;strong>More stability and clarity:&lt;/strong> The &amp;ldquo;internal engine&amp;rdquo; has been reorganized to make the platform more robust and easier to maintain. This means fewer errors and a smoother experience for you.&lt;/li>
+&lt;li>&lt;strong>Better traceability:&lt;/strong> Internal logs are now clearer, making it easier to detect and fix any issues. This results in a more reliable and transparent service.&lt;/li>
+&lt;li>&lt;strong>Key bug fixes:&lt;/strong> Issues that could affect project indexing and tracking have been resolved, ensuring your information is always accessible and up to date.&lt;/li>
+&lt;/ul>
+&lt;p>See all details and download the new version here:&lt;/p></description></item></channel></rss>
