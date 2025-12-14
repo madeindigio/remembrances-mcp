@@ -419,8 +419,7 @@ echo "Building embedded libraries variants only for CUDA"
 echo "Building embedded CUDA libraries..."
 make build-embedded-cuda
 cd build
-rm build/remembrances-mcp  # remove existing binary to avoid confusion
-mv build/remembrances-mcp-embedded remembrances-mcp
+cp remembrances-mcp-embedded remembrances-mcp
 zip -9 remembrances-mcp-linux-x64-nvidia-embedded.zip remembrances-mcp
 mv remembrances-mcp-linux-x64-nvidia-embedded.zip ../dist-variants/
 cd ..
@@ -428,8 +427,7 @@ cd ..
 echo "Building embedded CUDA portable libraries..."
 make build-embedded-cuda-portable
 cd build
-rm build/remembrances-mcp  # remove existing binary to avoid confusion
-mv build/remembrances-mcp-embedded remembrances-mcp
+cp remembrances-mcp-embedded remembrances-mcp
 zip -9 remembrances-mcp-linux-x64-nvidia-embedded-portable.zip remembrances-mcp
 mv remembrances-mcp-linux-x64-nvidia-embedded-portable.zip ../dist-variants/
 cd ..
