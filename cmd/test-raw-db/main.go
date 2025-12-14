@@ -1,16 +1,26 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
-	embedded "github.com/madeindigio/surrealdb-embedded-golang"
+	"github.com/madeindigio/remembrances-mcp/internal/surrealembedded"
 )
 
 func main() {
+	ctx := context.Background()
+
+	url := os.Getenv("SURREALDB_EMBEDDED_URL")
+	if url == "" {
+		// Plain path is treated as RocksDB by the purego wrapper.
+		url = "~/www/MCP/remembrances-mcp/remembrances.db"
+	}
+
 	// Connect to embedded DB
-	db, err := embedded.NewRocksDB("~/www/MCP/remembrances-mcp/remembrances.db")
+	db, err := surrealembedded.NewFromURL(ctx, url)
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}

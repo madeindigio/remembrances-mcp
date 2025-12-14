@@ -330,6 +330,7 @@ func main() {
 
 	// Register MCP tools
 	toolManager := mcp_tools.NewToolManagerWithCodeEmbedder(storageInstance, embedderInstance, codeEmbedderInstance, cfg.KnowledgeBase)
+	toolManager.SetKBChunking(cfg.GetChunkSize(), cfg.GetChunkOverlap())
 	if err := toolManager.RegisterTools(srv); err != nil {
 		slog.Error("failed to register MCP tools", "error", err)
 		os.Exit(1)

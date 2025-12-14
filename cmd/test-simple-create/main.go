@@ -1,16 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
 
-	embedded "github.com/madeindigio/surrealdb-embedded-golang"
+	"github.com/madeindigio/remembrances-mcp/internal/surrealembedded"
 )
 
 func main() {
+	ctx := context.Background()
 	// Connect to embedded DB
-	db, err := embedded.NewRocksDB("~/www/MCP/remembrances-mcp/test-simple.db")
+	db, err := surrealembedded.NewFromURL(ctx, "~/www/MCP/remembrances-mcp/test-simple.db")
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
@@ -67,7 +69,7 @@ func main() {
 
 	// Reopen and check
 	fmt.Println("\n6. Reopening...")
-	db2, err := embedded.NewRocksDB("~/www/MCP/remembrances-mcp/test-simple.db")
+	db2, err := surrealembedded.NewFromURL(ctx, "~/www/MCP/remembrances-mcp/test-simple.db")
 	if err != nil {
 		log.Fatalf("Failed to reopen: %v", err)
 	}

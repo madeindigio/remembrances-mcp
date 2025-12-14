@@ -1,4 +1,4 @@
-//go:build darwin && arm64 && (embedded_metal || embedded)
+//go:build darwin && arm64 && embedded && embedded_metal
 
 package embedded
 

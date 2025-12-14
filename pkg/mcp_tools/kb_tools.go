@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
+	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
 )
 
 // Knowledge Base tool definitions
@@ -139,15 +140,45 @@ func (tm *ToolManager) addDocumentHandler(ctx context.Context, request *protocol
 		return nil, fmt.Errorf(errParseArgs, err)
 	}
 
-	// Generate embedding for the document content
-	embedding, err := tm.embedder.EmbedQuery(ctx, input.Content)
+	// Chunk content and embed chunks to avoid llama/ggml batch assertions on long inputs.
+	// This is consistent with the knowledge base watcher behavior.
+	content := input.Content
+	if len(strings.TrimSpace(content)) == 0 {
+		return nil, fmt.Errorf("document content is empty")
+	}
+
+	// Guardrail: very large payloads can exhaust memory/time.
+	const maxToolDocBytes = 500 * 1024 // Keep consistent with kb watcher
+	if len(content) > maxToolDocBytes {
+		return nil, fmt.Errorf("document too large: %d bytes (max %d)", len(content), maxToolDocBytes)
+	}
+
+	chunkSize := tm.kbChunkSize
+	chunkOverlap := tm.kbChunkOverlap
+	if chunkSize <= 0 {
+		chunkSize = 1500
+	}
+	if chunkOverlap < 0 {
+		chunkOverlap = 200
+	}
+
+	chunks, embeddings, err := embedder.EmbedTextChunksWithOverlap(ctx, tm.embedder, content, chunkSize, chunkOverlap)
 	if err != nil {
 		return nil, fmt.Errorf(errGenEmbedding, err)
 	}
 
-	// Save to database
-	err = tm.storage.SaveDocument(ctx, input.FilePath, input.Content, embedding, input.Metadata.AsMap())
-	if err != nil {
+	metadata := input.Metadata.AsMap()
+	if metadata == nil {
+		metadata = map[string]interface{}{}
+	}
+	// Add/override provenance fields.
+	metadata["source"] = "tool"
+	metadata["tool"] = "kb_add_document"
+	metadata["total_size"] = len(content)
+	metadata["chunk_size"] = chunkSize
+	metadata["chunk_overlap"] = chunkOverlap
+
+	if err := tm.storage.SaveDocumentChunks(ctx, input.FilePath, chunks, embeddings, metadata); err != nil {
 		return nil, fmt.Errorf("failed to add document to database: %w", err)
 	}
 

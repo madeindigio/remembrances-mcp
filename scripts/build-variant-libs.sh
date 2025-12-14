@@ -151,6 +151,41 @@ for dir in bin src common ggml ggml/src .; do
     fi
 done
 
+# Compilar y copiar la shim (libllama_shim.*) junto al resto de librerías.
+echo ""
+echo -e "${YELLOW}Compilando libllama_shim...${NC}"
+
+SHIM_SRC="$PROJECT_ROOT/internal/llama_shim/llama_shim.c"
+SHIM_INC="$PROJECT_ROOT/internal/llama_shim"
+
+if [ -f "$SHIM_SRC" ]; then
+    case "$(uname -s)" in
+        Darwin)
+            cc_bin="${CC:-clang}"
+            "$cc_bin" -dynamiclib -O3 \
+                -I"$SHIM_INC" \
+                -L"$BUILD_DIR" -lllama \
+                -Wl,-rpath,@loader_path \
+                -Wl,-install_name,@rpath/libllama_shim.dylib \
+                -o "$BUILD_DIR/libllama_shim.dylib" \
+                "$SHIM_SRC" -lm
+            echo "  Copiado: libllama_shim.dylib"
+            ;;
+        *)
+            cc_bin="${CC:-gcc}"
+            "$cc_bin" -shared -fPIC -O3 \
+                -I"$SHIM_INC" \
+                -L"$BUILD_DIR" -lllama \
+                -Wl,-rpath,'$ORIGIN' \
+                -o "$BUILD_DIR/libllama_shim.so" \
+                "$SHIM_SRC" -lm
+            echo "  Copiado: libllama_shim.so"
+            ;;
+    esac
+else
+    echo -e "${YELLOW}Advertencia: fuente de shim no encontrado en $SHIM_SRC (omitido)${NC}"
+fi
+
 # Crear archivo de información
 cat > "$BUILD_DIR/BUILD_INFO.txt" << EOF
 Variant: $VARIANT
