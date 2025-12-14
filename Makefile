@@ -199,31 +199,38 @@ llama-cpp:
 	@echo "Checking llama.cpp library..."
 	@echo "  GO_LLAMA_DIR: $(GO_LLAMA_DIR)"
 	@echo "  Platform: $(PLATFORM) / $(ARCH)"
-	@# Check if the llama.cpp submodule exists (look for CMakeLists.txt inside llama.cpp/)
-	@if [ ! -f "$(GO_LLAMA_DIR)/llama.cpp/CMakeLists.txt" ]; then \
-		echo "Error: llama.cpp submodule not found at $(GO_LLAMA_DIR)/llama.cpp"; \
-		echo "Please run: cd $(GO_LLAMA_DIR) && git submodule update --init --recursive"; \
-		exit 1; \
-	fi
-	@# Check for already built libraries (platform-specific extension)
-	@if [ ! -f "$(GO_LLAMA_DIR)/build/bin/libllama.$(LIB_EXT)" ]; then \
-		echo "llama.cpp not built. Building now for $(PLATFORM)/$(ARCH)..."; \
-		echo "Build type: $(BUILD_TYPE)"; \
-		if [ "$(BUILD_TYPE)" = "cuda" ]; then \
-			echo "Building with CUDA support..."; \
-			echo "Note: Make sure you have CUDA Toolkit installed"; \
-			cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
-		elif [ "$(BUILD_TYPE)" = "metal" ]; then \
-			echo "Building with Metal support (macOS)..."; \
-			cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DGGML_METAL=ON -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
-		else \
-			echo "Building with CPU only..."; \
-			cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
-		fi \
+	@# IMPORTANT: keep this as a single shell so skipping truly skips all rebuild logic.
+	@if [ -f "$(BUILD_DIR)/libllama.$(LIB_EXT)" ] || \
+	   [ -f "$(BUILD_DIR)/libs/$(BUILD_VARIANT)/libllama.$(LIB_EXT)" ] || \
+	   [ -f "$(BUILD_DIR)/embedded-libs/$(BUILD_VARIANT)/libllama.$(LIB_EXT)" ]; then \
+		echo "✓ Using existing llama.cpp libraries from build artifacts (variant=$(BUILD_VARIANT)); skipping rebuild"; \
 	else \
-		echo "llama.cpp library already built at $(GO_LLAMA_DIR)/build/bin/"; \
+		# Check if the llama.cpp submodule exists (look for CMakeLists.txt inside llama.cpp/) \
+		if [ ! -f "$(GO_LLAMA_DIR)/llama.cpp/CMakeLists.txt" ]; then \
+			echo "Error: llama.cpp submodule not found at $(GO_LLAMA_DIR)/llama.cpp"; \
+			echo "Please run: cd $(GO_LLAMA_DIR) && git submodule update --init --recursive"; \
+			exit 1; \
+		fi; \
+		# Check for already built libraries (platform-specific extension) \
+		if [ ! -f "$(GO_LLAMA_DIR)/build/bin/libllama.$(LIB_EXT)" ]; then \
+			echo "llama.cpp not built. Building now for $(PLATFORM)/$(ARCH)..."; \
+			echo "Build type: $(BUILD_TYPE)"; \
+			if [ "$(BUILD_TYPE)" = "cuda" ]; then \
+				echo "Building with CUDA support..."; \
+				echo "Note: Make sure you have CUDA Toolkit installed"; \
+				cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
+			elif [ "$(BUILD_TYPE)" = "metal" ]; then \
+				echo "Building with Metal support (macOS)..."; \
+				cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DGGML_METAL=ON -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
+			else \
+				echo "Building with CPU only..."; \
+				cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
+			fi; \
+		else \
+			echo "llama.cpp library already built at $(GO_LLAMA_DIR)/build/bin/"; \
+		fi; \
+		echo "llama.cpp library ready"; \
 	fi
-	@echo "llama.cpp library ready"
 
 # Clean llama.cpp build artifacts
 llama-cpp-clean:
@@ -235,23 +242,33 @@ llama-cpp-clean:
 surrealdb-embedded:
 	@echo "Checking surrealdb-embedded library..."
 	@echo "  SURREALDB_EMBEDDED_DIR: $(SURREALDB_EMBEDDED_DIR)"
-	@if [ ! -d "$(SURREALDB_EMBEDDED_DIR)" ]; then \
-		echo "Error: surrealdb-embedded not found at $(SURREALDB_EMBEDDED_DIR)"; \
-		exit 1; \
-	fi
-	@if [ ! -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.$(LIB_EXT)" ]; then \
-		echo "surrealdb-embedded not built for $(PLATFORM)/$(ARCH). Building now..."; \
-		cd "$(SURREALDB_EMBEDDED_DIR)" && make build-rust; \
-	else \
-		echo "surrealdb-embedded library already built"; \
-	fi
-	@echo "surrealdb-embedded library ready"
-	@# Copy library to build directory
+	@# IMPORTANT: keep this as a single shell so skipping truly skips all rebuild logic.
 	@mkdir -p $(BUILD_DIR)
-	@echo "Copying SurrealDB embedded library to $(BUILD_DIR)/..."
-	@cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.$(LIB_EXT)" "$(BUILD_DIR)/" 2>/dev/null && \
-		echo "✓ SurrealDB embedded library copied to $(BUILD_DIR)/" || \
-		echo "⚠ Warning: Could not copy SurrealDB embedded library"
+	@if [ -f "$(BUILD_DIR)/libsurrealdb_embedded_rs.$(LIB_EXT)" ] || \
+	   [ -f "$(BUILD_DIR)/libs/$(BUILD_VARIANT)/libsurrealdb_embedded_rs.$(LIB_EXT)" ] || \
+	   [ -f "$(BUILD_DIR)/embedded-libs/$(BUILD_VARIANT)/libsurrealdb_embedded_rs.$(LIB_EXT)" ]; then \
+		echo "✓ Using existing SurrealDB embedded library from build artifacts (variant=$(BUILD_VARIANT)); skipping rebuild"; \
+		if [ ! -f "$(BUILD_DIR)/libsurrealdb_embedded_rs.$(LIB_EXT)" ]; then \
+			cp "$(BUILD_DIR)/libs/$(BUILD_VARIANT)/libsurrealdb_embedded_rs.$(LIB_EXT)" "$(BUILD_DIR)/" 2>/dev/null || true; \
+			cp "$(BUILD_DIR)/embedded-libs/$(BUILD_VARIANT)/libsurrealdb_embedded_rs.$(LIB_EXT)" "$(BUILD_DIR)/" 2>/dev/null || true; \
+		fi; \
+	else \
+		if [ ! -d "$(SURREALDB_EMBEDDED_DIR)" ]; then \
+			echo "Error: surrealdb-embedded not found at $(SURREALDB_EMBEDDED_DIR)"; \
+			exit 1; \
+		fi; \
+		if [ ! -f "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.$(LIB_EXT)" ]; then \
+			echo "surrealdb-embedded not built for $(PLATFORM)/$(ARCH). Building now..."; \
+			cd "$(SURREALDB_EMBEDDED_DIR)" && make build-rust; \
+		else \
+			echo "surrealdb-embedded library already built"; \
+		fi; \
+		echo "surrealdb-embedded library ready"; \
+		echo "Copying SurrealDB embedded library to $(BUILD_DIR)/..."; \
+		cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.$(LIB_EXT)" "$(BUILD_DIR)/" 2>/dev/null && \
+			echo "✓ SurrealDB embedded library copied to $(BUILD_DIR)/" || \
+			echo "⚠ Warning: Could not copy SurrealDB embedded library"; \
+	fi
 
 # Build the main project
 build: llama-cpp surrealdb-embedded
@@ -262,18 +279,32 @@ build: llama-cpp surrealdb-embedded
 	@mkdir -p $(BUILD_DIR)
 	go build -mod=mod -v -ldflags="$(RPATH_OPTION) $(GO_VERSION_LDFLAGS) -X $(VERSION_PKG).Variant=$(BUILD_VARIANT)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Copying shared libraries to build directory..."
-	@# Copy SurrealDB embedded library from Rust build directory
+	@# Copy SurrealDB embedded library (prefer prebuilt artifacts for this variant)
 	@echo "Copying SurrealDB embedded library..."
-	@cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.$(LIB_EXT)" "$(BUILD_DIR)/" 2>/dev/null || \
-	 echo "⚠ Warning: SurrealDB embedded library not found"
+	@if [ -f "$(BUILD_DIR)/libs/$(BUILD_VARIANT)/libsurrealdb_embedded_rs.$(LIB_EXT)" ]; then \
+		cp "$(BUILD_DIR)/libs/$(BUILD_VARIANT)/libsurrealdb_embedded_rs.$(LIB_EXT)" "$(BUILD_DIR)/"; \
+	elif [ -f "$(BUILD_DIR)/embedded-libs/$(BUILD_VARIANT)/libsurrealdb_embedded_rs.$(LIB_EXT)" ]; then \
+		cp "$(BUILD_DIR)/embedded-libs/$(BUILD_VARIANT)/libsurrealdb_embedded_rs.$(LIB_EXT)" "$(BUILD_DIR)/"; \
+	else \
+		cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.$(LIB_EXT)" "$(BUILD_DIR)/" 2>/dev/null || \
+			echo "⚠ Warning: SurrealDB embedded library not found"; \
+	fi
 	@# Copy ALL llama.cpp shared libraries (platform-specific extension)
 	@# This includes libraries for CUDA, Metal, ROCm, Vulkan, etc.
-	@echo "Copying all llama.cpp shared libraries (*.$(LIB_EXT))..."
-	@find "$(GO_LLAMA_DIR)/build/bin" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true
-	@# Also check other common locations in the build directory
-	@find "$(GO_LLAMA_DIR)/build/src" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true
-	@find "$(GO_LLAMA_DIR)/build/common" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true
-	@find "$(GO_LLAMA_DIR)/build/ggml" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true
+	@echo "Copying llama.cpp shared libraries (*.$(LIB_EXT))..."
+	@if ls "$(BUILD_DIR)/libs/$(BUILD_VARIANT)"/*.$(LIB_EXT) >/dev/null 2>&1; then \
+		echo "  Using prebuilt libs from $(BUILD_DIR)/libs/$(BUILD_VARIANT)/"; \
+		cp "$(BUILD_DIR)/libs/$(BUILD_VARIANT)"/*.$(LIB_EXT) "$(BUILD_DIR)/" 2>/dev/null || true; \
+	elif ls "$(BUILD_DIR)/embedded-libs/$(BUILD_VARIANT)"/*.$(LIB_EXT) >/dev/null 2>&1; then \
+		echo "  Using prebuilt libs from $(BUILD_DIR)/embedded-libs/$(BUILD_VARIANT)/"; \
+		cp "$(BUILD_DIR)/embedded-libs/$(BUILD_VARIANT)"/*.$(LIB_EXT) "$(BUILD_DIR)/" 2>/dev/null || true; \
+	else \
+		echo "  Using libs from $(GO_LLAMA_DIR)/build/*"; \
+		find "$(GO_LLAMA_DIR)/build/bin" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true; \
+		find "$(GO_LLAMA_DIR)/build/src" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true; \
+		find "$(GO_LLAMA_DIR)/build/common" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true; \
+		find "$(GO_LLAMA_DIR)/build/ggml" -type f -name "*.$(LIB_EXT)" -exec cp {} "$(BUILD_DIR)/" \; 2>/dev/null || true; \
+	fi
 	@# Build the ABI-stabilizing shim used by the purego loader (libllama_shim)
 	@echo "Building libllama_shim.$(LIB_EXT)..."
 	@SHIM_SRC="$(CURDIR)/internal/llama_shim/llama_shim.c"; \
@@ -385,8 +416,9 @@ build-binary-only:
 # go:embed-friendly directory structure so they can be packaged into the
 # binary using the embedded package.
 prepare-embedded-libs: surrealdb-embedded
-	@if ! ls $(BUILD_DIR)/libs/$(EMBEDDED_VARIANT)/*.$(LIB_EXT) >/dev/null 2>&1; then \
-		echo "Libraries for $(EMBEDDED_VARIANT) not found in $(BUILD_DIR)/libs/$(EMBEDDED_VARIANT); building..."; \
+	@if ! ls $(BUILD_DIR)/libs/$(EMBEDDED_VARIANT)/*.$(LIB_EXT) >/dev/null 2>&1 && \
+	    ! ls $(BUILD_DIR)/embedded-libs/$(EMBEDDED_VARIANT)/*.$(LIB_EXT) >/dev/null 2>&1; then \
+		echo "Libraries for $(EMBEDDED_VARIANT) not found in $(BUILD_DIR)/libs/$(EMBEDDED_VARIANT) or $(BUILD_DIR)/embedded-libs/$(EMBEDDED_VARIANT); building..."; \
 		$(MAKE) build-libs-variant VARIANT=$(EMBEDDED_VARIANT); \
 	fi
 	@echo "Preparing embedded libraries for $(PLATFORM)/$(ARCH) variant $(EMBEDDED_VARIANT) -> $(EMBEDDED_LIB_PATH)"
@@ -399,7 +431,7 @@ prepare-embedded-libs: surrealdb-embedded
 	libs="$$libs libsurrealdb_embedded_rs.$(LIB_EXT)"; \
 	for lib in $$libs; do \
 		found=0; \
-		for dir in $(BUILD_DIR)/libs/$(EMBEDDED_VARIANT) $(BUILD_DIR) $(GO_LLAMA_DIR)/build/bin $(GO_LLAMA_DIR)/build/common $(GO_LLAMA_DIR)/build/src $(GO_LLAMA_DIR)/build/ggml $(GO_LLAMA_DIR)/build; do \
+		for dir in $(BUILD_DIR)/libs/$(EMBEDDED_VARIANT) $(BUILD_DIR)/embedded-libs/$(EMBEDDED_VARIANT) $(BUILD_DIR) $(GO_LLAMA_DIR)/build/bin $(GO_LLAMA_DIR)/build/common $(GO_LLAMA_DIR)/build/src $(GO_LLAMA_DIR)/build/ggml $(GO_LLAMA_DIR)/build; do \
 			if [ -f "$$dir/$$lib" ]; then \
 				cp "$$dir/$$lib" $(EMBEDDED_LIB_PATH)/ && echo "✓ $$lib"; \
 				found=1; \

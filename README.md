@@ -334,47 +334,6 @@ go run ./cmd/remembrances-mcp/main.go --knowledge-base ./kb --rest-api-serve
 
 See [LICENSE.txt](LICENSE.txt).
 
-## CUDA Build Variants
-
-The project supports two CUDA build variants:
-
-#### 1. CUDA Full (Bundled Libraries) - Recommended for Distribution
-- **Size**: ~880MB compressed
-- **Portability**: ✅ Fully portable, no system CUDA required
-- **Includes**: All CUDA runtime libraries (libcudart, libcublas, libcublasLt)
-- **Use case**: Distributing to systems without CUDA installed
-
-```bash
-make build BUILD_TYPE=cuda BUNDLE_CUDA=1
-# or use the shortcut:
-make build-cuda-full
-# Package for distribution:
-make dist-cuda-full
-```
-
-#### 2. CUDA System (System Libraries) - Recommended for Development
-- **Size**: ~93MB compressed
-- **Portability**: ⚠️ Requires CUDA 12.x installed on target system
-- **Includes**: Only project libraries (libggml-cuda, libllama, libsurrealdb)
-- **Use case**: Development or deployment to GPU servers with CUDA pre-installed
-
-```bash
-make build BUILD_TYPE=cuda BUNDLE_CUDA=0
-# or use the shortcut:
-make build-cuda-system
-# Package for distribution:
-make dist-cuda-system
-```
-
-#### Build Both Variants
-```bash
-make dist-cuda-both
-```
-
-This creates both distribution packages:
-- `dist-variants/remembrances-mcp-cuda-full-linux-amd64.zip` (880MB)
-- `dist-variants/remembrances-mcp-cuda-system-linux-amd64.zip` (93MB)
-
 ## Tasks
 
 ### build
@@ -387,8 +346,6 @@ go build -o dist/remembrances-mcp ./cmd/remembrances-mcp
 #try to copy to project root if error, remove the binary in the project root first
 cp dist/remembrances-mcp ./remembrances-mcp || (rm -f ./remembrances-mcp && cp dist/remembrances-mcp ./remembrances-mcp)
 ```
-
-
 
 ### build-and-copy
 
@@ -405,90 +362,6 @@ cp ./build/remembrances-mcp ~/bin/remembrances-mcp-beta
 rm -f *.log
 ```
 
-### starts-surrealdb
-
-Starts the SurrealDB instance
-
-interactive: true
-```bash
-surreal start --user root --pass root surrealkv://~/www/MCP/remembrances-mcp/surreal_data
-```
-
-### run-tests
-
-Runs the test suite
-
-interactive: true
-
-```bash
-make test
-
-python3 tests/test_mcp_e2e.py --config config.test.yaml
-```
-
-### tag
-
-Deploys a new tag for the repo.
-
-Specify major/minor/patch with VERSION
-
-Env: PRERELEASE=0, VERSION=minor, FORCE_VERSION=0
-Inputs: VERSION, PRERELEASE, FORCE_VERSION
-
-
-```
-# https://github.com/unegma/bash-functions/blob/main/update.sh
-
-CURRENT_VERSION=`git describe --abbrev=0 --tags 2>/dev/null`
-CURRENT_VERSION_PARTS=(${CURRENT_VERSION//./ })
-VNUM1=${CURRENT_VERSION_PARTS[0]}
-# remove v
-VNUM1=${VNUM1:1}
-VNUM2=${CURRENT_VERSION_PARTS[1]}
-VNUM3=${CURRENT_VERSION_PARTS[2]}
-
-if [[ $VERSION == 'major' ]]
-then
-  VNUM1=$((VNUM1+1))
-  VNUM2=0
-  VNUM3=0
-elif [[ $VERSION == 'minor' ]]
-then
-  VNUM2=$((VNUM2+1))
-  VNUM3=0
-elif [[ $VERSION == 'patch' ]]
-then
-  VNUM3=$((VNUM3+1))
-else
-  echo "Invalid version"
-  exit 1
-fi
-
-NEW_TAG="v$VNUM1.$VNUM2.$VNUM3"
-
-# if command convco is available, use it to check the version
-if command -v convco &> /dev/null
-then
-  # if the version is a prerelease, add the prerelease tag
-  if [[ $PRERELEASE == '1' ]]
-  then
-    NEW_TAG=v$(convco version -b --prerelease)
-  else
-    NEW_TAG=v$(convco version -b)
-  fi
-fi
-
-# if $FORCE_VERSION is different to 0 then use it as the version
-if [[ $FORCE_VERSION != '0' ]]
-then
-  NEW_TAG=v$FORCE_VERSION
-fi
-
-echo Adding git tag with version ${NEW_TAG}
-git tag ${NEW_TAG}
-git push origin ${NEW_TAG}
-```
-
 ### changelog
 
 Generate a changelog for the repo.
@@ -500,41 +373,6 @@ git commit -m "Update changelog"
 git push
 ```
 
-### release
-
-Releasing a new version into the repo.
-
-```
-goreleaser release --clean --skip sign
-```
-
-### release-snapshot
-
-Releasing a new snapshot version into the repo.
-
-```
-goreleaser release --snapshot --skip sign --clean
-```
-
-### build-llama-cpp-portable
-
-Build llama.cpp in portable mode (Intel/AMD compatible)
-
-interactive: true
-
-```
-GO_LLAMA_DIR=/www/MCP/Remembrances/go-llama.cpp PORTABLE=1 ./scripts/build-cuda-libs.sh
-```
-
-### build-llama-cpp
-
-Build llama.cpp with optimizations for the current CPU
-
-interactive: true
-
-```
-GO_LLAMA_DIR=/www/MCP/Remembrances/go-llama.cpp PORTABLE=0 ./scripts/build-cuda-libs.sh
-```
 
 ### dist (updated flow)
 
@@ -610,4 +448,6 @@ make dist-darwin-arm64
 
 #BUNDLE_CUDA=1 make build-embedded-cuda
 make build-embedded-cuda
+make build-embedded-cuda-portable
+make build-embedded-cpu
 ```
