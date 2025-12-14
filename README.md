@@ -399,7 +399,6 @@ echo "Building CUDA portable (AVX2-compatible for Intel/AMD)"
 # CUDA portable (AVX2-compatible for Intel/AMD)
 make PORTABLE=1 build-libs-cuda-portable
 make BUILD_TYPE=cuda build
-make dist-variant VARIANT=cuda-portable
 cd build
 zip -9 remembrances-mcp-linux-x64-nvidia-portable.zip remembrances-mcp *.so
 mv remembrances-mcp-linux-x64-nvidia-portable.zip ../dist-variants/
@@ -409,7 +408,6 @@ echo "building CPU-only"
 # CPU-only
 make build-libs-cpu
 make build-binary-only
-make dist-variant VARIANT=cpu
 cd build
 zip -9 remembrances-mcp-linux-x64-cpu.zip remembrances-mcp *.so
 mv remembrances-mcp-linux-x64-cpu.zip ../dist-variants/
