@@ -456,18 +456,18 @@ prepare-embedded-libs-metal: prepare-embedded-libs
 
 # Build an embedded binary that ships the shared libraries via go:embed/purego.
 build-embedded: prepare-embedded-libs
-	@echo "Building $(BINARY_NAME)-embedded with embedded shared libraries (variant=$(EMBEDDED_VARIANT))..."
+	@echo "Building $(BINARY_NAME) with embedded shared libraries (variant=$(EMBEDDED_VARIANT))..."
 	@echo "  Target: $(PLATFORM)/$(ARCH)"
 	@echo "  Version: $(BUILD_VERSION)"
 	@echo "  Commit: $(COMMIT_HASH)"
 	@mkdir -p $(BUILD_DIR)
-	go build -mod=mod -tags "$(EMBEDDED_TAGS)" -v -ldflags="$(EMBEDDED_RPATH_OPTION) $(GO_VERSION_LDFLAGS) -X $(VERSION_PKG).Variant=$(EMBEDDED_VARIANT)" -o $(BUILD_DIR)/$(BINARY_NAME)-embedded ./cmd/remembrances-mcp
+	go build -mod=mod -tags "$(EMBEDDED_TAGS)" -v -ldflags="$(EMBEDDED_RPATH_OPTION) $(GO_VERSION_LDFLAGS) -X $(VERSION_PKG).Variant=$(EMBEDDED_VARIANT)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Copying embedded libraries next to binary for loader resolution..."
 	@cp $(EMBEDDED_LIB_PATH)/*.$(LIB_EXT) $(BUILD_DIR)/ 2>/dev/null || echo "⚠ Warning: Could not copy embedded libraries to $(BUILD_DIR)/"
 	@echo "Copying embedded libraries into embedded-libs/$(EMBEDDED_VARIANT) for RPATH lookup..."
 	@mkdir -p $(BUILD_DIR)/embedded-libs/$(EMBEDDED_VARIANT)
 	@cp $(EMBEDDED_LIB_PATH)/*.$(LIB_EXT) $(BUILD_DIR)/embedded-libs/$(EMBEDDED_VARIANT)/ 2>/dev/null || echo "⚠ Warning: Could not copy embedded libraries to $(BUILD_DIR)/embedded-libs/$(EMBEDDED_VARIANT)/"
-	@echo "Embedded binary ready: $(BUILD_DIR)/$(BINARY_NAME)-embedded"
+	@echo "Embedded binary ready: $(BUILD_DIR)/$(BINARY_NAME)"
 
 build-embedded-cpu: EMBEDDED_VARIANT=cpu
 build-embedded-cpu: build-embedded
@@ -778,29 +778,29 @@ endif
 	@echo ""
 	@echo "To use a specific variant, copy libraries from build/libs/{variant}/ to build/"
 
-# Build a single variant binary with specific name (e.g., remembrances-mcp-cuda)
+# Build a single variant binary (stored under build/variants/<variant>/ as $(BINARY_NAME))
 build-variant: surrealdb-embedded
 	@if [ -z "$(VARIANT)" ]; then \
 		echo "Error: VARIANT not specified"; \
 		echo "Usage: make build-variant VARIANT=cuda"; \
 		exit 1; \
 	fi
-	@echo "Building variant binary: $(BINARY_NAME)-$(VARIANT)"
+	@echo "Building variant binary: variants/$(VARIANT)/$(BINARY_NAME)"
 	@# First build the libraries for this variant
 	@$(MAKE) build-libs-variant VARIANT=$(VARIANT)
-	@# Build the Go binary with variant-specific name
-	@mkdir -p $(BUILD_DIR)
-	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-$(VARIANT) ./cmd/remembrances-mcp
+	@# Build the Go binary (keep binary name stable; separate variants by directory)
+	@mkdir -p $(BUILD_DIR)/variants/$(VARIANT)
+	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/variants/$(VARIANT)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@# Copy SurrealDB embedded library
 	@echo "Copying SurrealDB embedded library..."
-	@cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so $(BUILD_DIR)/ 2>/dev/null || \
-	 cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib $(BUILD_DIR)/ 2>/dev/null || \
+	@cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so $(BUILD_DIR)/variants/$(VARIANT)/ 2>/dev/null || \
+	 cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.dylib $(BUILD_DIR)/variants/$(VARIANT)/ 2>/dev/null || \
 	 echo "⚠ Warning: SurrealDB embedded library not found"
-	@# Copy variant-specific llama.cpp libraries to build root
-	@echo "Copying $(VARIANT) libraries to build directory..."
-	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.so $(BUILD_DIR)/ 2>/dev/null || true
-	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.dylib $(BUILD_DIR)/ 2>/dev/null || true
-	@echo "✓ Variant binary built: $(BUILD_DIR)/$(BINARY_NAME)-$(VARIANT)"
+	@# Copy variant-specific llama.cpp libraries next to the variant binary
+	@echo "Copying $(VARIANT) libraries to variant directory..."
+	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.so $(BUILD_DIR)/variants/$(VARIANT)/ 2>/dev/null || true
+	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.dylib $(BUILD_DIR)/variants/$(VARIANT)/ 2>/dev/null || true
+	@echo "✓ Variant binary built: $(BUILD_DIR)/variants/$(VARIANT)/$(BINARY_NAME)"
 
 # Build all variant binaries
 build-all-variants:
@@ -844,8 +844,8 @@ else ifeq ($(PLATFORM),linux)
 	@echo "✓ All Linux variant binaries built successfully!"
 endif
 	@echo ""
-	@echo "Variant binaries available in $(BUILD_DIR)/:"
-	@ls -lh $(BUILD_DIR)/$(BINARY_NAME)-* 2>/dev/null || echo "  (none found)"
+	@echo "Variant binaries available in $(BUILD_DIR)/variants/:"
+	@find $(BUILD_DIR)/variants -maxdepth 2 -type f -name "$(BINARY_NAME)" -exec ls -lh {} \; 2>/dev/null || echo "  (none found)"
 
 # Package a single variant with its libraries as a zip file
 dist-variant:
@@ -856,21 +856,21 @@ dist-variant:
 	fi
 	@echo "Packaging $(VARIANT) variant for distribution..."
 	@# Ensure the variant binary exists
-	@if [ ! -f "$(BUILD_DIR)/$(BINARY_NAME)-$(VARIANT)" ]; then \
+	@if [ ! -f "$(BUILD_DIR)/variants/$(VARIANT)/$(BINARY_NAME)" ]; then \
 		echo "Building $(VARIANT) variant first..."; \
 		$(MAKE) build-variant VARIANT=$(VARIANT); \
 	fi
 	@# Create dist directory structure
 	@mkdir -p dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)
 	@# Copy variant binary with default name
-	@cp $(BUILD_DIR)/$(BINARY_NAME)-$(VARIANT) dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/$(BINARY_NAME)
+	@cp $(BUILD_DIR)/variants/$(VARIANT)/$(BINARY_NAME) dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/$(BINARY_NAME)
 	@# Copy variant-specific libraries
-	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.so dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
-	@cp $(BUILD_DIR)/libs/$(VARIANT)/*.dylib dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
+	@cp $(BUILD_DIR)/variants/$(VARIANT)/*.so dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
+	@cp $(BUILD_DIR)/variants/$(VARIANT)/*.dylib dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
 	@# Copy SurrealDB embedded library
 	@echo "Copying SurrealDB embedded library to distribution..."
-	@cp $(BUILD_DIR)/libsurrealdb_embedded_rs.so dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || \
-	 cp $(BUILD_DIR)/libsurrealdb_embedded_rs.dylib dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || \
+	@cp $(BUILD_DIR)/variants/$(VARIANT)/libsurrealdb_embedded_rs.so dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || \
+	 cp $(BUILD_DIR)/variants/$(VARIANT)/libsurrealdb_embedded_rs.dylib dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || \
 	 echo "⚠ Warning: SurrealDB embedded library not found for distribution"
 	@# Copy documentation and configs
 	@cp README.md dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M)/ 2>/dev/null || true
