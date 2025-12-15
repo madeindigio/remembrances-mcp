@@ -383,20 +383,34 @@ install_files() {
     mkdir -p "${DATA_DIR}"
     mkdir -p "${MODELS_DIR}"
 
-    # Copy binary
+    # Copy binary (some zips contain a top-level folder; search recursively)
+    local bin_path=""
     if [ -f "${src_dir}/remembrances-mcp" ]; then
-        cp "${src_dir}/remembrances-mcp" "${BIN_DIR}/"
-        chmod +x "${BIN_DIR}/remembrances-mcp"
-        print_success "Binary installed to ${BIN_DIR}/remembrances-mcp"
+        bin_path="${src_dir}/remembrances-mcp"
     else
+        bin_path=$(find "${src_dir}" -type f -name "remembrances-mcp" 2>/dev/null | head -n 1 || true)
+    fi
+
+    if [ -z "${bin_path}" ]; then
         print_error "Binary not found in release"
+        print_warning "Debug hint: extracted dir was: ${src_dir}"
+        print_warning "Top-level contents:"
+        ls -la "${src_dir}" 2>/dev/null || true
         exit 1
     fi
+
+    local base_dir
+    base_dir="$(dirname "${bin_path}")"
+    print_step "Using release directory: ${base_dir}"
+
+    cp "${bin_path}" "${BIN_DIR}/"
+    chmod +x "${BIN_DIR}/remembrances-mcp"
+    print_success "Binary installed to ${BIN_DIR}/remembrances-mcp"
 
     # Copy shared libraries to the SAME directory as binary
     # The binary is compiled to look for libraries in its own directory first
     local lib_count=0
-    for lib in "${src_dir}"/*.so "${src_dir}"/*.so.* "${src_dir}"/*.dylib; do
+    for lib in "${base_dir}"/*.so "${base_dir}"/*.so.* "${base_dir}"/*.dylib; do
         if [ -f "$lib" ]; then
             cp "$lib" "${BIN_DIR}/"
             lib_count=$((lib_count + 1))
@@ -407,12 +421,26 @@ install_files() {
         print_success "${lib_count} shared libraries installed to ${BIN_DIR}/"
     fi
 
-    # Copy sample configs for reference
-    if [ -f "${src_dir}/config.sample.yaml" ]; then
-        cp "${src_dir}/config.sample.yaml" "${CONFIG_DIR}/"
+    # Copy sample configs for reference (may live alongside binary or one folder up)
+    local cfg
+    cfg="${base_dir}/config.sample.yaml"
+    if [ -f "$cfg" ]; then
+        cp "$cfg" "${CONFIG_DIR}/"
+    else
+        cfg=$(find "${src_dir}" -type f -name "config.sample.yaml" 2>/dev/null | head -n 1 || true)
+        if [ -n "$cfg" ] && [ -f "$cfg" ]; then
+            cp "$cfg" "${CONFIG_DIR}/"
+        fi
     fi
-    if [ -f "${src_dir}/config.sample.gguf.yaml" ]; then
-        cp "${src_dir}/config.sample.gguf.yaml" "${CONFIG_DIR}/"
+
+    cfg="${base_dir}/config.sample.gguf.yaml"
+    if [ -f "$cfg" ]; then
+        cp "$cfg" "${CONFIG_DIR}/"
+    else
+        cfg=$(find "${src_dir}" -type f -name "config.sample.gguf.yaml" 2>/dev/null | head -n 1 || true)
+        if [ -n "$cfg" ] && [ -f "$cfg" ]; then
+            cp "$cfg" "${CONFIG_DIR}/"
+        fi
     fi
 }
 
