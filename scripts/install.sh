@@ -345,12 +345,17 @@ download_release() {
     temp_dir="$(mktemp -d)"
     local zip_file="${temp_dir}/release.zip"
 
-    print_step "Downloading release..."
-    download_with_progress "${url}" "${zip_file}"
+    # Expose temp dir to caller for cleanup
+    DOWNLOAD_TEMP_DIR="${temp_dir}"
 
-    print_success "Download complete"
+    # IMPORTANT: this function is often called in contexts where stdout is parsed.
+    # Keep stdout reserved for structured output only; send status to stderr.
+    print_step "Downloading release..." >&2
+    download_with_progress "${url}" "${zip_file}" >&2
 
-    print_step "Extracting files..."
+    print_success "Download complete" >&2
+
+    print_step "Extracting files..." >&2
 
     if command -v unzip &> /dev/null; then
         unzip -q "${zip_file}" -d "${temp_dir}"
@@ -368,6 +373,9 @@ download_release() {
         extracted_dir="${temp_dir}"
     fi
 
+    EXTRACTED_DIR="${extracted_dir}"
+
+    # Backward compatible: return the path on stdout (single line)
     echo "${extracted_dir}"
 }
 
@@ -887,7 +895,13 @@ main() {
 
     # Download and extract
     local extracted_dir
-    extracted_dir=$(download_release "${download_url}")
+    DOWNLOAD_TEMP_DIR=""
+    EXTRACTED_DIR=""
+    download_release "${download_url}"
+    extracted_dir="${EXTRACTED_DIR}"
+    if [ -z "${extracted_dir}" ]; then
+        die "Failed to determine extracted release directory."
+    fi
 
     progress_step "Installing files"
 
@@ -942,8 +956,10 @@ main() {
     # Setup PATH (+ LD_LIBRARY_PATH if needed)
     setup_path "${os}"
 
-    # Cleanup
-    cleanup "$(dirname "${extracted_dir}")"
+    # Cleanup (only remove the temp dir created by download_release)
+    if [ -n "${DOWNLOAD_TEMP_DIR}" ]; then
+        cleanup "${DOWNLOAD_TEMP_DIR}"
+    fi
 
     # Print final instructions
     print_instructions "${os}"
