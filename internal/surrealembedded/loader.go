@@ -33,6 +33,15 @@ func ensureLibraryLoaded(ctx context.Context, destDir string) (*loadedLib, error
 func loadLibrary(ctx context.Context, destDir string) (*loadedLib, error) {
 	ext := libExt()
 	name := "libsurrealdb_embedded_rs" + ext
+	flags := purego.RTLD_NOW | purego.RTLD_GLOBAL
+
+	// 0) If another subsystem already loaded the library (e.g., via the embedded
+	// manager that extracts and preloads all shared objects), prefer reusing it.
+	// This avoids accidentally loading multiple independent copies of the same
+	// Rust shared library from different temporary directories.
+	if h, err := purego.Dlopen(name, flags); err == nil {
+		return &loadedLib{dir: "", handle: h}, nil
+	}
 
 	// 1) Prefer libraries next to the running binary (distribution mode)
 	if execDir, err := executableDir(); err == nil {
@@ -41,7 +50,7 @@ func loadLibrary(ctx context.Context, destDir string) (*loadedLib, error) {
 			if err := embedded.AppendLibraryPath(execDir); err != nil {
 				return nil, fmt.Errorf("update library path: %w", err)
 			}
-			h, err := purego.Dlopen(candidate, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+			h, err := purego.Dlopen(candidate, flags)
 			if err != nil {
 				return nil, fmt.Errorf("dlopen %s: %w", candidate, err)
 			}
@@ -56,7 +65,7 @@ func loadLibrary(ctx context.Context, destDir string) (*loadedLib, error) {
 			if err := embedded.AppendLibraryPath(repoDir); err != nil {
 				return nil, fmt.Errorf("update library path: %w", err)
 			}
-			h, err := purego.Dlopen(candidate, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+			h, err := purego.Dlopen(candidate, flags)
 			if err != nil {
 				return nil, fmt.Errorf("dlopen %s: %w", candidate, err)
 			}
@@ -77,7 +86,7 @@ func loadLibrary(ctx context.Context, destDir string) (*loadedLib, error) {
 		return nil, fmt.Errorf("update library path: %w", err)
 	}
 
-	h, err := purego.Dlopen(path, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+	h, err := purego.Dlopen(path, flags)
 	if err != nil {
 		return nil, fmt.Errorf("dlopen %s: %w", path, err)
 	}

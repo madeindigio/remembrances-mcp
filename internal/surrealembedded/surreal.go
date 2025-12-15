@@ -24,6 +24,7 @@ var (
 )
 
 type api struct {
+	init        func(url string) int32
 	initMem     func() int32
 	initRocksDB func(path string) int32
 	use         func(handle int32, ns string, db string) int32
@@ -52,6 +53,7 @@ func ensureAPI(ctx context.Context) (*api, error) {
 		}
 
 		var a api
+		purego.RegisterLibFunc(&a.init, lib.handle, "surreal_init")
 		purego.RegisterLibFunc(&a.initMem, lib.handle, "surreal_init_mem")
 		purego.RegisterLibFunc(&a.initRocksDB, lib.handle, "surreal_init_rocksdb")
 		purego.RegisterLibFunc(&a.use, lib.handle, "surreal_use")
@@ -76,6 +78,36 @@ type DB struct {
 	handle int32
 }
 
+type backendKind int
+
+const (
+	backendMemory backendKind = iota
+	backendRocksDB
+)
+
+func parseEmbeddedURL(url string) (backendKind, string, error) {
+	normalized := strings.TrimSpace(url)
+	switch {
+	case normalized == "memory" || normalized == "memory://":
+		return backendMemory, "", nil
+	case strings.HasPrefix(normalized, "rocksdb://"):
+		return backendRocksDB, expandUser(strings.TrimPrefix(normalized, "rocksdb://")), nil
+	case strings.HasPrefix(normalized, "file://"):
+		return backendRocksDB, expandUser(strings.TrimPrefix(normalized, "file://")), nil
+	case strings.HasPrefix(normalized, "surrealkv://"):
+		// SurrealKV is a supported embedded backend in the CLI/config. The current
+		// purego wrapper exposes a file-backed initializer; keep backward
+		// compatibility by accepting the scheme.
+		return backendRocksDB, expandUser(strings.TrimPrefix(normalized, "surrealkv://")), nil
+	default:
+		// Treat a plain path as rocksdb for backward compatibility with existing config.
+		if strings.Contains(normalized, "://") {
+			return 0, "", fmt.Errorf("unsupported embedded SurrealDB URL: %s", url)
+		}
+		return backendRocksDB, expandUser(normalized), nil
+	}
+}
+
 // NewFromURL creates a new embedded SurrealDB instance from a URL-like string.
 //
 // Supported forms:
@@ -91,34 +123,40 @@ func NewFromURL(ctx context.Context, url string) (*DB, error) {
 
 	normalized := strings.TrimSpace(url)
 	switch {
+	case normalized == "" :
+		return nil, fmt.Errorf("embedded SurrealDB URL/path is empty")
 	case normalized == "memory" || normalized == "memory://":
 		h := a.initMem()
-		if h < 0 {
-			return nil, handleError(int(h))
+		if h <= 0 {
+			if h < 0 {
+				return nil, handleError(int(h))
+			}
+			return nil, fmt.Errorf("database initialization returned invalid handle: %d", h)
 		}
 		return &DB{a: a, handle: h}, nil
-	case strings.HasPrefix(normalized, "rocksdb://"):
-		path := expandUser(strings.TrimPrefix(normalized, "rocksdb://"))
-		h := a.initRocksDB(path)
-		if h < 0 {
-			return nil, handleError(int(h))
-		}
-		return &DB{a: a, handle: h}, nil
-	case strings.HasPrefix(normalized, "file://"):
-		path := expandUser(strings.TrimPrefix(normalized, "file://"))
-		h := a.initRocksDB(path)
-		if h < 0 {
-			return nil, handleError(int(h))
+	case strings.Contains(normalized, "://"):
+		// Let the embedded library parse backend URLs such as:
+		// - surrealkv:///path
+		// - rocksdb:///path
+		// - file:///path
+		// This keeps behavior aligned with the Rust embedded implementation.
+		h := a.init(normalized)
+		if h <= 0 {
+			if h < 0 {
+				return nil, handleError(int(h))
+			}
+			return nil, fmt.Errorf("database initialization returned invalid handle: %d", h)
 		}
 		return &DB{a: a, handle: h}, nil
 	default:
-		// Treat a plain path as rocksdb for backward compatibility with existing config.
-		if strings.Contains(normalized, "://") {
-			return nil, fmt.Errorf("unsupported embedded SurrealDB URL: %s", url)
-		}
-		h := a.initRocksDB(expandUser(normalized))
-		if h < 0 {
-			return nil, handleError(int(h))
+		// Backward compatibility: a plain path is treated as RocksDB.
+		path := expandUser(normalized)
+		h := a.initRocksDB(path)
+		if h <= 0 {
+			if h < 0 {
+				return nil, handleError(int(h))
+			}
+			return nil, fmt.Errorf("database initialization returned invalid handle: %d", h)
 		}
 		return &DB{a: a, handle: h}, nil
 	}

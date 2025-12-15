@@ -362,6 +362,21 @@ cp ./build/remembrances-mcp ~/bin/remembrances-mcp-beta
 rm -f *.log
 ```
 
+### build-and-copy-embedded
+
+Build the project and copy the binary to path
+
+interactive: true
+
+```bash
+cp ./build/libs/cuda/*.so ./build/
+make build-embedded-cuda
+rm -f ~/bin/remembrances-mcp-beta
+rm -f ~/bin/*.so
+cp ./build/remembrances-mcp ~/bin/remembrances-mcp-beta
+rm -f *.log
+```
+
 ### changelog
 
 Generate a changelog for the repo.
@@ -433,8 +448,6 @@ echo "Checking if memote osx is available..."
 # if ssh connection with mac-mini-de-digio is available, build macos metal version
 if ssh -o BatchMode=yes -o ConnectTimeout=5 mac-mini-de-digio 'echo 2>&1' && [ $? -eq 0 ]; then
     echo "Building macOS Metal variant on remote host..."
-    make BUILD_TYPE=metal build-libs-osx
-    make BUILD_TYPE=metal build-binary-only
     ./scripts/build-osx-remote.sh
     ./scripts/copy-osx-build.sh
     make dist-variant VARIANT=osx-metal

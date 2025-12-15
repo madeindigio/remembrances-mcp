@@ -169,9 +169,27 @@ func copyEmbeddedFile(fsys fs.FS, src, dest string) error {
 }
 
 func isLibraryFile(name string) bool {
-	if platformLibExt == "" {
+	ext := libraryFileExt()
+	if ext == "" {
 		return false
 	}
+	return strings.HasSuffix(name, ext)
+}
 
-	return strings.HasSuffix(name, platformLibExt)
+func libraryFileExt() string {
+	// When the binary is built without the embedded build tags, platformLibExt is
+	// empty (see platform_unsupported.go). We still want to support loading
+	// shared libraries distributed next to the binary.
+	if platformLibExt != "" {
+		return platformLibExt
+	}
+
+	switch runtime.GOOS {
+	case "darwin":
+		return ".dylib"
+	case "windows":
+		return ".dll"
+	default:
+		return ".so"
+	}
 }

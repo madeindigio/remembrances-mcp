@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/ebitengine/purego"
@@ -106,7 +107,39 @@ func dlopenInOrder(files map[string]string, ext string) (*loadedLibs, error) {
 
 		h, err := purego.Dlopen(path, purego.RTLD_NOW|purego.RTLD_GLOBAL)
 		if err != nil {
-			return nil, fmt.Errorf("dlopen %s: %w", path, err)
+			// If we are loading from an explicit path next to the binary, we can
+			// opportunistically try to load a missing dependency from the same
+			// directory and retry. This helps with cases where libggml.so has an
+			// explicit DT_NEEDED on libggml-cuda.so (or similar).
+			if filepath.IsAbs(path) {
+				if dep := missingKnownDependency(err, ext); dep != "" {
+					depPath := filepath.Join(filepath.Dir(path), dep)
+					if _, stErr := os.Stat(depPath); stErr == nil {
+						depHandle, depErr := purego.Dlopen(depPath, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+						if depErr != nil {
+							return nil, fmt.Errorf("dlopen %s: %w", depPath, depErr)
+						}
+						handles = append(handles, depHandle)
+
+						// Retry the original library now that the dependency is loaded.
+						h, err = purego.Dlopen(path, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+						if err != nil {
+							return nil, fmt.Errorf("dlopen %s: %w", path, err)
+						}
+					} else {
+						return nil, fmt.Errorf(
+							"dlopen %s: %w (missing dependency %s next to the binary; ensure you copied the full library set for your variant)",
+							path,
+							err,
+							dep,
+						)
+					}
+				} else {
+					return nil, fmt.Errorf("dlopen %s: %w", path, err)
+				}
+			} else {
+				return nil, fmt.Errorf("dlopen %s: %w", path, err)
+			}
 		}
 		handles = append(handles, h)
 
@@ -121,6 +154,22 @@ func dlopenInOrder(files map[string]string, ext string) (*loadedLibs, error) {
 	}
 
 	return nil, fmt.Errorf("libllama_shim%s not loaded", ext)
+}
+
+func missingKnownDependency(err error, ext string) string {
+	if err == nil {
+		return ""
+	}
+
+	msg := err.Error()
+	// Keep this intentionally conservative: only detect the known optional backends.
+	for _, dep := range []string{"libggml-cuda" + ext, "libggml-metal" + ext, "libggml-cpu" + ext} {
+		// Typical dlopen message: "...: libggml-cuda.so: cannot open shared object file: No such file or directory"
+		if strings.Contains(msg, dep) {
+			return dep
+		}
+	}
+	return ""
 }
 
 func libExt() string {

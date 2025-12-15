@@ -3,7 +3,10 @@ package embedded
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/ebitengine/purego"
 )
@@ -26,11 +29,54 @@ func (l *Loader) Load(files map[string]string, variant string) error {
 		return errors.New("no libraries to load")
 	}
 
+	ext := libraryFileExt()
+	flags := purego.RTLD_NOW | purego.RTLD_GLOBAL
+
 	for _, name := range orderedNames(files, variant) {
+		if _, ok := l.handles[name]; ok {
+			continue
+		}
+
 		path := files[name]
-		handle, err := purego.Dlopen(path, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+		handle, err := purego.Dlopen(path, flags)
 		if err != nil {
+			// Some builds encode optional backends as DT_NEEDED entries on libggml.so.
+			// When this happens, loading libggml.so directly may fail unless the
+			// backend shared object can be resolved by the dynamic loader.
+			//
+			// To keep the embedded extraction approach robust across variants, detect
+			// the missing backend from the dlopen error, load it explicitly from the
+			// same directory, and retry.
+			if filepath.IsAbs(path) {
+				if dep := missingKnownDependency(err, ext); dep != "" {
+					if _, already := l.handles[dep]; !already {
+						depPath := files[dep]
+						if depPath == "" {
+							depPath = filepath.Join(filepath.Dir(path), dep)
+						}
+						if _, stErr := os.Stat(depPath); stErr == nil {
+							depHandle, depErr := purego.Dlopen(depPath, flags)
+							if depErr != nil {
+								return fmt.Errorf("dlopen %s: %w", depPath, depErr)
+							}
+							l.handles[dep] = depHandle
+						} else {
+							return fmt.Errorf(
+								"dlopen %s: %w (missing dependency %s next to extracted libraries; ensure you built/embedded the full library set for your variant)",
+								path,
+								err,
+								dep,
+							)
+						}
+					}
+
+					// Retry the original library now that the dependency is loaded.
+					handle, err = purego.Dlopen(path, flags)
+				}
+			}
+			if err != nil {
 			return fmt.Errorf("dlopen %s: %w", path, err)
+			}
 		}
 		l.handles[name] = handle
 	}
@@ -38,6 +84,20 @@ func (l *Loader) Load(files map[string]string, variant string) error {
 	l.variant = variant
 
 	return nil
+}
+
+func missingKnownDependency(err error, ext string) string {
+	if err == nil {
+		return ""
+	}
+
+	msg := err.Error()
+	for _, dep := range []string{"libggml-cuda" + ext, "libggml-metal" + ext, "libggml-cpu" + ext} {
+		if strings.Contains(msg, dep) {
+			return dep
+		}
+	}
+	return ""
 }
 
 // Close releases all loaded libraries. Errors are aggregated if multiple
@@ -60,7 +120,7 @@ func (l *Loader) Variant() string {
 }
 
 func orderedNames(files map[string]string, variant string) []string {
-	ext := platformLibExt
+	ext := libraryFileExt()
 	seen := make(map[string]struct{}, len(files))
 	order := make([]string, 0, len(files))
 

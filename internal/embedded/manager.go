@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 // ExtractAndLoad first attempts to load libraries from the directory where
@@ -50,10 +51,6 @@ func ExtractAndLoad(ctx context.Context, destDir string) (*ExtractResult, *Loade
 // tryLoadFromBinaryDir attempts to find and load shared libraries from the
 // same directory where the executable binary is located.
 func tryLoadFromBinaryDir(ctx context.Context) (*ExtractResult, *Loader, error) {
-	if !platformSupported {
-		return nil, nil, ErrPlatformUnsupported
-	}
-
 	// Get the path to the current executable
 	execPath, err := os.Executable()
 	if err != nil {
@@ -87,14 +84,15 @@ func tryLoadFromBinaryDir(ctx context.Context) (*ExtractResult, *Loader, error) 
 
 	// Try to load the libraries
 	ldr := NewLoader()
-	if err := ldr.Load(files, platformVariant); err != nil {
+	variant := inferVariant(files)
+	if err := ldr.Load(files, variant); err != nil {
 		return nil, nil, fmt.Errorf("load libraries from binary dir: %w", err)
 	}
 
 	return &ExtractResult{
-		Platform:  fmt.Sprintf("%s/%s", platformOS, platformArch),
-		Variant:   platformVariant,
-		Portable:  platformPortable,
+		Platform:  fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+		Variant:   variant,
+		Portable:  false,
 		Directory: binDir,
 		Files:     files,
 	}, ldr, nil
@@ -103,7 +101,8 @@ func tryLoadFromBinaryDir(ctx context.Context) (*ExtractResult, *Loader, error) 
 // findLibrariesInDir scans a directory for shared library files matching the
 // platform extension (.so on Linux, .dylib on macOS).
 func findLibrariesInDir(dir string) (map[string]string, error) {
-	if platformLibExt == "" {
+	ext := libraryFileExt()
+	if ext == "" {
 		return nil, fmt.Errorf("platform library extension not defined")
 	}
 
@@ -127,4 +126,18 @@ func findLibrariesInDir(dir string) (map[string]string, error) {
 	}
 
 	return files, nil
+}
+
+func inferVariant(files map[string]string) string {
+	ext := libraryFileExt()
+	if _, ok := files["libggml-cuda"+ext]; ok {
+		return "cuda"
+	}
+	if _, ok := files["libggml-metal"+ext]; ok {
+		return "metal"
+	}
+	if _, ok := files["libggml-cpu"+ext]; ok {
+		return "cpu"
+	}
+	return ""
 }
