@@ -453,8 +453,31 @@ Build for macOS (arm64 metal)
 interactive: true
 
 ```zsh
+echo "Building macOS Metal binary..."
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH
-make BUILD_TYPE=metal build
+make BUILD_TYPE=metal build-binary-only
+echo "Zipping macOS Metal binary..."
+rm -f dist/remembrances-mcp-darwin-aarch64.zip
+cp config.sample*.yaml build/
+cd build
+zip -9 ../dist/remembrances-mcp-darwin-aarch64.zip remembrances-mcp *.dylib config.sample*.yaml
+```
+
+### build-osx-embedded
+
+Build for macOS (arm64 metal)
+
+interactive: true
+
+```zsh
+echo "Building macOS Metal embedded libraries binary..."
+export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH
+make EMBEDDED_VARIANT=metal build-embedded
+echo "Zipping macOS Metal embedded binary..."
+rm -f dist/remembrances-mcp-darwin-aarch64-embedded.zip
+cp config.sample*.yaml build/
+cd build
+zip -9 ../dist/remembrances-mcp-darwin-aarch64-embedded.zip remembrances-mcp config.sample*.yaml
 ```
 
 ### build-libs-osx
@@ -464,27 +487,11 @@ Build libs for macOS (arm64 metal)
 interactive: true
 
 ```zsh
+echo "Building macOS Metal libraries..."
 export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH
-make dist-darwin-arm64
-```
-
-### new-build
-
-```
-./scripts/build-variant-libs.sh
-./scripts/build-cuda-libs.sh
-./scripts/build-libs-cross.sh
-```
-
-### new-embedded
-
-```
-# Optional if you don't use the default paths in the Makefile:
-#export GO_LLAMA_DIR=/path/to/go-llama.cpp
-#export SURREALDB_EMBEDDED_DIR=/path/to/surrealdb-embedded
-
-#BUNDLE_CUDA=1 make build-embedded-cuda
-make build-embedded-cuda
-make build-embedded-cuda-portable
-make build-embedded-cpu
+make build-libs-metal
+cp build/libs/metal/*.dylib build/
+echo "Building SurrealDB embedded for macOS..."
+make build-surrealdb-darwin-arm64
+cp build/libs/surrealdb-aarch64-apple-darwin/*.dylib build/
 ```
