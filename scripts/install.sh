@@ -137,6 +137,17 @@ cpu_has_avx2() {
     return 1
 }
 
+# Check if CPU supports AVX-512 (Linux x86_64)
+# We use avx512f as the primary feature bit.
+cpu_has_avx512() {
+    if [ -f /proc/cpuinfo ]; then
+        if grep -qiE "(^flags\s*:.*\bavx512f\b)" /proc/cpuinfo 2>/dev/null; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
 detect_cuda_major_version() {
     # Returns a CUDA major version number (e.g., 12) or empty if unknown/not found.
     # 1) Prefer nvidia-smi reported CUDA version
@@ -784,6 +795,7 @@ main() {
     local has_nvidia=false
     local cuda_major=""
     local has_avx2=false
+    local has_avx512=false
 
     if [ "${os}" = "linux" ] && [ "${arch}" = "amd64" ]; then
         if check_nvidia; then
@@ -792,6 +804,9 @@ main() {
         cuda_major=$(detect_cuda_major_version)
         if cpu_has_avx2; then
             has_avx2=true
+        fi
+        if cpu_has_avx512; then
+            has_avx512=true
         fi
     fi
 
@@ -804,6 +819,7 @@ main() {
     fi
     if [ "${os}" = "linux" ]; then
         print_kv "AVX2" "${has_avx2}"
+        print_kv "AVX-512" "${has_avx512}"
     fi
 
     progress_step "Choosing build (wizard)"
@@ -815,9 +831,15 @@ main() {
     if [ "${os}" = "linux" ] && [ "${has_nvidia}" = "true" ]; then
         want_nvidia=true
     fi
-    # Portable: follow requested behavior (AVX2-compatible or higher -> portable)
-    if [ "${os}" = "linux" ] && [ "${has_avx2}" = "true" ]; then
-        want_portable=true
+    # Portable selection (Linux x86_64 NVIDIA builds):
+    # - If CPU supports an instruction set ABOVE AVX2 (AVX-512), prefer the non-portable build.
+    # - Otherwise, prefer portable for broader compatibility.
+    if [ "${os}" = "linux" ]; then
+        if [ "${has_avx512}" = "true" ]; then
+            want_portable=false
+        else
+            want_portable=true
+        fi
     fi
 
     # Env overrides
@@ -853,7 +875,7 @@ main() {
             if [ "${want_portable}" = "true" ]; then
                 default_portable="y"
             fi
-            ask_yes_no "Use portable build for maximum CPU compatibility? [y/N] " "$default_portable"
+            ask_yes_no "Use portable build (recommended unless your CPU supports AVX-512)? [y/N] " "$default_portable"
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 want_portable=true
             else
