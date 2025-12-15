@@ -150,3 +150,7 @@ ollama-model: "nomic-embed-text:latest"
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
 log: "/www/MCP/remembrances-mcp/remembrances-mcp.externalsurreal.log"
+
+# Disable logging to stdout/stderr (default: false)
+# When true, logs will only be written to the file configured above (if any).
+disable-output-log: false

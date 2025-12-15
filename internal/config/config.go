@@ -59,6 +59,9 @@ type Config struct {
 	ChunkSize    int    `mapstructure:"chunk-size"`
 	ChunkOverlap int    `mapstructure:"chunk-overlap"`
 	LogFile      string `mapstructure:"log"`
+	// When true, disables all logging output to stdout/stderr.
+	// Logs will only be written to the configured log file (if any).
+	DisableOutputLog bool `mapstructure:"disable-output-log"`
 	// Code monitoring configuration
 	// When true, disables automatic code file watching for projects
 	DisableCodeWatch bool `mapstructure:"disable-code-watch"`
@@ -107,6 +110,7 @@ func Load() (*Config, error) {
 	pflag.Int("chunk-size", 1500, "Maximum chunk size in characters for text splitting (default: 1500)")
 	pflag.Int("chunk-overlap", 200, "Overlap between chunks in characters (default: 200)")
 	pflag.String("log", "", "Path to the log file (logs will be written to both stdout and file)")
+	pflag.Bool("disable-output-log", false, "Disable logging to stdout/stderr; only write to log file if configured")
 	pflag.Bool("disable-code-watch", false, "Disable automatic file watching for code projects")
 	// Version flag is handled here so config package can manage early-exit flags
 	// Also register a version flag with the standard library's flag set so
@@ -365,12 +369,24 @@ func Getenv(key, fallback string) string {
 	return fallback
 }
 
-// SetupLogging configures slog to write to both stdout and a log file if specified.
+// SetupLogging configures slog output.
+//
+// Important: when running MCP over stdio, stdout must be reserved for protocol
+// messages. Therefore, console logs default to stderr in stdio mode.
 func (c *Config) SetupLogging() error {
 	var writers []io.Writer
 
-	// Always write to stdout
-	writers = append(writers, os.Stdout)
+	// Console logging (stdout/stderr)
+	if !c.DisableOutputLog {
+		// If we're running in stdio mode (default: no http/sse/rest), avoid stdout.
+		// This prevents logs from corrupting MCP protocol messages.
+		stdioMode := !c.SSE && !c.HTTP && !c.RestAPIServe
+		if stdioMode {
+			writers = append(writers, os.Stderr)
+		} else {
+			writers = append(writers, os.Stdout)
+		}
+	}
 
 	// If log file is specified, also write to file
 	if c.LogFile != "" {
@@ -379,6 +395,11 @@ func (c *Config) SetupLogging() error {
 			return fmt.Errorf("failed to open log file %s: %w", c.LogFile, err)
 		}
 		writers = append(writers, logFile)
+	}
+
+	// If nothing is configured (disable-output-log=true and no file), discard logs.
+	if len(writers) == 0 {
+		writers = append(writers, io.Discard)
 	}
 
 	// Create a multi-writer that writes to all specified destinations

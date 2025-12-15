@@ -119,3 +119,7 @@ code-gguf-model-path: "/www/Remembrances/coderankembed.Q4_K_M.gguf"
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
 log: "/www/MCP/remembrances-mcp/remembrances-mcp.log"
+
+# Disable logging to stdout/stderr (default: false)
+# When true, logs will only be written to the file configured above (if any).
+disable-output-log: false
