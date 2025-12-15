@@ -450,7 +450,6 @@ if ssh -o BatchMode=yes -o ConnectTimeout=5 mac-mini-de-digio 'echo 2>&1' && [ $
     echo "Building macOS Metal variant on remote host..."
     ./scripts/build-osx-remote.sh
     ./scripts/copy-osx-build.sh
-    make dist-variant VARIANT=osx-metal
 else
     echo "Skipping macOS Metal build - remote host not available."
 fi 
