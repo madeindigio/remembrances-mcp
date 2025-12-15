@@ -12,15 +12,17 @@
 # 7. Download the GGUF embedding model
 #
 # Environment variables for non-interactive mode (curl | bash):
-#   REMEMBRANCES_VERSION=v1.14.1     - Specific version to install
-#   REMEMBRANCES_NVIDIA=yes|no       - Force NVIDIA or CPU-only build
-#   REMEMBRANCES_DOWNLOAD_MODEL=yes|no - Download GGUF model or skip
+#   REMEMBRANCES_VERSION=latest|vX.Y.Z     - Version to install (default: latest)
+#   REMEMBRANCES_NVIDIA=yes|no            - Force NVIDIA or CPU-only build (Linux only)
+#   REMEMBRANCES_PORTABLE=yes|no          - Force portable/non-portable build (Linux NVIDIA builds)
+#   REMEMBRANCES_DOWNLOAD_MODEL=yes|no    - Download GGUF model or skip
 #
-# Available builds:
-#   - darwin-arm64: macOS with Apple Silicon (M1/M2/M3)
-#   - linux-amd64-nvidia: Linux with NVIDIA GPU + modern Intel CPU
-#   - linux-amd64-nvidia-portable: Linux with NVIDIA GPU + AMD Ryzen or older Intel
-#   - linux-amd64-cpu-only: Linux without NVIDIA GPU
+# Notes:
+#   - This installer prefers *embedded* release assets from the latest GitHub release.
+#   - Supported platforms:
+#       * Linux x86_64 (amd64)
+#       * macOS Apple Silicon (aarch64)
+#   - Any other OS/architecture is not supported.
 
 set -e
 
@@ -38,10 +40,15 @@ if [ -t 0 ]; then
     INTERACTIVE=true
 fi
 
-# Version to install
-VERSION="${REMEMBRANCES_VERSION:-v1.14.1}"
+# Repository
 REPO="madeindigio/remembrances-mcp"
-GITHUB_RELEASE_URL="https://github.com/${REPO}/releases/download/${VERSION}"
+
+# Version selection (resolved dynamically via GitHub API)
+REQUESTED_VERSION="${REMEMBRANCES_VERSION:-latest}"
+VERSION="" # resolved tag (e.g., v1.16.10)
+
+# CUDA runtime libraries fallback (Linux only)
+CUDA_LIBS_URL="https://github.com/madeindigio/remembrances-mcp/releases/download/v1.16.4/cuda-libs-linux-x64.tar.xz"
 
 # GGUF Model
 GGUF_MODEL_URL="https://huggingface.co/nomic-ai/nomic-embed-text-v1.5-GGUF/resolve/main/nomic-embed-text-v1.5.Q4_K_M.gguf?download=true"
@@ -62,6 +69,29 @@ print_warning() {
 
 print_error() {
     echo -e "${RED}✗${NC} $1"
+}
+
+print_kv() {
+    # Usage: print_kv "Label" "Value"
+    printf "  ${BLUE}%-22s${NC} %s\n" "$1" "$2"
+}
+
+TOTAL_STEPS=10
+CURRENT_STEP=0
+
+progress_step() {
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    local pct=$(( (CURRENT_STEP * 100) / TOTAL_STEPS ))
+    echo -e "${BLUE}[${pct}%]${NC} $1"
+}
+
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+die() {
+    print_error "$1"
+    exit 1
 }
 
 # Detect OS
@@ -88,56 +118,174 @@ detect_arch() {
 
 # Check if NVIDIA GPU is available (Linux only)
 check_nvidia() {
-    if command -v nvidia-smi &> /dev/null; then
-        return 0
+    if command_exists nvidia-smi; then
+        # nvidia-smi may exist but fail if driver isn't loaded
+        if nvidia-smi >/dev/null 2>&1; then
+            return 0
+        fi
     fi
     return 1
 }
 
-# Check if CPU is modern Intel (not AMD Ryzen or older Intel)
-# Returns 0 (true) if modern Intel, 1 (false) if AMD Ryzen or older Intel
-check_modern_intel_cpu() {
-    local cpu_info
-    
-    # Get CPU model name
+# Check if CPU supports AVX2 (Linux x86_64)
+cpu_has_avx2() {
     if [ -f /proc/cpuinfo ]; then
-        cpu_info=$(grep -m1 "model name" /proc/cpuinfo 2>/dev/null | cut -d: -f2 | tr '[:upper:]' '[:lower:]')
-    else
-        return 1  # Cannot determine, use portable version
-    fi
-    
-    # Check for AMD Ryzen - use portable version
-    if echo "$cpu_info" | grep -q "amd\|ryzen"; then
-        return 1
-    fi
-    
-    # Check for Intel - determine if modern (10th gen or newer)
-    if echo "$cpu_info" | grep -q "intel"; then
-        # Try to extract generation from Intel Core processors
-        # Modern formats: "11th gen intel", "12th gen intel", "13th gen intel", "14th gen intel"
-        # Also: Intel Core i7-10xxx, i7-11xxx, etc.
-        
-        # Check for "Nth gen" format (10th gen and above = modern)
-        if echo "$cpu_info" | grep -qE "(1[0-9]th|2[0-9]th)\s*gen"; then
-            return 0  # Modern Intel
+        if grep -qiE "(^flags\s*:.*\bavx2\b)" /proc/cpuinfo 2>/dev/null; then
+            return 0
         fi
-        
-        # Check for Core iX-NXXXX format where N >= 10
-        if echo "$cpu_info" | grep -qE "i[3579]-1[0-9][0-9][0-9][0-9]"; then
-            return 0  # Modern Intel (10th gen+)
-        fi
-        
-        # Check for 12th/13th/14th gen patterns (like i7-12700, i9-13900)
-        if echo "$cpu_info" | grep -qE "i[3579]-(1[2-9][0-9][0-9][0-9]|[2-9][0-9][0-9][0-9][0-9])"; then
-            return 0  # Modern Intel
-        fi
-        
-        # Older Intel - use portable version for better compatibility
-        return 1
     fi
-    
-    # Unknown CPU, use portable version for safety
     return 1
+}
+
+detect_cuda_major_version() {
+    # Returns a CUDA major version number (e.g., 12) or empty if unknown/not found.
+    # 1) Prefer nvidia-smi reported CUDA version
+    if command_exists nvidia-smi; then
+        local line
+        line=$(nvidia-smi 2>/dev/null | grep -m1 -E "CUDA Version" || true)
+        if [ -n "$line" ]; then
+            # Example: "| NVIDIA-SMI 535.183.01   Driver Version: 535.183.01   CUDA Version: 12.2     |"
+            echo "$line" | sed -n 's/.*CUDA Version:[[:space:]]*\([0-9][0-9]*\)\..*/\1/p'
+            return 0
+        fi
+    fi
+
+    # 2) Check for libcudart.so.12 presence in dynamic linker cache
+    if command_exists ldconfig; then
+        if ldconfig -p 2>/dev/null | grep -q "libcudart.so.12"; then
+            echo "12"
+            return 0
+        fi
+    fi
+
+    # 3) Fallback: common locations
+    if [ -f /usr/local/cuda/lib64/libcudart.so.12 ] || [ -f /usr/local/cuda/lib64/libcudart.so.12.0 ]; then
+        echo "12"
+        return 0
+    fi
+
+    echo ""
+}
+
+http_get() {
+    local url="$1"
+    if command_exists curl; then
+        curl -fsSL "$url"
+        return $?
+    fi
+    if command_exists wget; then
+        wget -q -O - "$url"
+        return $?
+    fi
+    die "Neither curl nor wget found. Please install one of them."
+}
+
+download_with_progress() {
+    local url="$1"
+    local out="$2"
+    if command_exists curl; then
+        curl -fL --progress-bar -o "$out" "$url"
+        return $?
+    fi
+    if command_exists wget; then
+        wget --show-progress -q -O "$out" "$url"
+        return $?
+    fi
+    die "Neither curl nor wget found. Please install one of them."
+}
+
+github_release_api_url() {
+    # Prints GitHub API URL for release metadata
+    # Supports: latest, vX.Y.Z
+    if [ "${REQUESTED_VERSION}" = "latest" ] || [ -z "${REQUESTED_VERSION}" ]; then
+        echo "https://api.github.com/repos/${REPO}/releases/latest"
+        return 0
+    fi
+    echo "https://api.github.com/repos/${REPO}/releases/tags/${REQUESTED_VERSION}"
+}
+
+get_release_json() {
+    local url
+    url=$(github_release_api_url)
+    http_get "$url"
+}
+
+release_get_tag_name() {
+    local json="$1"
+    echo "$json" | tr -d '\r' | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1
+}
+
+release_list_asset_urls() {
+    local json="$1"
+    echo "$json" | tr -d '\r' | grep -oE '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]+"' | sed 's/.*"\(https\?:[^\"]*\)"/\1/'
+}
+
+release_find_asset_url() {
+    # Usage: release_find_asset_url "$json" "filename.zip"
+    local json="$1"
+    local filename="$2"
+    release_list_asset_urls "$json" | grep -F "/${filename}" | head -n 1
+}
+
+detect_release_platform_id() {
+    # Maps to the filename platform segment used by releases
+    #   linux amd64 -> linux-x64
+    #   darwin aarch64 -> darwin-aarch64
+    local os="$1"
+    local arch="$2"
+
+    if [ "$os" = "linux" ] && [ "$arch" = "amd64" ]; then
+        echo "linux-x64"
+        return 0
+    fi
+    if [ "$os" = "darwin" ] && [ "$arch" = "aarch64" ]; then
+        echo "darwin-aarch64"
+        return 0
+    fi
+    echo ""
+}
+
+ensure_cuda_runtime_libs_linux() {
+    # Downloads CUDA runtime libs bundle and installs shared libraries into ~/.local/lib
+    # Also marks LD_LIBRARY_PATH setup requirement.
+    local target_dir="$HOME/.local/lib"
+
+    if [ -n "${REMEMBRANCES_SKIP_CUDA_LIBS:-}" ] && [ "${REMEMBRANCES_SKIP_CUDA_LIBS}" = "yes" ]; then
+        print_warning "Skipping CUDA runtime libs download (REMEMBRANCES_SKIP_CUDA_LIBS=yes)"
+        return 0
+    fi
+
+    if ! command_exists tar; then
+        die "tar is required to install CUDA libraries (tar.xz). Please install tar."
+    fi
+
+    mkdir -p "$target_dir"
+
+    local temp_dir
+    temp_dir="$(mktemp -d)"
+    local archive="$temp_dir/cuda-libs-linux-x64.tar.xz"
+
+    print_step "Downloading CUDA runtime libraries (CUDA 12+) ..."
+    download_with_progress "$CUDA_LIBS_URL" "$archive"
+
+    print_step "Extracting CUDA runtime libraries..."
+    tar -xJf "$archive" -C "$temp_dir"
+
+    # Copy .so files into ~/.local/lib
+    local copied=0
+    while IFS= read -r -d '' f; do
+        cp -f "$f" "$target_dir/"
+        copied=$((copied + 1))
+    done < <(find "$temp_dir" -type f \( -name '*.so' -o -name '*.so.*' \) -print0)
+
+    if [ "$copied" -gt 0 ]; then
+        print_success "Installed ${copied} CUDA libraries to ${target_dir}"
+        NEEDS_LD_LIBRARY_PATH=true
+    else
+        print_warning "No .so CUDA libraries found in the archive; the bundle format may have changed"
+    fi
+
+    rm -rf "$temp_dir"
 }
 
 # Get installation directories based on OS
@@ -159,32 +307,35 @@ get_install_dirs() {
     MODELS_DIR="${INSTALL_DIR}/models"
 }
 
-# Get the download URL for the release
-get_download_url() {
-    local os="$1"
-    local arch="$2"
-    local variant="$3"  # "nvidia", "nvidia-portable", or "cpu-only"
+choose_release_filename() {
+    # Chooses a filename from release assets.
+    # Prefers embedded assets whenever possible.
+    local os="$1"      # linux|darwin
+    local arch="$2"    # amd64|aarch64
+    local want_nvidia="$3"   # true|false
+    local want_portable="$4" # true|false
 
-    local filename
-
-    if [ "$os" = "darwin" ]; then
-        # macOS - only arm64 supported
-        filename="remembrances-mcp-darwin-arm64.zip"
-    elif [ "$os" = "linux" ]; then
-        case "$variant" in
-            "nvidia")
-                filename="remembrances-mcp-linux-amd64-nvidia.zip"
-                ;;
-            "nvidia-portable")
-                filename="remembrances-mcp-linux-amd64-nvidia-portable.zip"
-                ;;
-            *)
-                filename="remembrances-mcp-linux-amd64-cpu-only.zip"
-                ;;
-        esac
+    if [ "$os" = "darwin" ] && [ "$arch" = "aarch64" ]; then
+        echo "remembrances-mcp-darwin-aarch64-embedded.zip"
+        return 0
     fi
 
-    echo "${GITHUB_RELEASE_URL}/${filename}"
+    if [ "$os" = "linux" ] && [ "$arch" = "amd64" ]; then
+        if [ "$want_nvidia" = "true" ]; then
+            if [ "$want_portable" = "true" ]; then
+                echo "remembrances-mcp-linux-x64-nvidia-embedded-portable.zip"
+            else
+                echo "remembrances-mcp-linux-x64-nvidia-embedded.zip"
+            fi
+            return 0
+        fi
+
+        # CPU build: prefer embedded if present; otherwise fall back to cpu.zip.
+        echo "remembrances-mcp-linux-x64-cpu-embedded.zip"
+        return 0
+    fi
+
+    echo ""
 }
 
 # Download and extract release
@@ -194,16 +345,8 @@ download_release() {
     temp_dir="$(mktemp -d)"
     local zip_file="${temp_dir}/release.zip"
 
-    print_step "Downloading release from ${url}..."
-
-    if command -v curl &> /dev/null; then
-        curl -fsSL -o "${zip_file}" "${url}"
-    elif command -v wget &> /dev/null; then
-        wget -q -O "${zip_file}" "${url}"
-    else
-        print_error "Neither curl nor wget found. Please install one of them."
-        exit 1
-    fi
+    print_step "Downloading release..."
+    download_with_progress "${url}" "${zip_file}"
 
     print_success "Download complete"
 
@@ -216,13 +359,13 @@ download_release() {
         exit 1
     fi
 
-    # Find the extracted directory (should be named like linux-amd64, darwin-aarch64, etc.)
+    # Find the extracted directory (many zips include a top-level folder, but not always)
     local extracted_dir
     extracted_dir=$(find "${temp_dir}" -mindepth 1 -maxdepth 1 -type d | head -n 1)
 
+    # If the zip extracted files directly into temp_dir, use temp_dir
     if [ -z "${extracted_dir}" ]; then
-        print_error "Could not find extracted directory"
-        exit 1
+        extracted_dir="${temp_dir}"
     fi
 
     echo "${extracted_dir}"
@@ -373,6 +516,7 @@ download_gguf_model() {
 # Add to PATH in shell configuration files
 setup_path() {
     local path_line="export PATH=\"\$PATH:${BIN_DIR}\""
+    local ld_line="export LD_LIBRARY_PATH=\"$HOME/.local/lib:\${LD_LIBRARY_PATH:-}\""
 
     local shell_configs=()
     local os="$1"
@@ -407,6 +551,16 @@ setup_path() {
         else
             print_warning "PATH already configured in ${config}"
         fi
+
+        # If we installed CUDA runtime libs into ~/.local/lib, ensure LD_LIBRARY_PATH includes it
+        if [ "${NEEDS_LD_LIBRARY_PATH:-false}" = "true" ]; then
+            if ! grep -q "LD_LIBRARY_PATH=.*\\.local/lib" "${config}" 2>/dev/null; then
+                echo "${ld_line}" >> "${config}"
+                print_success "Added LD_LIBRARY_PATH to ${config}"
+            else
+                print_warning "LD_LIBRARY_PATH already configured in ${config}"
+            fi
+        fi
     done
 }
 
@@ -419,8 +573,12 @@ print_instructions() {
     echo -e "${GREEN}           Remembrances-MCP Installation Complete!              ${NC}"
     echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
     echo ""
+    echo -e "Version installed:      ${BLUE}${VERSION}${NC}"
     echo -e "Installation directory: ${BLUE}${INSTALL_DIR}${NC}"
     echo -e "Binary & libraries:     ${BLUE}${BIN_DIR}/${NC}"
+        if [ "${NEEDS_LD_LIBRARY_PATH:-false}" = "true" ]; then
+            echo -e "CUDA runtime libs:      ${BLUE}$HOME/.local/lib${NC} (added to LD_LIBRARY_PATH)"
+        fi
     echo -e "Configuration file:     ${BLUE}${CONFIG_DIR}/config.yaml${NC}"
     echo -e "Database location:      ${BLUE}${DATA_DIR}/remembrances.db${NC}"
     echo -e "GGUF model:             ${BLUE}${MODELS_DIR}/${GGUF_MODEL_NAME}${NC}"
@@ -488,20 +646,47 @@ ask_yes_no() {
     fi
 }
 
+ask_choice() {
+    # Usage: ask_choice "Prompt" "default" "valid_regex" -> sets REPLY
+    local prompt="$1"
+    local default="$2"
+    local valid_re="$3"
+
+    if [ "$INTERACTIVE" = "true" ]; then
+        while true; do
+            read -p "$prompt" -r
+            if [ -z "$REPLY" ]; then
+                REPLY="$default"
+            fi
+            if echo "$REPLY" | grep -qE "$valid_re"; then
+                return 0
+            fi
+            print_warning "Invalid choice. Please try again."
+        done
+    else
+        REPLY="$default"
+        print_warning "Non-interactive mode: using default ($default) for: $prompt"
+    fi
+}
+
 # Main installation function
 main() {
     echo ""
     echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
-    echo -e "${GREEN}              Remembrances-MCP Installer ${VERSION}              ${NC}"
+    echo -e "${GREEN}                Remembrances-MCP Installer (Wizard)            ${NC}"
     echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
     echo ""
     
     if [ "$INTERACTIVE" = "false" ]; then
         print_warning "Running in non-interactive mode (piped input detected)"
         print_warning "Using default values for all prompts"
-        print_warning "Set environment variables to customize: REMEMBRANCES_VERSION, REMEMBRANCES_NVIDIA=yes/no, REMEMBRANCES_DOWNLOAD_MODEL=yes/no"
+        print_warning "Set environment variables to customize: REMEMBRANCES_VERSION, REMEMBRANCES_NVIDIA, REMEMBRANCES_PORTABLE, REMEMBRANCES_DOWNLOAD_MODEL"
         echo ""
     fi
+
+    NEEDS_LD_LIBRARY_PATH=false
+
+    progress_step "Detecting platform"
 
     # Detect OS
     local os
@@ -525,86 +710,184 @@ main() {
         exit 1
     fi
 
-    # Check for macOS x86_64 (not supported in releases)
-    if [ "${os}" = "darwin" ] && [ "${arch}" = "amd64" ]; then
-        print_error "macOS Intel (x86_64) binaries are not available in the current release."
-        print_error "Only macOS ARM64 (M1/M2/M3) is supported."
-        print_error "Please compile from source or use a Mac with Apple Silicon."
-        exit 1
+    # Enforce supported platforms: linux/amd64 or darwin/aarch64
+    if [ "${os}" = "darwin" ] && [ "${arch}" != "aarch64" ]; then
+        die "Unsupported macOS architecture: $(uname -m). Only Apple Silicon (aarch64/arm64) is supported."
     fi
 
-    # Check for Linux ARM (not supported in releases)
-    if [ "${os}" = "linux" ] && [ "${arch}" = "aarch64" ]; then
-        print_error "Linux ARM64 binaries are not available in the current release."
-        print_error "Please compile from source or use a different architecture."
-        exit 1
+    if [ "${os}" = "linux" ] && [ "${arch}" != "amd64" ]; then
+        die "Unsupported Linux architecture: $(uname -m). Only x86_64 (amd64) is supported."
     fi
 
-    # Determine variant for Linux
-    local variant="cpu-only"
+    progress_step "Fetching latest release metadata"
+
+    # Fetch release metadata via GitHub API
+    local release_json
+    release_json=$(get_release_json) || die "Failed to fetch release metadata from GitHub."
+
+    VERSION=$(release_get_tag_name "$release_json")
+    if [ -z "${VERSION}" ]; then
+        die "Could not determine latest release tag from GitHub API response."
+    fi
+    print_success "Selected release: ${VERSION}"
+
+    # Show embedded assets found (assistant-style)
+    local embedded_list
+    embedded_list=$(release_list_asset_urls "$release_json" | grep -E "embedded" | sed 's#.*/##' || true)
+    if [ -n "$embedded_list" ]; then
+        print_step "Embedded assets available in this release:"
+        echo "$embedded_list" | while read -r a; do
+            [ -n "$a" ] && echo "  - $a"
+        done
+    else
+        print_warning "No embedded assets detected in the release metadata. Will try best-effort selection."
+    fi
+
+    progress_step "Detecting CPU/GPU capabilities"
+
+    local has_nvidia=false
+    local cuda_major=""
+    local has_avx2=false
+
     if [ "${os}" = "linux" ] && [ "${arch}" = "amd64" ]; then
-        # Check environment variable first
-        if [ "${REMEMBRANCES_NVIDIA:-}" = "yes" ]; then
-            if check_modern_intel_cpu; then
-                variant="nvidia"
-                print_success "Using NVIDIA build (modern Intel CPU detected, from env var)"
-            else
-                variant="nvidia-portable"
-                print_success "Using NVIDIA portable build (AMD Ryzen/older Intel, from env var)"
-            fi
-        elif [ "${REMEMBRANCES_NVIDIA:-}" = "no" ]; then
-            variant="cpu-only"
-            print_success "Using CPU-only build (from env var)"
-        elif check_nvidia; then
-            print_success "NVIDIA GPU detected"
-            
-            # Detect CPU type
-            local cpu_info=""
-            if [ -f /proc/cpuinfo ]; then
-                cpu_info=$(grep -m1 "model name" /proc/cpuinfo 2>/dev/null | cut -d: -f2)
-            fi
-            if [ -n "$cpu_info" ]; then
-                print_step "Detected CPU:$cpu_info"
-            fi
-            
-            echo ""
-            ask_yes_no "Do you want to install the NVIDIA/CUDA optimized version? [Y/n] " "y"
-            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-                # Determine which NVIDIA variant based on CPU
-                if check_modern_intel_cpu; then
-                    variant="nvidia"
-                    print_success "Using NVIDIA build (optimized for modern Intel CPUs)"
-                else
-                    variant="nvidia-portable"
-                    print_success "Using NVIDIA portable build (compatible with AMD Ryzen and older Intel)"
-                fi
-            else
-                variant="cpu-only"
-                print_success "Using CPU-only build"
-            fi
-        else
-            print_step "No NVIDIA GPU detected, using CPU-only build"
-            variant="cpu-only"
+        if check_nvidia; then
+            has_nvidia=true
+        fi
+        cuda_major=$(detect_cuda_major_version)
+        if cpu_has_avx2; then
+            has_avx2=true
         fi
     fi
+
+    print_step "Detected capabilities:"
+    print_kv "NVIDIA GPU" "${has_nvidia}"
+    if [ -n "$cuda_major" ]; then
+        print_kv "CUDA version" "${cuda_major}.x (detected)"
+    else
+        print_kv "CUDA version" "unknown/not found"
+    fi
+    if [ "${os}" = "linux" ]; then
+        print_kv "AVX2" "${has_avx2}"
+    fi
+
+    progress_step "Choosing build (wizard)"
+
+    local want_nvidia=false
+    local want_portable=false
+
+    # Defaults
+    if [ "${os}" = "linux" ] && [ "${has_nvidia}" = "true" ]; then
+        want_nvidia=true
+    fi
+    # Portable: follow requested behavior (AVX2-compatible or higher -> portable)
+    if [ "${os}" = "linux" ] && [ "${has_avx2}" = "true" ]; then
+        want_portable=true
+    fi
+
+    # Env overrides
+    if [ "${REMEMBRANCES_NVIDIA:-}" = "yes" ]; then
+        want_nvidia=true
+    elif [ "${REMEMBRANCES_NVIDIA:-}" = "no" ]; then
+        want_nvidia=false
+    fi
+
+    if [ "${REMEMBRANCES_PORTABLE:-}" = "yes" ]; then
+        want_portable=true
+    elif [ "${REMEMBRANCES_PORTABLE:-}" = "no" ]; then
+        want_portable=false
+    fi
+
+    # Interactive wizard (Linux only)
+    if [ "${INTERACTIVE}" = "true" ] && [ "${os}" = "linux" ] && [ "${arch}" = "amd64" ]; then
+        echo ""
+        print_step "Installer wizard"
+        if [ "${has_nvidia}" = "true" ]; then
+            ask_yes_no "Install NVIDIA/CUDA build? [Y/n] " "y"
+            if [[ $REPLY =~ ^[Nn]$ ]]; then
+                want_nvidia=false
+            else
+                want_nvidia=true
+            fi
+        else
+            want_nvidia=false
+        fi
+
+        if [ "${want_nvidia}" = "true" ]; then
+            local default_portable="n"
+            if [ "${want_portable}" = "true" ]; then
+                default_portable="y"
+            fi
+            ask_yes_no "Use portable build for maximum CPU compatibility? [y/N] " "$default_portable"
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                want_portable=true
+            else
+                want_portable=false
+            fi
+        fi
+    fi
+
+    progress_step "Preparing install directories"
 
     # Get installation directories
     get_install_dirs "${os}"
 
-    # Get download URL
+    # Choose filename and resolve asset URL
+    local filename
+    filename=$(choose_release_filename "${os}" "${arch}" "${want_nvidia}" "${want_portable}")
+    if [ -z "$filename" ]; then
+        die "Could not determine a release filename for this platform."
+    fi
+
     local download_url
-    download_url=$(get_download_url "${os}" "${arch}" "${variant}")
-    print_step "Download URL: ${download_url}"
+    download_url=$(release_find_asset_url "$release_json" "$filename")
+
+    # If CPU embedded isn't available, fall back to non-embedded CPU asset.
+    if [ -z "$download_url" ] && [ "${os}" = "linux" ] && [ "${want_nvidia}" != "true" ]; then
+        if [ "$filename" = "remembrances-mcp-linux-x64-cpu-embedded.zip" ]; then
+            print_warning "CPU embedded asset not found. Falling back to standard CPU build."
+            filename="remembrances-mcp-linux-x64-cpu.zip"
+            download_url=$(release_find_asset_url "$release_json" "$filename")
+        fi
+    fi
+
+    if [ -z "$download_url" ]; then
+        die "Could not find download URL for asset: ${filename}"
+    fi
+    print_step "Selected asset: ${filename}"
+
+    progress_step "Downloading & extracting release"
 
     # Download and extract
     local extracted_dir
     extracted_dir=$(download_release "${download_url}")
 
+    progress_step "Installing files"
+
     # Install files
     install_files "${extracted_dir}"
 
+    # If Linux + NVIDIA selected, ensure CUDA 12+ runtime libs exist; otherwise install fallback bundle.
+    if [ "${os}" = "linux" ] && [ "${want_nvidia}" = "true" ]; then
+        local cuda_ok=false
+        if [ -n "$cuda_major" ] && [ "$cuda_major" -ge 12 ] 2>/dev/null; then
+            cuda_ok=true
+        fi
+
+        if [ "$cuda_ok" = "true" ]; then
+            print_success "CUDA ${cuda_major}.x detected (>= 12)."
+        else
+            print_warning "NVIDIA GPU detected but CUDA 12+ runtime libraries were not found."
+            print_warning "Downloading CUDA runtime bundle and configuring LD_LIBRARY_PATH..."
+            ensure_cuda_runtime_libs_linux
+        fi
+    fi
+
+    progress_step "Creating configuration"
+
     # Create configuration
     create_config
+
+    progress_step "Optional: downloading GGUF model"
 
     # Download GGUF model
     echo ""
@@ -626,7 +909,9 @@ main() {
         print_warning "You can download it later manually or configure Ollama/OpenAI instead"
     fi
 
-    # Setup PATH
+    progress_step "Finalizing shell setup"
+
+    # Setup PATH (+ LD_LIBRARY_PATH if needed)
     setup_path "${os}"
 
     # Cleanup
