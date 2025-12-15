@@ -48,7 +48,7 @@ surrealdb-namespace: "test"
 surrealdb-database: "test"
 
 # External command to start SurrealDB when connection fails (default: "")
-surrealdb-start-cmd: "surreal start --user root --pass root surrealkv:///www/MCP/remembrances-mcp/remembrances-external.db"
+#surrealdb-start-cmd: "surreal start --user root --pass root surrealkv:///www/MCP/remembrances-mcp/remembrances-external.db"
 
 # ========== GGUF Local Model Configuration ==========
 # Path to GGUF model file for local embeddings (default: "")
