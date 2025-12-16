@@ -1,5 +1,57 @@
 # Changelog
 
+### [v1.16.11](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.10...v1.16.11) (2025-12-16)
+
+#### Fixes
+
+* compilation errors
+([c882eba](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/c882ebaa4310c20eef3787f5e42e4b307701c988))
+* Detect AVX-512 CPU set instructions and download the correct version in the
+install script
+([35f958a](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/35f958af326f8a2d846976a79390c56f30f760e0))
+* install script
+([f1c3c3b](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/f1c3c3be003c586e26a82499af15392626db25cd))
+* error in install script when detect the binary
+([2d5d306](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/2d5d3064fab726925e8a55026078be338e70416e))
+* updated installation script for unix systems
+([0d500c5](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/0d500c570fed8777f0f74d2774f58c08a8f7251a))
+
+### [v1.16.10](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.9...v1.16.10) (2025-12-15)
+
+#### Fixes
+
+* Error in some mcp clients when llama.cpp outputs debug info
+([643c24e](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/643c24ebbf3a53391fda610fd0342ff17f2e2096))
+
+### [v1.16.9](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.8...v1.16.9) (2025-12-15)
+
+#### Fixes
+
+* problems locating shared libraries in embedded and no embedded version
+([0bc44fc](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/0bc44fc5666308da2ddddfa6c5167dc7fdeb149a))
+* MacOSX new embedded build options
+([4e6808d](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/4e6808da5f273275e86e6fcab1028d9ae02bcecb))
+
+### [v1.16.8](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.4...v1.16.8) (2025-12-14)
+
+#### Features
+
+* add version libs
+([1ff33af](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/1ff33af84b81f3c59498741c3819fc52595f59e1))
+* add variant in version
+([d5249de](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/d5249de4c5d56b4a57f5dade37865ab79a7fd964))
+* purego embedded surrealdb support
+([ed2699b](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/ed2699b30daac8147cc28c56e0fb903413c76903))
+* change how load shared libraries for use embedded purego option
+([2d24a53](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/2d24a53a178b2199205a53a0fe1dcf1a95f9d821))
+* Add cuda libraries and full compilation for cuda support
+([67c57f4](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/67c57f418efcf453fcbb97d3e5b7f00e197974af))
+
+#### Fixes
+
+* error compiling embedded shared library option
+([7c283a5](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/7c283a590a4d121e6ee08c7e82fd3c85108b5c5e))
+
 ### [v1.16.4](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.3...v1.16.4) (2025-12-11)
 
 #### Features
