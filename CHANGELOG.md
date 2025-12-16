@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.11...a1b367e030daf3c186df04536bfb5df4db0cde91) (2025-12-16)
+
+### Fixes
+
+* renew CUDA libs detection in isntall script for linux
+([a1b367e](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a1b367e030daf3c186df04536bfb5df4db0cde91))
+* error install script
+([a4a934d](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a4a934dd49fe83559f4e942782f101fa992f9f1f))
+* error install script macosx with embedded version
+([72a89b5](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/72a89b55a82b871988e7ab349dffc9566849fab5))
+* error compiling embedded flavour in Macosx
+([38d261e](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/38d261e302ae293f9e6dfa075b4f6989e5c786ff))
+
 ### [v1.16.11](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.10...v1.16.11) (2025-12-16)
 
 #### Fixes
