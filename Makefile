@@ -97,7 +97,10 @@ EMBEDDED_TAGS = embedded $(EMBEDDED_VARIANT_TAG)
 ifeq ($(PLATFORM),darwin)
 	# Add both the binary directory and the embedded-libs/<variant> directory.
 	# Use multiple -rpath entries (macOS does not interpret colon-separated lists).
-	EMBEDDED_RPATH_OPTION = -extldflags "-Wl,-rpath,@executable_path -Wl,-rpath,@executable_path/embedded-libs/$(EMBEDDED_VARIANT)"
+	# IMPORTANT: Avoid nested quoting inside go build -ldflags="...".
+	# We pass both rpaths via a single -Wl invocation with comma-separated args.
+	# This yields: -rpath @executable_path -rpath @executable_path/embedded-libs/<variant>
+	EMBEDDED_RPATH_OPTION = -extldflags=-Wl,-rpath,@executable_path,-rpath,@executable_path/embedded-libs/$(EMBEDDED_VARIANT)
 else
 	# Use a single rpath entry with a colon-separated list to avoid spaces/quoting issues.
 	EMBEDDED_RPATH_OPTION = -extldflags=-Wl,-rpath,\$$ORIGIN:\$$ORIGIN/embedded-libs/$(EMBEDDED_VARIANT)
