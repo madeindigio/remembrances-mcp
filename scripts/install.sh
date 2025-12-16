@@ -996,8 +996,16 @@ main() {
     print_instructions "${os}"
 }
 
-# Run main only when executed directly.
-# This allows sourcing the script in tests without executing the installer.
-if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+# Run main unless the script is being sourced.
+#
+# IMPORTANT:
+# - `curl ... | bash` executes the script from stdin, so $0 is typically "bash"
+#   and BASH_SOURCE[0] is not a reliable signal.
+# - The `(return 0)` trick works across GNU/BSD bash: it only succeeds when the
+#   file is sourced (or inside a function). In an `if` condition, a non-zero
+#   status does not trigger `set -e`.
+if (return 0 2>/dev/null); then
+    : # sourced: do not auto-run
+else
     main "$@"
 fi
