@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+
+	buildversion "github.com/madeindigio/remembrances-mcp/pkg/version"
 )
 
 // ExtractAndLoad first attempts to load libraries from the directory where
@@ -20,7 +22,12 @@ func ExtractAndLoad(ctx context.Context, destDir string) (*ExtractResult, *Loade
 	// First, try to load libraries from the binary's directory
 	res, ldr, err := tryLoadFromBinaryDir(ctx)
 	if err == nil {
-		slog.Info("Loaded libraries from binary directory", "dir", res.Directory, "variant", res.Variant)
+		slog.Info(
+			"Loaded libraries from binary directory",
+			"dir", res.Directory,
+			"variant", res.Variant,
+			"build_lib_mode", buildversion.LibMode,
+		)
 		return res, ldr, nil
 	}
 
@@ -44,7 +51,12 @@ func ExtractAndLoad(ctx context.Context, destDir string) (*ExtractResult, *Loade
 		return nil, nil, fmt.Errorf("load embedded libraries: %w", err)
 	}
 
-	slog.Info("Loaded libraries from embedded extraction", "dir", res.Directory, "variant", res.Variant)
+	slog.Info(
+		"Loaded libraries from embedded extraction",
+		"dir", res.Directory,
+		"variant", res.Variant,
+		"build_lib_mode", buildversion.LibMode,
+	)
 	return res, ldr, nil
 }
 

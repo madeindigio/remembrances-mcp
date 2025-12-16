@@ -80,22 +80,33 @@ func loadLibraries(ctx context.Context, destDir string) (*loadedLibs, error) {
 }
 
 func dlopenInOrder(files map[string]string, ext string) (*loadedLibs, error) {
-	// Determine which ggml backend to load based on what's present.
-	backend := "libggml-cpu" + ext
+	// Determine variant (for reporting).
+	variant := "cpu"
 	if _, ok := files["libggml-cuda"+ext]; ok {
-		backend = "libggml-cuda" + ext
+		variant = "cuda"
 	} else if _, ok := files["libggml-metal"+ext]; ok {
-		backend = "libggml-metal" + ext
+		variant = "metal"
 	}
 
-	order := []string{
-		"libggml-base" + ext,
-		"libggml" + ext,
-		backend,
-		"libmtmd" + ext,
-		"libllama" + ext,
-		"libllama_shim" + ext,
+	order := make([]string, 0, 8)
+	order = append(order, "libggml-base"+ext)
+
+	// Backends next (libggml can depend on multiple backends).
+	for _, backend := range []string{"libggml-cpu" + ext, "libggml-cuda" + ext, "libggml-metal" + ext} {
+		if _, ok := files[backend]; ok {
+			order = append(order, backend)
+		}
 	}
+
+	// Now the core ggml and the higher-level libs.
+	// NOTE: libmtmd depends on libllama and libggml, so libllama must be loaded
+	// before libmtmd.
+	order = append(order,
+		"libggml"+ext,
+		"libllama"+ext,
+		"libmtmd"+ext,
+		"libllama_shim"+ext,
+	)
 
 	var handles []uintptr
 	for _, name := range order {
@@ -146,7 +157,7 @@ func dlopenInOrder(files map[string]string, ext string) (*loadedLibs, error) {
 		if name == "libllama_shim"+ext {
 			return &loadedLibs{
 				dir:         filepath.Dir(path),
-				variant:     backend,
+				variant:     variant,
 				llamaShim:   h,
 				openHandles: handles,
 			}, nil
@@ -236,12 +247,13 @@ func findLibsInDir(dir string, ext string, required []string) (bool, map[string]
 		return false, nil
 	}
 
-	// Probe for a backend lib.
-	for _, backend := range []string{"libggml-cuda" + ext, "libggml-metal" + ext, "libggml-cpu" + ext} {
+	// Probe for backend libs.
+	// NOTE: libggml.* can have DT_NEEDED on multiple backends (e.g., both cpu and
+	// cuda). Keep any that exist so dlopen order can satisfy dependencies.
+	for _, backend := range []string{"libggml-cpu" + ext, "libggml-cuda" + ext, "libggml-metal" + ext} {
 		candidate := filepath.Join(dir, backend)
 		if _, err := os.Stat(candidate); err == nil {
 			files[backend] = candidate
-			break
 		}
 	}
 

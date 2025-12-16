@@ -130,49 +130,7 @@ func Load() (*Config, error) {
 
 	// Handle early-exit flags (version) before binding to viper
 	if ver := pflag.Lookup("version"); ver != nil && ver.Value.String() == "true" {
-		variant := ""
-		if version.Variant != "" && version.Variant != "unknown" {
-			variant = version.Variant
-		}
-		mode := ""
-		if version.LibMode != "" {
-			mode = version.LibMode
-		}
-		if version.CommitHash != "" && version.CommitHash != "unknown" {
-			suffix := ""
-			if variant != "" {
-				suffix = variant
-			}
-			if mode != "" {
-				if suffix != "" {
-					suffix = suffix + " " + mode
-				} else {
-					suffix = mode
-				}
-			}
-			if suffix != "" {
-				fmt.Printf("%s (%s) %s\n", version.Version, version.CommitHash, suffix)
-			} else {
-				fmt.Printf("%s (%s)\n", version.Version, version.CommitHash)
-			}
-		} else {
-			suffix := ""
-			if variant != "" {
-				suffix = variant
-			}
-			if mode != "" {
-				if suffix != "" {
-					suffix = suffix + " " + mode
-				} else {
-					suffix = mode
-				}
-			}
-			if suffix != "" {
-				fmt.Printf("%s %s\n", version.Version, suffix)
-			} else {
-				fmt.Printf("%s\n", version.Version)
-			}
-		}
+		fmt.Println(version.Describe())
 		os.Exit(0)
 	}
 

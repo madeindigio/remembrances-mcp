@@ -125,6 +125,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	slog.Info(
+		"Build info",
+		"version", version.Version,
+		"commit", version.CommitHash,
+		"variant", version.Variant,
+		"lib_mode", version.LibMode,
+	)
+
 	// Root context with graceful shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

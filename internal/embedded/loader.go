@@ -125,6 +125,9 @@ func orderedNames(files map[string]string, variant string) []string {
 	order := make([]string, 0, len(files))
 
 	add := func(name string) bool {
+		if _, ok := seen[name]; ok {
+			return false
+		}
 		if _, ok := files[name]; ok {
 			order = append(order, name)
 			seen[name] = struct{}{}
@@ -134,23 +137,25 @@ func orderedNames(files map[string]string, variant string) []string {
 	}
 
 	add("libggml-base" + ext)
+	// Backends first: libggml.* may encode optional backends as DT_NEEDED entries
+	// and on Linux it can depend on multiple backends (e.g., cpu + cuda).
+	add("libggml-cpu" + ext)
+	if variant == "cuda" || variant == "cuda-portable" {
+		add("libggml-cuda" + ext)
+	}
+	if variant == "metal" {
+		add("libggml-metal" + ext)
+	}
+	// Also load any other known backend that happens to be present.
+	add("libggml-cuda" + ext)
+	add("libggml-metal" + ext)
+	// Then the core ggml library.
 	add("libggml" + ext)
 
-	switch variant {
-	case "cuda", "cuda-portable":
-		if !add("libggml-cuda" + ext) {
-			add("libggml-cpu" + ext)
-		}
-	case "metal":
-		if !add("libggml-metal" + ext) {
-			add("libggml-cpu" + ext)
-		}
-	default:
-		add("libggml-cpu" + ext)
-	}
-
-	add("libmtmd" + ext)
+	// libmtmd depends on libllama and libggml.
 	add("libllama" + ext)
+	add("libmtmd" + ext)
+	add("libllama_shim" + ext)
 	add("libsurrealdb_embedded_rs" + ext)
 
 	extra := make([]string, 0, len(files)-len(order))

@@ -90,17 +90,29 @@ EMBEDDED_VARIANT ?= cpu
 EMBEDDED_VARIANT_TAG = embedded_$(subst -,_,$(EMBEDDED_VARIANT))
 EMBEDDED_TAGS = embedded $(EMBEDDED_VARIANT_TAG)
 
-# Use a single rpath entry with a colon-separated list to avoid spaces/quoting issues.
-EMBEDDED_RPATH_OPTION = -extldflags=-Wl,-rpath,\$$ORIGIN:\$$ORIGIN/embedded-libs/$(EMBEDDED_VARIANT)
+# RPATH used by embedded builds.
+#
+# Linux uses $ORIGIN (ELF) while macOS uses @executable_path / @loader_path.
+# Note: macOS does not support the Linux-style "$ORIGIN" token.
+ifeq ($(PLATFORM),darwin)
+	# Add both the binary directory and the embedded-libs/<variant> directory.
+	# Use multiple -rpath entries (macOS does not interpret colon-separated lists).
+	EMBEDDED_RPATH_OPTION = -extldflags "-Wl,-rpath,@executable_path -Wl,-rpath,@executable_path/embedded-libs/$(EMBEDDED_VARIANT)"
+else
+	# Use a single rpath entry with a colon-separated list to avoid spaces/quoting issues.
+	EMBEDDED_RPATH_OPTION = -extldflags=-Wl,-rpath,\$$ORIGIN:\$$ORIGIN/embedded-libs/$(EMBEDDED_VARIANT)
+endif
 EMBEDDED_LIB_PATH = internal/embedded/libs/$(PLATFORM)/$(ARCH)/$(EMBEDDED_VARIANT)
 ABS_EMBEDDED_LIB_PATH = $(abspath $(EMBEDDED_LIB_PATH))
 ABS_BUILD_DIR := $(abspath $(BUILD_DIR))
 TEST_PKGS := $(shell GOFLAGS=-mod=mod go list ./... | grep -v '/cmd/test-')
 
-# CGO flags for linking with llama.cpp and surrealdb-embedded
+# CGO is required by some dependencies (e.g., tree-sitter bindings). However,
+# Remembrances-MCP loads llama/ggml and surrealdb-embedded at *runtime* (purego)
+# and must NOT globally force-link those libraries via CGO_LDFLAGS, otherwise
+# unrelated cgo packages end up pulling in -lllama/-lggml flags and builds break
+# when the libraries are not present in the external linker's search path.
 export CGO_ENABLED := 1
-export CGO_CFLAGS := -I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include -I$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/include
-export CGO_LDFLAGS := -L$(GO_LLAMA_DIR) -L$(GO_LLAMA_DIR)/build/bin -L$(GO_LLAMA_DIR)/build/common -L$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release -lllama -lcommon -lggml -lggml-base -lsurrealdb_embedded_rs $(LLAMA_LDFLAGS)
 
 # Go linker flags to set RPATH - platform-specific, defined above
 # GO_LDFLAGS is set per-platform in the ifeq blocks above
@@ -424,7 +436,7 @@ prepare-embedded-libs: surrealdb-embedded
 	@echo "Preparing embedded libraries for $(PLATFORM)/$(ARCH) variant $(EMBEDDED_VARIANT) -> $(EMBEDDED_LIB_PATH)"
 	@mkdir -p $(EMBEDDED_LIB_PATH)
 	@case "$(EMBEDDED_VARIANT)" in \
-		cuda|cuda-portable) libs="libggml-base.$(LIB_EXT) libggml.$(LIB_EXT) libggml-cuda.$(LIB_EXT) libllama.$(LIB_EXT) libllama_shim.$(LIB_EXT) libmtmd.$(LIB_EXT)" ;; \
+		cuda|cuda-portable) libs="libggml-base.$(LIB_EXT) libggml.$(LIB_EXT) libggml-cpu.$(LIB_EXT) libggml-cuda.$(LIB_EXT) libllama.$(LIB_EXT) libllama_shim.$(LIB_EXT) libmtmd.$(LIB_EXT)" ;; \
 		metal) libs="libggml-base.$(LIB_EXT) libggml.$(LIB_EXT) libggml-metal.$(LIB_EXT) libllama.$(LIB_EXT) libllama_shim.$(LIB_EXT) libmtmd.$(LIB_EXT)" ;; \
 		*) libs="libggml-base.$(LIB_EXT) libggml.$(LIB_EXT) libggml-cpu.$(LIB_EXT) libllama.$(LIB_EXT) libllama_shim.$(LIB_EXT) libmtmd.$(LIB_EXT)" ;; \
 	esac; \

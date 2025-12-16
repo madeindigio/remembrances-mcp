@@ -30,6 +30,18 @@ func TestExtractLibrariesCreatesFiles(t *testing.T) {
 			t.Fatalf("extracted library %s is not readable/executable: %v", name, statErr)
 		}
 	}
+
+	// Regression: on Linux CUDA builds, libggml.so can depend on both
+	// libggml-cpu.so and libggml-cuda.so. Ensure the embedded set includes the CPU
+	// backend as well, otherwise dlopen(libggml.so) fails in the extracted temp dir.
+	ext := libraryFileExt()
+	if res.Variant == "cuda" || res.Variant == "cuda-portable" {
+		if _, ok := res.Files["libggml"+ext]; ok {
+			if _, ok := res.Files["libggml-cpu"+ext]; !ok {
+				t.Fatalf("embedded variant %q is missing %s (required by libggml%s)", res.Variant, "libggml-cpu"+ext, ext)
+			}
+		}
+	}
 }
 
 func TestAppendLibraryPathIdempotent(t *testing.T) {
@@ -86,15 +98,19 @@ func TestOrderedNamesPrefersVariant(t *testing.T) {
 		"libggml-base" + ext: "base",
 		"libggml" + ext:      "ggml",
 		"libggml-cuda" + ext: "cuda",
+		"libggml-cpu" + ext:  "cpu",
 		"libllama" + ext:     "llama",
+		"libllama_shim" + ext:"shim",
 	}
 
 	order := orderedNames(files, "cuda")
 	expected := []string{
 		"libggml-base" + ext,
-		"libggml" + ext,
+		"libggml-cpu" + ext,
 		"libggml-cuda" + ext,
+		"libggml" + ext,
 		"libllama" + ext,
+		"libllama_shim" + ext,
 	}
 
 	if len(order) < len(expected) {
