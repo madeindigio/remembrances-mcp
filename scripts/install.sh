@@ -228,7 +228,16 @@ release_get_tag_name() {
 
 release_list_asset_urls() {
     local json="$1"
-    echo "$json" | tr -d '\r' | grep -oE '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]+"' | sed 's/.*"\(https\?:[^\"]*\)"/\1/'
+    # Extract browser_download_url values from the GitHub API JSON.
+    #
+    # IMPORTANT:
+    # - This script must work with both GNU and BSD userlands.
+    # - macOS/BSD sed does not treat "\?" as an "optional" operator in basic regex
+    #   the same way GNU sed can, which previously caused the replacement to fail
+    #   and left a trailing quote in URLs (breaking curl with "Malformed input").
+    #
+    # Use extended regex (-E) and capture the URL content inside quotes.
+    echo "$json" | tr -d '\r' | sed -nE 's/.*"browser_download_url"[[:space:]]*:[[:space:]]*"([^\"]+)".*/\1/p'
 }
 
 release_find_asset_url() {
@@ -987,5 +996,8 @@ main() {
     print_instructions "${os}"
 }
 
-# Run main
-main "$@"
+# Run main only when executed directly.
+# This allows sourcing the script in tests without executing the installer.
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi
