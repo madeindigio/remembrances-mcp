@@ -178,6 +178,92 @@ detect_cuda_major_version() {
     echo ""
 }
 
+shared_lib_exists_linux() {
+    # Usage: shared_lib_exists_linux "libcudart.so.12"
+    # Checks ldconfig cache (if available) and common library directories.
+    local soname="$1"
+
+    if command_exists ldconfig; then
+        if ldconfig -p 2>/dev/null | grep -qE "\\b${soname//./\\.}\\b"; then
+            return 0
+        fi
+    fi
+
+    # Common locations for CUDA and system libraries
+    local d
+    for d in \
+        /usr/local/cuda/lib64 \
+        /usr/lib/x86_64-linux-gnu \
+        /lib/x86_64-linux-gnu \
+        /usr/lib64 \
+        /lib64 \
+        /usr/lib \
+        /lib
+    do
+        # Match exact soname or versioned variants (e.g., libcublas.so.12.6.4.1)
+        if ls "${d}/${soname}" "${d}/${soname}."* "${d}/${soname}"* >/dev/null 2>&1; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+cuda_required_runtime_libs_present_linux() {
+    # The NVIDIA build of llama/ggml typically requires these CUDA 12 runtime libs.
+    # We check for the SONAMEs shown in the release bundle.
+    shared_lib_exists_linux "libcudart.so.12" || return 1
+    shared_lib_exists_linux "libcublas.so.12" || return 1
+    shared_lib_exists_linux "libcublasLt.so.12" || return 1
+    return 0
+}
+
+cuda_report_missing_runtime_libs_linux() {
+    local missing=0
+    local lib
+    for lib in "libcudart.so.12" "libcublas.so.12" "libcublasLt.so.12"; do
+        if ! shared_lib_exists_linux "$lib"; then
+            print_warning "Missing CUDA runtime library: ${lib}"
+            missing=$((missing + 1))
+        fi
+    done
+    return $missing
+}
+
+cuda_llama_deps_resolvable() {
+    # If libllama is present, prefer checking what the loader can actually resolve.
+    # This is more reliable than trying to infer from CUDA version strings.
+    # Returns 0 if the core CUDA deps resolve, 1 otherwise.
+    local llama_path=""
+
+    if [ -n "${BIN_DIR:-}" ] && [ -f "${BIN_DIR}/libllama.so" ]; then
+        llama_path="${BIN_DIR}/libllama.so"
+    elif [ -f "./libllama.so" ]; then
+        llama_path="./libllama.so"
+    fi
+
+    if [ -z "$llama_path" ]; then
+        return 1
+    fi
+    if ! command_exists ldd; then
+        return 1
+    fi
+
+    # Note: ldd output is localized on some systems; we only depend on "not found".
+    local out
+    out=$(ldd "$llama_path" 2>/dev/null || true)
+    if echo "$out" | grep -qE "(libcudart\\.so\\.12|libcublas\\.so\\.12|libcublasLt\\.so\\.12).*not found"; then
+        return 1
+    fi
+
+    # If none of the CUDA libs are referenced at all, fall back to the generic check.
+    if ! echo "$out" | grep -qE "libcudart\\.so\\.12|libcublas\\.so\\.12|libcublasLt\\.so\\.12"; then
+        return 1
+    fi
+
+    return 0
+}
+
 http_get() {
     local url="$1"
     if command_exists curl; then
@@ -942,14 +1028,24 @@ main() {
     # If Linux + NVIDIA selected, ensure CUDA 12+ runtime libs exist; otherwise install fallback bundle.
     if [ "${os}" = "linux" ] && [ "${want_nvidia}" = "true" ]; then
         local cuda_ok=false
-        if [ -n "$cuda_major" ] && [ "$cuda_major" -ge 12 ] 2>/dev/null; then
+
+        # 1) Best-effort: check if libllama's CUDA deps are actually resolvable.
+        if cuda_llama_deps_resolvable; then
+            cuda_ok=true
+        # 2) Fallback: check for required CUDA runtime SONAMEs in known locations.
+        elif cuda_required_runtime_libs_present_linux; then
             cuda_ok=true
         fi
 
         if [ "$cuda_ok" = "true" ]; then
-            print_success "CUDA ${cuda_major}.x detected (>= 12)."
+            if [ -n "$cuda_major" ]; then
+                print_success "CUDA runtime detected (CUDA ${cuda_major}.x and required libs present)."
+            else
+                print_success "CUDA runtime detected (required libs present)."
+            fi
         else
-            print_warning "NVIDIA GPU detected but CUDA 12+ runtime libraries were not found."
+            print_warning "NVIDIA GPU detected but CUDA runtime libraries required by llama were not found in the system loader paths."
+            cuda_report_missing_runtime_libs_linux || true
             print_warning "Downloading CUDA runtime bundle and configuring LD_LIBRARY_PATH..."
             ensure_cuda_runtime_libs_linux
         fi
