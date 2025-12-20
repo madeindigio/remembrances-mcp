@@ -8,7 +8,7 @@ Additionally, I want to introduce the ability to generate and modify `.md` files
 
 For generating embeddings for RAG, use langchaingo with support for Ollama locally and OpenAI-compatible APIs.
 
-The binary can also be called with the `--sse` parameter to activate SSE support instead of MCP's stdio, and a `--rest-api-serve` parameter that will enable a series of endpoints to call the functionality externally, allowing any external application to use an HTTP API instead of the MCP protocol.
+The binary can also be called with the `--mcp-http` parameter to activate MCP Streamable HTTP transport instead of MCP's stdio (recommended for remote/networked clients), and a `--rest-api-serve` parameter that will enable a series of endpoints to call the functionality externally, allowing any external application to use an HTTP API instead of the MCP protocol.
 
 Another important detail is that for storing key-value databases, vector embeddings for RAG, and graph databases, you must use the SurrealDB SDK for Golang, prioritizing the use of an embedded database system but allowing configuration of an external SurrealDB database via environment variables. This is the SDK documentation: https://surrealdb.com/docs/sdk/golang and https://pkg.go.dev/github.com/surrealdb/surrealdb.go. With the `--dbpath` parameter, the root folder for generating the database structure will be specified.
 

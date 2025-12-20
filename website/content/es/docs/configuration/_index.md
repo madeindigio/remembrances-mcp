@@ -42,9 +42,10 @@ gguf-gpu-layers: 32
 # openai-model: "text-embedding-3-large"
 
 # Opciones de transporte
-# Por defecto SSE está deshabilitado, permite habilitarlo para agentes que soporten SSE y usarlo de forma remota (podéis compartir la misma instancia de Remembrances con varios agentes y usuarios de un equipo de trabajo)
-sse: false
-sse-addr: ":3000"
+# MCP Streamable HTTP es el transporte de red recomendado para las tools de MCP.
+mcp-http: false
+mcp-http-addr: ":3000"
+mcp-http-endpoint: "/mcp"
 
 # API JSON HTTP (útil para integración con otros sistemas o agentes que no soporten MCP nativamente)
 http: false
@@ -83,11 +84,14 @@ export GOMEM_OPENAI_KEY="sk-..."
 # GOMEM_OPENAI_MODEL: Modelo de OpenAI para embeddings (ej. text-embedding-3-large)
 export GOMEM_OPENAI_MODEL="text-embedding-3-large"
 
-# GOMEM_SSE: Habilitar transporte SSE (por defecto: false)
-export GOMEM_SSE=false
+# GOMEM_MCP_HTTP: Habilitar transporte MCP Streamable HTTP (por defecto: false)
+export GOMEM_MCP_HTTP=false
 
-# GOMEM_SSE_ADDR: Dirección del servidor SSE (por defecto: :3000)
-export GOMEM_SSE_ADDR=":3000"
+# GOMEM_MCP_HTTP_ADDR: Dirección del servidor MCP Streamable HTTP (por defecto: :3000)
+export GOMEM_MCP_HTTP_ADDR=":3000"
+
+# GOMEM_MCP_HTTP_ENDPOINT: Path del endpoint MCP Streamable HTTP (por defecto: /mcp)
+export GOMEM_MCP_HTTP_ENDPOINT="/mcp"
 
 # GOMEM_HTTP: Habilitar API JSON HTTP para integración con otros sistemas (por defecto: false)
 export GOMEM_HTTP=false
@@ -127,8 +131,9 @@ Y para acceder a una instancia remota de SurrealDB:
 
 ### Transporte
 
-- `sse`: Habilitar transporte SSE
-- `sse-addr`: Dirección del servidor SSE (por defecto: `:3000`)
+- `mcp-http`: Habilitar transporte MCP Streamable HTTP
+- `mcp-http-addr`: Dirección del servidor MCP Streamable HTTP (por defecto: `:3000`)
+- `mcp-http-endpoint`: Path del endpoint MCP (por defecto: `/mcp`)
 
 ## Configuraciones de Ejemplo
 

@@ -235,22 +235,22 @@ description: >
 
 4. **Reinicia Claude Desktop** después de cambios en la configuración.
 
-### Problemas de Transporte SSE/HTTP
+### Problemas de MCP Streamable HTTP / API HTTP
 
-**Problema**: No se puede conectar vía transporte SSE o HTTP.
+**Problema**: No se puede conectar vía MCP Streamable HTTP (tools MCP) o la API JSON HTTP.
 
 **Soluciones**:
 
 1. **Verifica si el puerto está en uso**:
    ```bash
    # Verificar disponibilidad del puerto
-   lsof -i :3000  # SSE por defecto
+   lsof -i :3000  # MCP Streamable HTTP por defecto
    lsof -i :8080  # HTTP por defecto
    ```
 
 2. **Usa un puerto diferente**:
    ```bash
-   --sse --sse-addr ":3001"
+   --mcp-http --mcp-http-addr ":3001"
    --http --http-addr ":8081"
    ```
 

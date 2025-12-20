@@ -20,8 +20,16 @@ import (
 
 // Config holds the configuration for the Remembrances-MCP server.
 type Config struct {
-	SSE                bool   `mapstructure:"sse"`
-	SSEAddr            string `mapstructure:"sse-addr"`
+	// Deprecated: SSE transport is obsolete in MCP. Use MCPStreamableHTTP instead.
+	SSE     bool   `mapstructure:"sse"`
+	SSEAddr string `mapstructure:"sse-addr"`
+
+	// MCPStreamableHTTP enables MCP over Streamable HTTP transport.
+	// This is the recommended network transport for MCP (replaces SSE).
+	MCPStreamableHTTP         bool   `mapstructure:"mcp-http"`
+	MCPStreamableHTTPAddr     string `mapstructure:"mcp-http-addr"`
+	MCPStreamableHTTPEndpoint string `mapstructure:"mcp-http-endpoint"`
+
 	HTTP               bool   `mapstructure:"http"`
 	HTTPAddr           string `mapstructure:"http-addr"`
 	RestAPIServe       bool   `mapstructure:"rest-api-serve"`
@@ -80,8 +88,15 @@ func Load() (*Config, error) {
 	// initialization.
 
 	pflag.String("config", "", "Path to YAML configuration file")
-	pflag.Bool("sse", false, "Enable SSE transport")
-	pflag.String("sse-addr", ":3000", "Address to bind SSE transport (host:port), can also be set via GOMEM_SSE_ADDR")
+	// Deprecated SSE flags: keep for backwards compatibility but migrate users to Streamable HTTP.
+	pflag.Bool("sse", false, "[DEPRECATED] Enable SSE transport (obsolete). Use --mcp-http")
+	pflag.String("sse-addr", ":3000", "[DEPRECATED] Address to bind SSE transport (obsolete). Use --mcp-http-addr")
+
+	// MCP over Streamable HTTP (recommended)
+	pflag.Bool("mcp-http", false, "Enable MCP Streamable HTTP transport")
+	pflag.String("mcp-http-addr", ":3000", "Address to bind MCP Streamable HTTP transport (host:port), can also be set via GOMEM_MCP_HTTP_ADDR")
+	pflag.String("mcp-http-endpoint", "/mcp", "HTTP path for the MCP Streamable HTTP endpoint, can also be set via GOMEM_MCP_HTTP_ENDPOINT")
+
 	pflag.Bool("http", false, "Enable HTTP JSON API transport")
 	pflag.String("http-addr", ":8080", "Address to bind HTTP transport (host:port), can also be set via GOMEM_HTTP_ADDR")
 	pflag.Bool("rest-api-serve", false, "Enable REST API server")
@@ -338,7 +353,7 @@ func (c *Config) SetupLogging() error {
 	if !c.DisableOutputLog {
 		// If we're running in stdio mode (default: no http/sse/rest), avoid stdout.
 		// This prevents logs from corrupting MCP protocol messages.
-		stdioMode := !c.SSE && !c.HTTP && !c.RestAPIServe
+		stdioMode := !c.SSE && !c.MCPStreamableHTTP && !c.HTTP && !c.RestAPIServe
 		if stdioMode {
 			writers = append(writers, os.Stderr)
 		} else {

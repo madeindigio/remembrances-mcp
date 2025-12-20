@@ -218,7 +218,7 @@ docker inspect --format='{{.State.Health.Status}}' remembrances-mcp
 |------|----------|-------------|
 | 8080 | HTTP | HTTP JSON API (default) |
 
-To use SSE transport instead of HTTP:
+To expose MCP tools over Streamable HTTP (recommended) instead of the HTTP JSON API:
 
 ```bash
 docker run -d \
@@ -228,7 +228,7 @@ docker run -d \
     -v /path/to/data:/data \
     -v /path/to/kb:/knowledge-base \
     ghcr.io/madeindigio/remembrances-mcp:cuda \
-    --sse --sse-addr :3000
+    --mcp-http --mcp-http-addr :3000
 ```
 
 ## Troubleshooting

@@ -137,7 +137,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Select transport: stdio (default), SSE when --sse is passed, or HTTP when --http is passed
+	// Select transport:
+	// - stdio (default)
+	// - MCP Streamable HTTP when --mcp-http is passed (recommended)
+	// - legacy SSE when --sse is passed (deprecated; mapped to Streamable HTTP)
+	// - HTTP JSON API when --http is passed (separate REST-like API; not MCP transport)
 	var t mcptransport.ServerTransport
 	var httpTransport *transport.HTTPTransport
 
@@ -154,23 +158,45 @@ func main() {
 		slog.Info("HTTP transport enabled", "address", addr)
 
 		// We'll create the HTTP transport after the MCP server is created
-		// because it needs access to the server for routing
+		// because it needs access to the server for routing.
 		t = mcptransport.NewStdioServerTransport() // temporary, will be replaced
-	} else if cfg.SSE {
-		addr := cfg.SSEAddr
-		// allow env var to override if set for backwards compatibility
-		if env := os.Getenv("GOMEM_SSE_ADDR"); env != "" {
-			addr = env
+	} else if cfg.MCPStreamableHTTP || cfg.SSE {
+		// MCP Streamable HTTP transport.
+		// Note: --sse is deprecated and treated as an alias to Streamable HTTP.
+		addr := cfg.MCPStreamableHTTPAddr
+		endpoint := cfg.MCPStreamableHTTPEndpoint
+		if endpoint == "" {
+			endpoint = "/mcp"
 		}
+
+		if cfg.SSE && !cfg.MCPStreamableHTTP {
+			// Legacy alias path.
+			slog.Warn("--sse transport is deprecated; using MCP Streamable HTTP instead")
+			addr = cfg.SSEAddr
+		}
+
+		// allow env vars to override
+		if env := os.Getenv("GOMEM_MCP_HTTP_ADDR"); env != "" {
+			addr = env
+		} else if cfg.SSE {
+			// backward compat: allow old env var if set
+			if env := os.Getenv("GOMEM_SSE_ADDR"); env != "" {
+				addr = env
+			}
+		}
+		if env := os.Getenv("GOMEM_MCP_HTTP_ENDPOINT"); env != "" {
+			endpoint = env
+		}
+
 		if addr == "" {
 			addr = ":3000"
 		}
-		slog.Info("SSE transport enabled", "address", addr)
-		t, err = mcptransport.NewSSEServerTransport(addr)
-		if err != nil {
-			slog.Error("failed to initialize SSE transport", "error", err)
-			os.Exit(1)
-		}
+		slog.Info("MCP Streamable HTTP transport enabled", "address", addr, "endpoint", endpoint)
+		t = mcptransport.NewStreamableHTTPServerTransport(
+			addr,
+			mcptransport.WithStreamableHTTPServerTransportOptionEndpoint(endpoint),
+			mcptransport.WithStreamableHTTPServerTransportOptionStateMode(mcptransport.Stateful),
+		)
 	} else {
 		slog.Info("Starting MCP over stdio (default)")
 		t = mcptransport.NewStdioServerTransport()

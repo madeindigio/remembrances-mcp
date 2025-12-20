@@ -7,14 +7,17 @@
 #   macOS: ~/Library/Application Support/remembrances/config.yaml
 #
 # Configuration can be overridden by command-line flags or environment variables.
-# Environment variables use the GOMEM_ prefix (e.g., GOMEM_SSE_ADDR).
+# Environment variables use the GOMEM_ prefix (e.g., GOMEM_MCP_HTTP_ADDR).
 # Command-line flags take precedence over YAML, and environment variables over both.
 
-# Enable SSE transport (default: false)
-#sse: false
+# Enable MCP Streamable HTTP transport (recommended) (default: false)
+#mcp-http: false
 
-# Address to bind SSE transport (host:port) (default: ":3000")
-#sse-addr: "3000"
+# Address to bind MCP Streamable HTTP transport (host:port) (default: ":3000")
+#mcp-http-addr: ":3000"
+
+# MCP Streamable HTTP endpoint path (default: "/mcp")
+#mcp-http-endpoint: "/mcp"
 
 # Enable HTTP JSON API transport (default: false)
 #http: false

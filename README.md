@@ -11,7 +11,7 @@ Remembrances-MCP is a Go-based MCP server that provides long-term memory capabil
   - **GGUF models (local, privacy-first, GPU accelerated)** ⭐ NEW
   - Ollama (local server)
   - OpenAI API (remote)
-- Multiple transport options: stdio (default), SSE, and HTTP JSON API
+- Multiple transport options: stdio (default), MCP Streamable HTTP, and HTTP JSON API
 
 ## 🚀 GGUF Embeddings (NEW)
 
@@ -150,8 +150,11 @@ If no configuration file is found, the server will use environment variables and
 ### CLI Flags
 
 - `--config`: Path to YAML configuration file (optional, see above for automatic location)
-- `--sse` (default: false): Enable SSE transport
-- `--sse-addr` (default: :3000): Address to bind SSE transport (host:port). Can also be set via `GOMEM_SSE_ADDR`.
+- `--mcp-http` (default: false): Enable MCP Streamable HTTP transport (recommended)
+- `--mcp-http-addr` (default: :3000): Address to bind MCP Streamable HTTP transport (host:port). Can also be set via `GOMEM_MCP_HTTP_ADDR`.
+- `--mcp-http-endpoint` (default: /mcp): HTTP path for MCP Streamable HTTP endpoint. Can also be set via `GOMEM_MCP_HTTP_ENDPOINT`.
+- `--sse` (default: false): **DEPRECATED** (obsolete). Kept for backwards compatibility and mapped to Streamable HTTP.
+- `--sse-addr` (default: :3000): **DEPRECATED**. Kept for backwards compatibility.
 - `--http` (default: false): Enable HTTP JSON API transport
 - `--http-addr` (default: :8080): Address to bind HTTP transport (host:port). Can also be set via `GOMEM_HTTP_ADDR`.
 - `--rest-api-serve`: Enable REST API server
@@ -177,8 +180,11 @@ If no configuration file is found, the server will use environment variables and
 
 All flags can be set via environment variables prefixed with `GOMEM_` and dashes replaced by underscores. For example:
 
-- `GOMEM_SSE`
-- `GOMEM_SSE_ADDR` (e.g. `:3000` or `0.0.0.0:3000`)
+- `GOMEM_MCP_HTTP`
+- `GOMEM_MCP_HTTP_ADDR` (e.g. `:3000` or `0.0.0.0:3000`)
+- `GOMEM_MCP_HTTP_ENDPOINT` (e.g. `/mcp`)
+- `GOMEM_SSE` (**DEPRECATED**)
+- `GOMEM_SSE_ADDR` (**DEPRECATED**)
 - `GOMEM_HTTP`
 - `GOMEM_HTTP_ADDR` (e.g. `:8080` or `0.0.0.0:8080`)
 - `GOMEM_REST_API_SERVE`
@@ -237,9 +243,10 @@ The YAML file should contain the configuration options using the same keys as th
 Example YAML configuration file (`config.yaml`):
 
 ```yaml
-# Enable SSE transport
-sse: true
-sse-addr: ":4000"
+# Enable MCP Streamable HTTP transport
+mcp-http: true
+mcp-http-addr: ":3000"
+mcp-http-endpoint: "/mcp"
 
 # Database configuration
 db-path: "./mydata.db"
@@ -265,11 +272,11 @@ Example usage (start command provided via env):
 export GOMEM_SURREALDB_START_CMD="surreal start --user root --pass root surrealkv:///path/to/surreal_data"
 go run ./cmd/remembrances-mcp/main.go --knowledge-base ./kb
 
-# Start SSE transport on a custom address via CLI flag
-go run ./cmd/remembrances-mcp/main.go --sse --sse-addr=":3000"
+# Start MCP Streamable HTTP transport on a custom address via CLI flag
+go run ./cmd/remembrances-mcp/main.go --mcp-http --mcp-http-addr=":3000"
 
-# Or via environment variable
-GOMEM_SSE=true GOMEM_SSE_ADDR=":3000" go run ./cmd/remembrances-mcp/main.go --sse
+# Or via environment variables
+GOMEM_MCP_HTTP=true GOMEM_MCP_HTTP_ADDR=":3000" go run ./cmd/remembrances-mcp/main.go --mcp-http
 
 # Start HTTP JSON API transport
 go run ./cmd/remembrances-mcp/main.go --http --http-addr=":8080"
@@ -280,11 +287,13 @@ GOMEM_HTTP=true GOMEM_HTTP_ADDR=":8080" go run ./cmd/remembrances-mcp/main.go
 
 ### Transport Options
 
-The server supports three transport modes:
+The server supports these transport modes:
 
 1. **stdio (default)**: Standard input/output for MCP protocol communication
-2. **SSE**: Server-Sent Events for web-based clients 
+2. **MCP Streamable HTTP**: Recommended network transport for MCP tools (endpoint: `/mcp`)
 3. **HTTP**: Simple HTTP JSON API for direct REST-style access
+
+> Note: Legacy **SSE** transport is deprecated/obsolete and is mapped to Streamable HTTP.
 
 #### HTTP Transport Endpoints
 

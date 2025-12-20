@@ -229,8 +229,9 @@ Create `config.yaml`:
 
 ```yaml
 # Server configuration
-sse: true
-sse-addr: ":3000"
+mcp-http: true
+mcp-http-addr: ":3000"
+mcp-http-endpoint: "/mcp"
 
 # Database configuration
 surrealdb-url: "ws://localhost:8000"
