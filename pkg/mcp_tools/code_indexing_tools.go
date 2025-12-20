@@ -92,12 +92,15 @@ func (ctm *CodeToolManager) codeIndexStatusTool() *protocol.Tool {
 }
 
 func (ctm *CodeToolManager) codeListProjectsTool() *protocol.Tool {
-	tool, err := protocol.NewTool("code_list_projects", `List all indexed code projects. Use how_to_use("code_list_projects") for details.`, CodeListProjectsInput{})
-	if err != nil {
-		slog.Error("failed to create tool", "name", "code_list_projects", "err", err)
-		return nil
-	}
-	return tool
+	// NOTE: This tool has no input fields. Some clients (e.g. Copilot CLI / OpenAI tool
+	// schema validators) require object schemas to include an explicit `properties` key.
+	// Using a raw schema avoids relying on vendor JSON schema serialization details.
+	schema := json.RawMessage(`{"type":"object","properties":{}}`)
+	return protocol.NewToolWithRawSchema(
+		"code_list_projects",
+		`List all indexed code projects. Use how_to_use("code_list_projects") for details.`,
+		schema,
+	)
 }
 
 func (ctm *CodeToolManager) codeDeleteProjectTool() *protocol.Tool {

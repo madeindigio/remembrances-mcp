@@ -214,6 +214,38 @@ class MCPClient:
             time.sleep(0.1)
         
         return {"error": "Timeout waiting for response"}
+
+    def call_method(self, method: str, params: dict | None = None) -> dict:
+        """Call an arbitrary MCP JSON-RPC method and return the response."""
+        self.request_id += 1
+        request: dict = {
+            "jsonrpc": "2.0",
+            "id": self.request_id,
+            "method": method,
+        }
+        if params is not None:
+            request["params"] = params
+
+        request_json = json.dumps(request) + "\n"
+        try:
+            self.process.stdin.write(request_json)
+            self.process.stdin.flush()
+        except BrokenPipeError:
+            return {"error": "Broken pipe - server may have terminated"}
+
+        start_time = time.time()
+        while time.time() - start_time < 30:
+            if self.process.poll() is not None:
+                return {"error": "Server process terminated"}
+
+            for response in self.response_buffer:
+                if isinstance(response, dict) and response.get("id") == self.request_id:
+                    self.response_buffer.remove(response)
+                    return response
+
+            time.sleep(0.1)
+
+        return {"error": "Timeout waiting for response"}
     
     def close(self):
         """Close the MCP server process."""
