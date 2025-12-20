@@ -1,5 +1,15 @@
 # Changelog
 
+### [v1.17.3](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.17.1...v1.17.3) (2025-12-20)
+
+#### Fixes
+
+* log lack_session in streamable http mode
+([5f17ff1](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/5f17ff1e33afe45f6393e9fa4ef17d860d66e567))
+* tools with no properties when type schema of tool is object generates errors
+in some clients
+([33136d2](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/33136d222007ac095dd4a94db5434375c88cbd40))
+
 ### [v1.17.1](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.12...v1.17.1) (2025-12-20)
 
 #### Features
