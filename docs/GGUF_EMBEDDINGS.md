@@ -230,7 +230,7 @@ Create `config.yaml`:
 ```yaml
 # Server configuration
 mcp-http: true
-mcp-http-addr: ":3000"
+mcp-http-addr: "3000"
 mcp-http-endpoint: "/mcp"
 
 # Database configuration

@@ -228,7 +228,7 @@ docker run -d \
     -v /path/to/data:/data \
     -v /path/to/kb:/knowledge-base \
     ghcr.io/madeindigio/remembrances-mcp:cuda \
-    --mcp-http --mcp-http-addr :3000
+    --mcp-http --mcp-http-addr 3000
 ```
 
 ## Troubleshooting

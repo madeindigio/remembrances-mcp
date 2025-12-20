@@ -44,7 +44,7 @@ gguf-gpu-layers: 32
 # Opciones de transporte
 # MCP Streamable HTTP es el transporte de red recomendado para las tools de MCP.
 mcp-http: false
-mcp-http-addr: ":3000"
+mcp-http-addr: "3000"
 mcp-http-endpoint: "/mcp"
 
 # API JSON HTTP (útil para integración con otros sistemas o agentes que no soporten MCP nativamente)

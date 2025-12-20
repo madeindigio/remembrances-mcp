@@ -151,7 +151,7 @@ If no configuration file is found, the server will use environment variables and
 
 - `--config`: Path to YAML configuration file (optional, see above for automatic location)
 - `--mcp-http` (default: false): Enable MCP Streamable HTTP transport (recommended)
-- `--mcp-http-addr` (default: :3000): Address to bind MCP Streamable HTTP transport (host:port). Can also be set via `GOMEM_MCP_HTTP_ADDR`.
+- `--mcp-http-addr` (default: 3000): Port or address to bind MCP Streamable HTTP transport (e.g. `3000` or `127.0.0.1:3000`). Can also be set via `GOMEM_MCP_HTTP_ADDR`.
 - `--mcp-http-endpoint` (default: /mcp): HTTP path for MCP Streamable HTTP endpoint. Can also be set via `GOMEM_MCP_HTTP_ENDPOINT`.
 - `--sse` (default: false): **DEPRECATED** (obsolete). Kept for backwards compatibility and mapped to Streamable HTTP.
 - `--sse-addr` (default: :3000): **DEPRECATED**. Kept for backwards compatibility.
@@ -181,7 +181,7 @@ If no configuration file is found, the server will use environment variables and
 All flags can be set via environment variables prefixed with `GOMEM_` and dashes replaced by underscores. For example:
 
 - `GOMEM_MCP_HTTP`
-- `GOMEM_MCP_HTTP_ADDR` (e.g. `:3000` or `0.0.0.0:3000`)
+- `GOMEM_MCP_HTTP_ADDR` (e.g. `3000` or `0.0.0.0:3000`)
 - `GOMEM_MCP_HTTP_ENDPOINT` (e.g. `/mcp`)
 - `GOMEM_SSE` (**DEPRECATED**)
 - `GOMEM_SSE_ADDR` (**DEPRECATED**)
@@ -245,7 +245,7 @@ Example YAML configuration file (`config.yaml`):
 ```yaml
 # Enable MCP Streamable HTTP transport
 mcp-http: true
-mcp-http-addr: ":3000"
+mcp-http-addr: "3000"
 mcp-http-endpoint: "/mcp"
 
 # Database configuration
@@ -273,10 +273,10 @@ export GOMEM_SURREALDB_START_CMD="surreal start --user root --pass root surrealk
 go run ./cmd/remembrances-mcp/main.go --knowledge-base ./kb
 
 # Start MCP Streamable HTTP transport on a custom address via CLI flag
-go run ./cmd/remembrances-mcp/main.go --mcp-http --mcp-http-addr=":3000"
+go run ./cmd/remembrances-mcp/main.go --mcp-http --mcp-http-addr="3000"
 
 # Or via environment variables
-GOMEM_MCP_HTTP=true GOMEM_MCP_HTTP_ADDR=":3000" go run ./cmd/remembrances-mcp/main.go --mcp-http
+GOMEM_MCP_HTTP=true GOMEM_MCP_HTTP_ADDR="3000" go run ./cmd/remembrances-mcp/main.go --mcp-http
 
 # Start HTTP JSON API transport
 go run ./cmd/remembrances-mcp/main.go --http --http-addr=":8080"

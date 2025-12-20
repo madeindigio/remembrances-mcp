@@ -94,7 +94,8 @@ func Load() (*Config, error) {
 
 	// MCP over Streamable HTTP (recommended)
 	pflag.Bool("mcp-http", false, "Enable MCP Streamable HTTP transport")
-	pflag.String("mcp-http-addr", ":3000", "Address to bind MCP Streamable HTTP transport (host:port), can also be set via GOMEM_MCP_HTTP_ADDR")
+	// Accept either plain port (e.g. "3000") or full address (e.g. "127.0.0.1:3000").
+	pflag.String("mcp-http-addr", "3000", "Port or address to bind MCP Streamable HTTP transport (e.g. 3000 or 127.0.0.1:3000); can also be set via GOMEM_MCP_HTTP_ADDR")
 	pflag.String("mcp-http-endpoint", "/mcp", "HTTP path for the MCP Streamable HTTP endpoint, can also be set via GOMEM_MCP_HTTP_ENDPOINT")
 
 	pflag.Bool("http", false, "Enable HTTP JSON API transport")

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -26,6 +27,20 @@ import (
 	mcptransport "github.com/ThinkInAIXYZ/go-mcp/transport"
 	"github.com/madeindigio/remembrances-mcp/pkg/version"
 )
+
+var portOnlyRe = regexp.MustCompile(`^\d{1,5}$`)
+
+func normalizeBindAddr(addr string, defaultAddr string) string {
+	if addr == "" {
+		addr = defaultAddr
+	}
+	// Allow users to specify just the port number (e.g. "3000")
+	// and normalize it to the net/http expected form ":3000".
+	if portOnlyRe.MatchString(addr) {
+		return ":" + addr
+	}
+	return addr
+}
 
 func generateInstructions(storageInstance storage.FullStorage) string {
 	ctx := context.Background()
@@ -188,9 +203,7 @@ func main() {
 			endpoint = env
 		}
 
-		if addr == "" {
-			addr = ":3000"
-		}
+		addr = normalizeBindAddr(addr, "3000")
 		slog.Info("MCP Streamable HTTP transport enabled", "address", addr, "endpoint", endpoint)
 		t = mcptransport.NewStreamableHTTPServerTransport(
 			addr,

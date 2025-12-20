@@ -13,8 +13,8 @@
 # Enable MCP Streamable HTTP transport (recommended) (default: false)
 #mcp-http: false
 
-# Address to bind MCP Streamable HTTP transport (host:port) (default: ":3000")
-#mcp-http-addr: ":3000"
+# Port or address to bind MCP Streamable HTTP transport (default: "3000")
+#mcp-http-addr: "3000"
 
 # MCP Streamable HTTP endpoint path (default: "/mcp")
 #mcp-http-endpoint: "/mcp"
