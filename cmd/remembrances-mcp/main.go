@@ -207,6 +207,7 @@ func main() {
 		slog.Info("MCP Streamable HTTP transport enabled", "address", addr, "endpoint", endpoint)
 		t = mcptransport.NewStreamableHTTPServerTransport(
 			addr,
+			mcptransport.WithStreamableHTTPServerTransportOptionLogger(streamableHTTPLogger()),
 			mcptransport.WithStreamableHTTPServerTransportOptionEndpoint(endpoint),
 			mcptransport.WithStreamableHTTPServerTransportOptionStateMode(mcptransport.Stateful),
 		)
