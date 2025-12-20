@@ -1,8 +1,20 @@
 # Changelog
 
-## [Unreleased](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.11...a1b367e030daf3c186df04536bfb5df4db0cde91) (2025-12-16)
+### [v1.17.1](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.12...v1.17.1) (2025-12-20)
 
-### Fixes
+#### Features
+
+* Add support for streamable http mode
+([65f5158](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/65f5158402418a19fbda41d4e66ecf63e38948b7))
+
+#### Fixes
+
+* streamable http port without ':' character
+([b16c884](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/b16c884c43657ed5bcc98d5d5d045e50d9de7610))
+
+### [v1.16.12](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.16.11...v1.16.12) (2025-12-16)
+
+#### Fixes
 
 * renew CUDA libs detection in isntall script for linux
 ([a1b367e](https://github.com-josedigio/madeindigio/remembrances-mcp/commit/a1b367e030daf3c186df04536bfb5df4db0cde91))
