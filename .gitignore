@@ -57,5 +57,5 @@ tests/clients
 surreal_data/*
 
 # binaries
-remembrances-mcp
+/remembrances-mcp
 dist/*
