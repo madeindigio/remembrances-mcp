@@ -2,7 +2,7 @@
 package treesitter
 
 import (
-	sitter "github.com/smacker/go-tree-sitter"
+	sitter "github.com/madeindigio/go-tree-sitter"
 )
 
 // KotlinExtractor extracts symbols from Kotlin source code

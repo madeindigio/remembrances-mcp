@@ -46,6 +46,11 @@ const (
 	LanguagePython     Language = "python"
 	LanguageRuby       Language = "ruby"
 	LanguageCSharp     Language = "csharp"
+	LanguageLua        Language = "lua"
+	LanguageMarkdown   Language = "markdown"
+	LanguageSvelte     Language = "svelte"
+	LanguageTOML       Language = "toml"
+	LanguageVue        Language = "vue"
 )
 
 // CodeSymbol represents a parsed code symbol from source code

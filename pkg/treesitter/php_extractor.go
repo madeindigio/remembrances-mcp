@@ -2,7 +2,7 @@
 package treesitter
 
 import (
-	sitter "github.com/smacker/go-tree-sitter"
+	sitter "github.com/madeindigio/go-tree-sitter"
 )
 
 // PHPExtractor extracts symbols from PHP source code

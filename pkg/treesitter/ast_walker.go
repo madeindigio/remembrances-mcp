@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	sitter "github.com/smacker/go-tree-sitter"
+	sitter "github.com/madeindigio/go-tree-sitter"
 )
 
 // SymbolExtractor defines the interface for language-specific symbol extraction
@@ -68,6 +68,11 @@ func NewASTWalker(config WalkerConfig) *ASTWalker {
 	walker.RegisterExtractor(NewSwiftExtractor(config))
 	walker.RegisterExtractor(NewCExtractor(config))
 	walker.RegisterExtractor(NewPythonExtractor(config))
+	walker.RegisterExtractor(NewLuaExtractor(config))
+	walker.RegisterExtractor(NewSvelteExtractor(config))
+	walker.RegisterExtractor(NewTOMLExtractor(config))
+	walker.RegisterExtractor(NewMarkdownExtractor(config))
+	walker.RegisterExtractor(NewVueExtractor(config))
 
 	return walker
 }

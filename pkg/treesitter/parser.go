@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	sitter "github.com/smacker/go-tree-sitter"
+	sitter "github.com/madeindigio/go-tree-sitter"
 )
 
 // Parser is a thread-safe wrapper around tree-sitter parsers

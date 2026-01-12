@@ -8,7 +8,7 @@ require (
 	github.com/ebitengine/purego v0.7.1
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/google/uuid v1.6.0
-	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
+	github.com/madeindigio/go-tree-sitter v0.0.0-20260112134930-85069ecc07ac
 	github.com/spf13/pflag v1.0.7
 	github.com/spf13/viper v1.20.1
 	github.com/surrealdb/surrealdb.go v1.0.0

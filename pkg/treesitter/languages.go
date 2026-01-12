@@ -2,26 +2,31 @@
 package treesitter
 
 import (
-	sitter "github.com/smacker/go-tree-sitter"
-	"github.com/smacker/go-tree-sitter/bash"
-	"github.com/smacker/go-tree-sitter/c"
-	"github.com/smacker/go-tree-sitter/cpp"
-	"github.com/smacker/go-tree-sitter/csharp"
-	"github.com/smacker/go-tree-sitter/css"
-	"github.com/smacker/go-tree-sitter/golang"
-	"github.com/smacker/go-tree-sitter/html"
-	"github.com/smacker/go-tree-sitter/java"
-	"github.com/smacker/go-tree-sitter/javascript"
-	"github.com/smacker/go-tree-sitter/kotlin"
-	"github.com/smacker/go-tree-sitter/php"
-	"github.com/smacker/go-tree-sitter/python"
-	"github.com/smacker/go-tree-sitter/ruby"
-	"github.com/smacker/go-tree-sitter/rust"
-	"github.com/smacker/go-tree-sitter/scala"
-	"github.com/smacker/go-tree-sitter/swift"
-	"github.com/smacker/go-tree-sitter/typescript/tsx"
-	"github.com/smacker/go-tree-sitter/typescript/typescript"
-	"github.com/smacker/go-tree-sitter/yaml"
+	sitter "github.com/madeindigio/go-tree-sitter"
+	"github.com/madeindigio/go-tree-sitter/bash"
+	"github.com/madeindigio/go-tree-sitter/c"
+	"github.com/madeindigio/go-tree-sitter/cpp"
+	"github.com/madeindigio/go-tree-sitter/csharp"
+	"github.com/madeindigio/go-tree-sitter/css"
+	"github.com/madeindigio/go-tree-sitter/golang"
+	"github.com/madeindigio/go-tree-sitter/html"
+	"github.com/madeindigio/go-tree-sitter/java"
+	"github.com/madeindigio/go-tree-sitter/javascript"
+	"github.com/madeindigio/go-tree-sitter/kotlin"
+	"github.com/madeindigio/go-tree-sitter/lua"
+	"github.com/madeindigio/go-tree-sitter/markdown"
+	"github.com/madeindigio/go-tree-sitter/php"
+	"github.com/madeindigio/go-tree-sitter/python"
+	"github.com/madeindigio/go-tree-sitter/ruby"
+	"github.com/madeindigio/go-tree-sitter/rust"
+	"github.com/madeindigio/go-tree-sitter/scala"
+	"github.com/madeindigio/go-tree-sitter/svelte"
+	"github.com/madeindigio/go-tree-sitter/swift"
+	"github.com/madeindigio/go-tree-sitter/toml"
+	"github.com/madeindigio/go-tree-sitter/typescript/tsx"
+	"github.com/madeindigio/go-tree-sitter/typescript/typescript"
+	"github.com/madeindigio/go-tree-sitter/vue2"
+	"github.com/madeindigio/go-tree-sitter/yaml"
 )
 
 // LanguageInfo holds metadata about a supported language
@@ -64,6 +69,36 @@ var supportedLanguages = map[Language]LanguageInfo{
 		Name:       "PHP",
 		Extensions: []string{"php", "phtml", "php3", "php4", "php5", "phps"},
 		Grammar:    php.GetLanguage,
+	},
+	LanguageLua: {
+		Language:   LanguageLua,
+		Name:       "Lua",
+		Extensions: []string{"lua"},
+		Grammar:    lua.GetLanguage,
+	},
+	LanguageMarkdown: {
+		Language:   LanguageMarkdown,
+		Name:       "Markdown",
+		Extensions: []string{"md", "markdown"},
+		Grammar:    markdown.GetLanguage,
+	},
+	LanguageSvelte: {
+		Language:   LanguageSvelte,
+		Name:       "Svelte",
+		Extensions: []string{"svelte"},
+		Grammar:    svelte.GetLanguage,
+	},
+	LanguageTOML: {
+		Language:   LanguageTOML,
+		Name:       "TOML",
+		Extensions: []string{"toml"},
+		Grammar:    toml.GetLanguage,
+	},
+	LanguageVue: {
+		Language:   LanguageVue,
+		Name:       "Vue",
+		Extensions: []string{"vue"},
+		Grammar:    vue2.GetLanguage,
 	},
 	LanguageRust: {
 		Language:   LanguageRust,
