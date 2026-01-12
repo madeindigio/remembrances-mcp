@@ -123,8 +123,8 @@ func Load() (*Config, error) {
 	pflag.String("code-gguf-model-path", "", "Path to GGUF model for code embeddings (e.g., CodeRankEmbed)")
 	pflag.String("code-ollama-model", "", "Ollama model to use for code embeddings (e.g., jina/jina-embeddings-v2-base-code)")
 	pflag.String("code-openai-model", "", "OpenAI model to use for code embeddings")
-	pflag.Int("chunk-size", 1500, "Maximum chunk size in characters for text splitting (default: 1500)")
-	pflag.Int("chunk-overlap", 200, "Overlap between chunks in characters (default: 200)")
+	pflag.Int("chunk-size", 800, "Maximum chunk size in characters for text splitting (default: 800)")
+	pflag.Int("chunk-overlap", 100, "Overlap between chunks in characters (default: 100)")
 	pflag.String("log", "", "Path to the log file (logs will be written to both stdout and file)")
 	pflag.Bool("disable-output-log", false, "Disable logging to stdout/stderr; only write to log file if configured")
 	pflag.Bool("disable-code-watch", false, "Disable automatic file watching for code projects")
@@ -306,7 +306,7 @@ func (c *Config) HasCodeSpecificEmbedder() bool {
 // GetChunkSize returns the chunk size for text splitting.
 func (c *Config) GetChunkSize() int {
 	if c.ChunkSize <= 0 {
-		return 1500 // Default chunk size
+		return 800 // Default chunk size - CRITICAL: must stay under 512 token limit
 	}
 	return c.ChunkSize
 }

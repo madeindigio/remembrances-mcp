@@ -170,10 +170,15 @@ func ensureAPI(ctx context.Context) (*api, error) {
 }
 
 type Model struct {
-	a    *api
-	model unsafe.Pointer
-	ctx   unsafe.Pointer
+	a         *api
+	model     unsafe.Pointer
+	ctx       unsafe.Pointer
 	normalize int32
+
+	// Model parameters (stored for dynamic limit calculations)
+	contextSize uint32
+	batchSize   uint32
+	ubatchSize  uint32
 
 	mu sync.Mutex
 }
@@ -201,7 +206,15 @@ func LoadModel(ctx context.Context, modelPath string, opts Options) (*Model, err
 		return nil, fmt.Errorf("failed to create context")
 	}
 
-	return &Model{a: a, model: model, ctx: ctxPtr, normalize: opts.Normalize}, nil
+	return &Model{
+		a:           a,
+		model:       model,
+		ctx:         ctxPtr,
+		normalize:   opts.Normalize,
+		contextSize: opts.ContextSize,
+		batchSize:   opts.BatchSize,
+		ubatchSize:  opts.UBatchSize,
+	}, nil
 }
 
 func (m *Model) Dimension() int {
@@ -209,6 +222,31 @@ func (m *Model) Dimension() int {
 		return 0
 	}
 	return int(m.a.modelNEmb(m.model))
+}
+
+// ContextSize returns the context size used by the model
+func (m *Model) ContextSize() uint32 {
+	if m == nil {
+		return 0
+	}
+	return m.contextSize
+}
+
+// BatchSize returns the batch size used by the model
+func (m *Model) BatchSize() uint32 {
+	if m == nil {
+		return 0
+	}
+	return m.batchSize
+}
+
+// UBatchSize returns the physical batch size (ubatch) used by the model
+// This is the HARD LIMIT for number of tokens that can be processed at once
+func (m *Model) UBatchSize() uint32 {
+	if m == nil {
+		return 0
+	}
+	return m.ubatchSize
 }
 
 func (m *Model) Embed(ctx context.Context, text string, threads int) ([]float32, error) {

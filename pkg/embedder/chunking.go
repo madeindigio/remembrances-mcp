@@ -8,12 +8,14 @@ import (
 
 const (
 	// DefaultMaxChunkSize is the default maximum number of characters per chunk.
-	// This is a conservative estimate that should work for most embedding models.
-	// Most models support 512-2048 tokens, and ~4 chars per token is a safe estimate.
-	DefaultMaxChunkSize = 1500 // ~375 tokens with 4 chars/token ratio
+	// CRITICAL: Model has HARD limit of 384 tokens (UBatchSize)
+	// Using ULTRA conservative 1.5:1 char/token ratio for code/special chars
+	// 384 * 0.70 = 270 max tokens (30% safety margin)
+	// 270 * 1.5 = 405 max chars, cap at 400 for safety
+	DefaultMaxChunkSize = 400
 
 	// DefaultChunkOverlap is the default overlap between consecutive chunks
-	DefaultChunkOverlap = 200
+	DefaultChunkOverlap = 60
 )
 
 // ChunkText splits a text into smaller chunks suitable for embedding models.

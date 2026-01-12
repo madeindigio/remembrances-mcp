@@ -14,13 +14,16 @@ import (
 
 const (
 	// ChunkThreshold is the minimum source code length to trigger chunking
-	ChunkThreshold = 1500
+	// Reduced to 800 to ensure chunks stay under token limit
+	ChunkThreshold = 800
 
 	// ChunkSize is the maximum size of each chunk
-	ChunkSize = 1500
+	// CRITICAL: Model has HARD limit of 512 tokens (UBatchSize)
+	// Using 800 chars with 2:1 ratio = ~400 tokens (safe margin)
+	ChunkSize = 800
 
 	// ChunkOverlap is the overlap between consecutive chunks
-	ChunkOverlap = 200
+	ChunkOverlap = 100
 )
 
 // processLargeSymbols creates chunks for symbols larger than the threshold

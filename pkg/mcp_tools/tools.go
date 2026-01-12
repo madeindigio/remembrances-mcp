@@ -31,8 +31,8 @@ func NewToolManager(storage storage.StorageWithStats, embedder embedder.Embedder
 		embedder:          embedder,
 		codeEmbedder:      embedder, // Default to same embedder for backwards compatibility
 		knowledgeBasePath: knowledgeBasePath,
-		kbChunkSize:       1500,
-		kbChunkOverlap:    200,
+		kbChunkSize:       800,
+		kbChunkOverlap:    100,
 	}
 }
 
@@ -43,8 +43,8 @@ func NewToolManagerWithCodeEmbedder(storage storage.StorageWithStats, embedder e
 		embedder:          embedder,
 		codeEmbedder:      codeEmbedder,
 		knowledgeBasePath: knowledgeBasePath,
-		kbChunkSize:       1500,
-		kbChunkOverlap:    200,
+		kbChunkSize:       800,
+		kbChunkOverlap:    100,
 	}
 }
 
@@ -52,7 +52,7 @@ func NewToolManagerWithCodeEmbedder(storage storage.StorageWithStats, embedder e
 // Values <= 0 fall back to safe defaults.
 func (tm *ToolManager) SetKBChunking(chunkSize, chunkOverlap int) {
 	if chunkSize <= 0 {
-		tm.kbChunkSize = 1500
+		tm.kbChunkSize = 800
 	} else {
 		tm.kbChunkSize = chunkSize
 	}

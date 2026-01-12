@@ -3,6 +3,8 @@ package embedder
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"runtime/debug"
 	"sync"
 
 	"github.com/madeindigio/remembrances-mcp/internal/llama"
@@ -15,7 +17,13 @@ type GGUFEmbedder struct {
 	dimension int
 	threads   int
 	gpuLayers int
-	mu        sync.Mutex // Protects access to the model/context
+
+	// Dynamic limits based on model configuration
+	maxTokens     int // Maximum tokens the model can handle (from UBatchSize)
+	maxChars      int // Maximum characters (calculated from maxTokens)
+	charsPerToken int // Conservative char-to-token ratio (default: 2)
+
+	mu sync.Mutex // Protects access to the model/context
 }
 
 // GGUFConfig holds configuration for the GGUF embedder.
@@ -36,27 +44,65 @@ func NewGGUFEmbedder(modelPath string, threads, gpuLayers int) (*GGUFEmbedder, e
 	}
 
 	model, err := llama.LoadModel(context.Background(), modelPath, llama.Options{
-		Threads:     threads,
+		Threads:      threads,
 		ThreadsBatch: threads,
-		GPULayers:   gpuLayers,
-		ContextSize: 2048,
-		BatchSize:   2048,
-		UBatchSize:  2048,
-		Pooling:     llama.PoolingMean,
-		Attention:   llama.AttentionNonCausal,
-		Normalize:   2,
+		GPULayers:    gpuLayers,
+		ContextSize:  384, // Reduced from 512 for safety
+		BatchSize:    384, // Reduced from 512 for safety
+		UBatchSize:   384, // CRITICAL: Must be >= n_tokens in any single call
+		Pooling:      llama.PoolingMean,
+		Attention:    llama.AttentionNonCausal,
+		Normalize:    2,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load GGUF model from %s: %w", modelPath, err)
 	}
 
-	return &GGUFEmbedder{
-		model:     model,
-		modelPath: modelPath,
-		dimension: 0, // Detected on first call
-		threads:   threads,
-		gpuLayers: gpuLayers,
-	}, nil
+	// Get dynamic limits from the model
+	ubatchSize := model.UBatchSize()
+	if ubatchSize == 0 {
+		ubatchSize = 384 // Fallback to safe default (reduced from 512)
+	}
+
+	// ULTRA conservative char-to-token ratio for code and special characters
+	// Many programming tokens can be 1:1 or worse (e.g., "}", "{", "->")
+	// Use 1.5:1 ratio to be extra safe
+	charsPerToken := 1
+
+	// Calculate max tokens with LARGE safety margin (leave ~30% margin)
+	// This accounts for tokenizer overhead and special tokens
+	maxTokens := int(ubatchSize) - int(float64(ubatchSize)*0.30)
+	if maxTokens <= 0 {
+		maxTokens = 270 // Fallback (384 * 0.70)
+	}
+
+	// Calculate max chars based on conservative ratio
+	// For 384 ubatch: 270 tokens * 1.5 chars/token = 405 chars max
+	maxChars := int(float64(maxTokens) * 1.5)
+	if maxChars > 450 {
+		maxChars = 450 // Hard cap for extreme safety
+	}
+
+	embedder := &GGUFEmbedder{
+		model:         model,
+		modelPath:     modelPath,
+		dimension:     0, // Detected on first call
+		threads:       threads,
+		gpuLayers:     gpuLayers,
+		maxTokens:     maxTokens,
+		maxChars:      maxChars,
+		charsPerToken: charsPerToken,
+	}
+
+	// Log the dynamic limits for debugging
+	slog.Info("GGUF embedder initialized with dynamic limits",
+		"ubatch_size", ubatchSize,
+		"max_tokens", maxTokens,
+		"max_chars", maxChars,
+		"chars_per_token", charsPerToken,
+		"model_path", modelPath)
+
+	return embedder, nil
 }
 
 // NewGGUFEmbedderFromConfig creates a GGUF embedder from a config struct.
@@ -65,6 +111,7 @@ func NewGGUFEmbedderFromConfig(cfg GGUFConfig) (*GGUFEmbedder, error) {
 }
 
 // EmbedDocuments generates embeddings for a batch of texts.
+// This function continues processing even if individual embeddings fail.
 func (g *GGUFEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]float32, error) {
 	if len(texts) == 0 {
 		return [][]float32{}, nil
@@ -77,6 +124,8 @@ func (g *GGUFEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]
 	}
 
 	result := make([][]float32, len(texts))
+	var lastError error
+	failedCount := 0
 
 	// Process sequentially; llama.cpp handles parallelism internally.
 	for i, text := range texts {
@@ -88,44 +137,101 @@ func (g *GGUFEmbedder) EmbedDocuments(ctx context.Context, texts []string) ([][]
 		}
 
 		if text == "" {
-			return nil, fmt.Errorf("text at index %d is empty", i)
+			slog.Warn("Empty text at index, skipping", "index", i)
+			failedCount++
+			continue
 		}
 
-		// Limit text length to prevent memory issues
-		const maxTextLength = 8000 // ~2000 tokens with typical 4:1 char/token ratio
-		if len(text) > maxTextLength {
-			text = text[:maxTextLength]
+		// CRITICAL: Limit text length to prevent token overflow
+		// Use dynamic limit based on model's actual UBatchSize
+		if len(text) > g.maxChars {
+			slog.Warn("Text exceeds limit, truncating",
+				"index", i,
+				"original_length", len(text),
+				"truncated_to", g.maxChars)
+			text = text[:g.maxChars]
 		}
 
 		embedding, err := g.embedSingle(ctx, text)
 		if err != nil {
-			return nil, fmt.Errorf("failed to embed document at index %d: %w", i, err)
+			// Log the error but CONTINUE processing other texts
+			slog.Error("Failed to embed document, continuing with next",
+				"index", i,
+				"error", err,
+				"text_length", len(text))
+			lastError = err
+			failedCount++
+			// Set nil embedding for failed item
+			result[i] = nil
+			continue
 		}
 
 		result[i] = embedding
+	}
+
+	// If ALL embeddings failed, return error
+	if failedCount == len(texts) {
+		return nil, fmt.Errorf("all %d embeddings failed, last error: %w", failedCount, lastError)
+	}
+
+	// If SOME embeddings failed, log warning but return partial results
+	if failedCount > 0 {
+		slog.Warn("Some embeddings failed but continuing",
+			"failed_count", failedCount,
+			"total_count", len(texts),
+			"success_rate", fmt.Sprintf("%.1f%%", float64(len(texts)-failedCount)/float64(len(texts))*100))
 	}
 
 	return result, nil
 }
 
 // EmbedQuery generates an embedding for a single text query.
+// This function includes error recovery and detailed logging.
 func (g *GGUFEmbedder) EmbedQuery(ctx context.Context, text string) ([]float32, error) {
 	if text == "" {
 		return nil, fmt.Errorf("text cannot be empty")
 	}
 
-	// Limit text length to prevent memory issues
-	const maxTextLength = 8000 // ~2000 tokens with typical 4:1 char/token ratio
-	if len(text) > maxTextLength {
-		text = text[:maxTextLength]
+	originalLength := len(text)
+
+	// CRITICAL: Limit text length to prevent token overflow
+	// Use dynamic limit based on model's actual UBatchSize
+	if len(text) > g.maxChars {
+		slog.Warn("Query text exceeds limit, truncating",
+			"original_length", originalLength,
+			"truncated_to", g.maxChars)
+		text = text[:g.maxChars]
 	}
 
-	return g.embedSingle(ctx, text)
+	embedding, err := g.embedSingle(ctx, text)
+	if err != nil {
+		slog.Error("Failed to embed query",
+			"error", err,
+			"text_length", len(text),
+			"original_length", originalLength)
+		return nil, err
+	}
+
+	return embedding, nil
 }
 
 // embedSingle generates an embedding for a single text.
 // A mutex is used to ensure the underlying llama context is accessed safely.
-func (g *GGUFEmbedder) embedSingle(ctx context.Context, text string) ([]float32, error) {
+// This function includes panic recovery to prevent crashes from propagating.
+func (g *GGUFEmbedder) embedSingle(ctx context.Context, text string) (embeddings []float32, err error) {
+	// Recover from panics to prevent program termination
+	defer func() {
+		if r := recover(); r != nil {
+			stack := debug.Stack()
+			slog.Error("CRITICAL: Panic recovered in embedSingle",
+				"panic", r,
+				"text_length", len(text),
+				"stack", string(stack))
+			err = fmt.Errorf("panic recovered during embedding: %v", r)
+			embeddings = nil
+		}
+	}()
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -136,8 +242,31 @@ func (g *GGUFEmbedder) embedSingle(ctx context.Context, text string) ([]float32,
 	default:
 	}
 
-	embeddings, err := g.model.Embed(ctx, text, g.threads)
+	// Validación exhaustiva antes de llamar a C
+	if len(text) == 0 {
+		return nil, fmt.Errorf("empty text provided")
+	}
+
+	if len(text) > g.maxChars {
+		slog.Warn("Text exceeds maxChars limit, this should not happen",
+			"text_length", len(text),
+			"max_chars", g.maxChars)
+		text = text[:g.maxChars]
+	}
+
+	// Validación del modelo
+	if g.model == nil {
+		return nil, fmt.Errorf("model is nil")
+	}
+
+	// Llamada al modelo con manejo de error
+	embeddings, err = g.model.Embed(ctx, text, g.threads)
 	if err != nil {
+		slog.Error("Failed to generate embeddings",
+			"error", err,
+			"text_length", len(text),
+			"max_chars", g.maxChars,
+			"max_tokens", g.maxTokens)
 		return nil, fmt.Errorf("failed to generate embeddings: %w", err)
 	}
 
@@ -163,6 +292,21 @@ func (g *GGUFEmbedder) Dimension() int {
 		}
 	}
 	return g.dimension
+}
+
+// MaxTokens returns the maximum number of tokens this embedder can handle
+func (g *GGUFEmbedder) MaxTokens() int {
+	return g.maxTokens
+}
+
+// MaxChars returns the maximum number of characters this embedder can handle
+func (g *GGUFEmbedder) MaxChars() int {
+	return g.maxChars
+}
+
+// CharsPerToken returns the conservative char-to-token ratio used
+func (g *GGUFEmbedder) CharsPerToken() int {
+	return g.charsPerToken
 }
 
 // Close releases model resources.

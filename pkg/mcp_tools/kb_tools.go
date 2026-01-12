@@ -156,7 +156,7 @@ func (tm *ToolManager) addDocumentHandler(ctx context.Context, request *protocol
 	chunkSize := tm.kbChunkSize
 	chunkOverlap := tm.kbChunkOverlap
 	if chunkSize <= 0 {
-		chunkSize = 1500
+		chunkSize = 800
 	}
 	if chunkOverlap < 0 {
 		chunkOverlap = 200

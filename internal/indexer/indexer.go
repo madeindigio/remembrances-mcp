@@ -151,10 +151,24 @@ func (idx *Indexer) processFiles(ctx context.Context, projectID, rootPath string
 			// Create a parser per worker - tree-sitter parsers are NOT thread-safe
 			workerParser := treesitter.NewParser()
 			for file := range fileChan {
-				if err := idx.processFileWithParser(ctx, projectID, rootPath, file, workerParser); err != nil {
-					slog.Error("Error processing file", "file", file.RelPath, "error", err)
-					errChan <- err
-				}
+				// Recover from panics to prevent one file from crashing the entire process
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							slog.Error("PANIC recovered while processing file",
+								"file", file.RelPath,
+								"panic", r)
+							errChan <- fmt.Errorf("panic processing %s: %v", file.RelPath, r)
+						}
+					}()
+
+					if err := idx.processFileWithParser(ctx, projectID, rootPath, file, workerParser); err != nil {
+						slog.Warn("Error processing file, continuing with next",
+							"file", file.RelPath,
+							"error", err)
+						errChan <- err
+					}
+				}()
 			}
 		}()
 	}
@@ -180,8 +194,26 @@ func (idx *Indexer) processFiles(ctx context.Context, projectID, rootPath string
 		errors = append(errors, err)
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("encountered %d errors during indexing", len(errors))
+	// Log summary but don't fail unless ALL files failed
+	totalFiles := len(files)
+	failedFiles := len(errors)
+
+	if failedFiles > 0 {
+		successRate := float64(totalFiles-failedFiles) / float64(totalFiles) * 100
+		slog.Warn("Some files failed during indexing",
+			"failed_count", failedFiles,
+			"total_count", totalFiles,
+			"success_rate", fmt.Sprintf("%.1f%%", successRate))
+
+		// Only return error if ALL files failed
+		if failedFiles == totalFiles {
+			return fmt.Errorf("all %d files failed during indexing", failedFiles)
+		}
+
+		// Partial success - log warning but continue
+		slog.Info("Indexing completed with partial success",
+			"successful_files", totalFiles-failedFiles,
+			"failed_files", failedFiles)
 	}
 
 	return nil
@@ -237,10 +269,13 @@ func (idx *Indexer) processFileWithParser(ctx context.Context, projectID, rootPa
 		}
 	}
 
-	// Generate embeddings for symbols
+	// Generate embeddings for symbols (with error recovery)
 	if err := idx.generateEmbeddings(ctx, symbols); err != nil {
-		slog.Warn("failed to generate embeddings", "file", file.RelPath, "error", err)
-		// Continue without embeddings
+		slog.Warn("Failed to generate embeddings for some/all symbols, saving without embeddings",
+			"file", file.RelPath,
+			"error", err,
+			"symbol_count", len(symbols))
+		// Continue without embeddings - symbols will be saved without embedding vectors
 	}
 
 	// Save symbols
@@ -262,10 +297,12 @@ func (idx *Indexer) processFileWithParser(ctx context.Context, projectID, rootPa
 		return fmt.Errorf("failed to save file record: %w", err)
 	}
 
-	// Process large symbols for chunking
+	// Process large symbols for chunking (with error recovery)
 	if err := idx.processLargeSymbols(ctx, projectID, file.RelPath, symbols); err != nil {
-		slog.Warn("failed to process large symbols for chunking", "error", err)
-		// Continue even if chunking fails
+		slog.Warn("Failed to process large symbols for chunking, skipping chunk generation",
+			"file", file.RelPath,
+			"error", err)
+		// Continue even if chunking fails - main symbols are already saved
 	}
 
 	idx.updateProgress(projectID, func(p *IndexingProgress) {
