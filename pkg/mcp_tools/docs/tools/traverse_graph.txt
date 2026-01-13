@@ -5,18 +5,19 @@ Traverse the knowledge graph from a start entity.
 
 DESCRIPTION
 -----------
-Performs breadth-limited traversal following relationships and returns 
-connected entities/edges.
+Performs breadth-limited traversal following relationships and returns
+connected entities/edges. Accepts either entity name or SurrealDB record ID.
 
 WHEN TO CALL
 ------------
-Use when you want to discover related entities (e.g., find colleagues of a 
+Use when you want to discover related entities (e.g., find colleagues of a
 person or projects linked to an org). "depth" controls traversal breadth.
 
 ARGUMENTS
 ---------
 start_entity: string (required)
-    The entity ID to start traversal from.
+    The entity name or ID to start traversal from.
+    Examples: "Alice" (by name) or "entities:abc123" (by ID)
 
 relationship_type: string (optional)
     Filter by specific relationship type.
@@ -27,7 +28,7 @@ depth: integer (optional, default: 2)
 EXAMPLE
 -------
 {
-    "start_entity": "entity_alice",
+    "start_entity": "Alice",
     "relationship_type": "works_at",
     "depth": 2
 }

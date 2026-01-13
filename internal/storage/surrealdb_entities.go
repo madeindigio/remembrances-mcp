@@ -138,10 +138,16 @@ func (s *SurrealDBStorage) CreateRelationship(ctx context.Context, fromEntity, t
 
 // TraverseGraph traverses the graph starting from an entity
 func (s *SurrealDBStorage) TraverseGraph(ctx context.Context, startEntity, relationshipType string, depth int) ([]GraphResult, error) {
+	// Resolve the start entity name to its ID
+	startEntityID, err := s.resolveEntityID(ctx, startEntity)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve start entity '%s': %w", startEntity, err)
+	}
+
 	query := "SELECT id, name, type, properties FROM entities"
 
 	params := map[string]interface{}{
-		"start_entity": startEntity,
+		"start_entity": startEntityID,
 		"depth":        depth,
 	}
 

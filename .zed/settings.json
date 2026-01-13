@@ -6,19 +6,19 @@
   "agent": {
     "always_allow_tool_actions": true,
     "expand_terminal_card": true,
-    "single_file_review": true
+    "single_file_review": true,
   },
   "context_servers": {
     "hyper-mcp": {
       "enabled": true,
       "command": "hyper-mcp",
-      "args": ["--config-file", "/home/sevir/.config/hyper-mcp/assistant.yaml"]
+      "args": ["--config-file", "/home/sevir/.config/hyper-mcp/assistant.yaml"],
     },
     "mycommandmcp": {
       "env": {},
       "enabled": true,
       "command": "mycommandmcp",
-      "args": ["--config", "/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"]
+      "args": ["--config", "/www/MCP/remembrances-mcp/.ai/mycommand-mcp.yaml"],
     },
     "remembrances": {
       "env": {},
@@ -26,8 +26,8 @@
       "command": "remembrances-mcp-beta",
       "args": [
         "--config",
-        "/www/MCP/remembrances-mcp/.ai/remembrances.config.yaml"
-      ]
+        "/www/MCP/remembrances-mcp/.ai/remembrances.config.yaml",
+      ],
     },
     "chrome-devtools": {
       "env": {},
@@ -37,8 +37,8 @@
         "-y",
         "chrome-devtools-mcp@latest",
         "--isolated=true",
-        "--acceptInsecureCerts=true"
-      ]
-    }
-  }
+        "--acceptInsecureCerts=true",
+      ],
+    },
+  },
 }

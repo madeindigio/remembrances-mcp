@@ -5,7 +5,8 @@ Create a relationship between two graph entities.
 
 DESCRIPTION
 -----------
-Links two existing entity IDs with a typed relationship and optional properties.
+Links two existing entities with a typed relationship and optional properties.
+Accepts either entity names or SurrealDB record IDs for both entities.
 
 WHEN TO CALL
 ------------
@@ -14,10 +15,12 @@ Use to model connections (e.g., person->works_at->organization, person->knows->p
 ARGUMENTS
 ---------
 from_entity: string (required)
-    The source entity ID.
+    The source entity name or ID.
+    Examples: "Alice" (by name) or "entities:abc123" (by ID)
 
 to_entity: string (required)
-    The target entity ID.
+    The target entity name or ID.
+    Examples: "Acme Corp" (by name) or "entities:def456" (by ID)
 
 relationship_type: string (required)
     The type of relationship (works_at, knows, owns, belongs_to, etc.).
@@ -28,8 +31,8 @@ properties: object (optional)
 EXAMPLE
 -------
 {
-    "from_entity": "entity_alice",
-    "to_entity": "entity_acme_corp",
+    "from_entity": "Alice",
+    "to_entity": "Acme Corp",
     "relationship_type": "works_at",
     "properties": { "since": "2023-01-01", "role": "Engineer" }
 }

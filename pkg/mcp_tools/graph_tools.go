@@ -80,7 +80,7 @@ func (tm *ToolManager) createRelationshipHandler(ctx context.Context, request *p
 	if fromEntity == nil {
 		suggestions := tm.FindEntityAlternatives(ctx, input.FromEntity)
 		payload := CreateEmptyResultTOON(
-			fmt.Sprintf("No entity found with ID '%s' for from_entity", input.FromEntity),
+			fmt.Sprintf("No entity found with name or ID '%s' for from_entity", input.FromEntity),
 			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
@@ -96,7 +96,7 @@ func (tm *ToolManager) createRelationshipHandler(ctx context.Context, request *p
 	if toEntity == nil {
 		suggestions := tm.FindEntityAlternatives(ctx, input.ToEntity)
 		payload := CreateEmptyResultTOON(
-			fmt.Sprintf("No entity found with ID '%s' for to_entity", input.ToEntity),
+			fmt.Sprintf("No entity found with name or ID '%s' for to_entity", input.ToEntity),
 			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
@@ -135,7 +135,7 @@ func (tm *ToolManager) traverseGraphHandler(ctx context.Context, request *protoc
 	if startEntity == nil {
 		suggestions := tm.FindEntityAlternatives(ctx, input.StartEntity)
 		payload := CreateEmptyResultTOON(
-			fmt.Sprintf("No entity found with ID '%s' to traverse", input.StartEntity),
+			fmt.Sprintf("No entity found with name or ID '%s' to traverse", input.StartEntity),
 			suggestions,
 		)
 		return protocol.NewCallToolResult([]protocol.Content{
@@ -185,7 +185,7 @@ func (tm *ToolManager) getEntityHandler(ctx context.Context, request *protocol.C
 
 	if entity == nil {
 		suggestions := tm.FindEntityAlternatives(ctx, input.EntityID)
-		payload := CreateEmptyResultTOON(fmt.Sprintf("No entity found with ID '%s'", input.EntityID), suggestions)
+		payload := CreateEmptyResultTOON(fmt.Sprintf("No entity found with name or ID '%s'", input.EntityID), suggestions)
 		return protocol.NewCallToolResult([]protocol.Content{
 			&protocol.TextContent{Type: "text", Text: payload},
 		}, false), nil

@@ -1,26 +1,28 @@
 TOOL: remembrance_get_entity
 ============================
 
-Get a graph entity by ID.
+Get a graph entity by name or ID.
 
 DESCRIPTION
 -----------
 Returns the stored entity record including properties and metadata.
+Accepts either the entity name or its SurrealDB record ID.
 
 WHEN TO CALL
 ------------
-Use when you need the full data for a specific entity 
+Use when you need the full data for a specific entity
 (e.g., when rendering a contact card).
 
 ARGUMENTS
 ---------
 entity_id: string (required)
-    The ID of the entity to retrieve.
+    The name or ID of the entity to retrieve.
+    Examples: "Alice" (by name) or "entities:abc123" (by ID)
 
 EXAMPLE
 -------
 {
-    "entity_id": "entity_alice"
+    "entity_id": "Alice"
 }
 
 RELATED TOOLS
