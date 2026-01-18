@@ -73,6 +73,15 @@ type Config struct {
 	// Code monitoring configuration
 	// When true, disables automatic code file watching for projects
 	DisableCodeWatch bool `mapstructure:"disable-code-watch"`
+	// Module configuration
+	Modules        map[string]ModuleEntry `mapstructure:"modules"`
+	DisableModules []string               `mapstructure:"disable"`
+}
+
+// ModuleEntry describes module configuration in config files.
+type ModuleEntry struct {
+	Enabled bool           `mapstructure:"enabled"`
+	Config  map[string]any `mapstructure:"config"`
 }
 
 // Load loads the configuration from CLI flags and environment variables.

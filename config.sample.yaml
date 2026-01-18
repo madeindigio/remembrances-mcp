@@ -150,6 +150,23 @@ ollama-model: "nomic-embed-text:latest"
 # go, typescript, javascript, tsx, python, rust, java, kotlin,
 # swift, c, cpp, objc, php, ruby, csharp, scala, bash, yaml
 
+# ========== Modules Configuration ==========
+# Load or disable modules. By default, standard tools are loaded.
+# To disable a default module, add its ID to the disable list.
+#
+#modules:
+#  tools.core:
+#    enabled: true
+#  tools.code_indexing:
+#    enabled: true
+#  tools.code_search:
+#    enabled: true
+#  tools.code_manipulation:
+#    enabled: true
+#
+#disable:
+#  - tools.code_manipulation
+
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
 log: "/www/MCP/remembrances-mcp/remembrances-mcp.externalsurreal.log"

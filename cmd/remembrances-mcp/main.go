@@ -20,7 +20,8 @@ import (
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
 	"github.com/madeindigio/remembrances-mcp/internal/transport"
 	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
-	"github.com/madeindigio/remembrances-mcp/pkg/mcp_tools"
+	"github.com/madeindigio/remembrances-mcp/pkg/modules"
+	_ "github.com/madeindigio/remembrances-mcp/modules/standard"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
@@ -125,6 +126,11 @@ Choose the right tool for your data:
 }
 
 func main() {
+	Main()
+}
+
+// Main is the entry point for embedding in custom builds.
+func Main() {
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
@@ -376,53 +382,29 @@ func main() {
 		slog.Info("Using specialized code embedder for code indexing")
 	}
 
-	// Register MCP tools
-	toolManager := mcp_tools.NewToolManagerWithCodeEmbedder(storageInstance, embedderInstance, codeEmbedderInstance, cfg.KnowledgeBase)
-	toolManager.SetKBChunking(cfg.GetChunkSize(), cfg.GetChunkOverlap())
-	if err := toolManager.RegisterTools(srv); err != nil {
-		slog.Error("failed to register MCP tools", "error", err)
+	// Initialize module manager
+	modManager := modules.NewModuleManager(modules.ModuleConfig{
+		Storage:           storageInstance,
+		Embedder:          embedderInstance,
+		CodeEmbedder:      codeEmbedderInstance,
+		KnowledgeBasePath: cfg.KnowledgeBase,
+		KBChunkSize:       cfg.GetChunkSize(),
+		KBChunkOverlap:    cfg.GetChunkOverlap(),
+		DisableCodeWatch:  cfg.DisableCodeWatch,
+		IndexerConfig:     indexer.DefaultIndexerConfig(),
+		JobManagerConfig:  indexer.DefaultJobManagerConfig(),
+		Logger:            slog.Default(),
+	})
+
+	if err := loadModules(ctx, modManager, cfg); err != nil {
+		slog.Error("failed to load modules", "error", err)
 		os.Exit(1)
 	}
 
-	// Create code indexing components
-	indexerConfig := indexer.DefaultIndexerConfig()
-	jmConfig := indexer.DefaultJobManagerConfig()
-	jobManager := toolManager.CreateJobManager(storageInstance, indexerConfig, jmConfig)
-	watcherManager := toolManager.CreateWatcherManager(storageInstance, jobManager)
-
-	// Create and register code indexing tools
-	codeToolManager := mcp_tools.NewCodeToolManager(toolManager, jobManager, watcherManager)
-	regFunc := func(name string, tool *protocol.Tool, handler func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error {
-		if tool == nil {
-			return fmt.Errorf("tool %s creation returned nil", name)
-		}
-		srv.RegisterTool(tool, handler)
-		return nil
-	}
-	if err := codeToolManager.RegisterCodeTools(regFunc); err != nil {
-		slog.Error("failed to register code indexing tools", "error", err)
+	// Register tools from modules
+	if err := registerModuleTools(modManager, srv); err != nil {
+		slog.Error("failed to register module tools", "error", err)
 		os.Exit(1)
-	}
-
-	// Create and register code search tools
-	codeSearchToolManager := mcp_tools.NewCodeSearchToolManager(storageInstance, codeEmbedderInstance)
-	if err := codeSearchToolManager.RegisterCodeSearchTools(regFunc); err != nil {
-		slog.Error("failed to register code search tools", "error", err)
-		os.Exit(1)
-	}
-
-	// Create and register code manipulation tools
-	codeManipulationToolManager := mcp_tools.NewCodeManipulationToolManager(storageInstance, codeEmbedderInstance)
-	if err := codeManipulationToolManager.RegisterCodeManipulationTools(regFunc); err != nil {
-		slog.Error("failed to register code manipulation tools", "error", err)
-		os.Exit(1)
-	}
-
-	// Auto-activate code watcher if a project has WatcherEnabled=true
-	if !cfg.DisableCodeWatch {
-		if err := watcherManager.AutoActivateOnStartup(ctx); err != nil {
-			slog.Warn("failed to auto-activate code watcher", "error", err)
-		}
 	}
 
 	// Knowledge base watcher
@@ -472,10 +454,8 @@ func main() {
 			kbWatcher.Stop()
 		}
 
-		// Stop code watcher manager
-		if watcherManager != nil {
-			watcherManager.Stop()
-		}
+		// Stop module-managed resources
+		modManager.Cleanup()
 
 		_ = srv.Shutdown(shutdownCtx)
 
@@ -529,4 +509,73 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func registerModuleTools(modManager *modules.ModuleManager, srv *mcpserver.Server) error {
+	for _, provider := range modManager.GetToolProviders() {
+		for _, def := range provider.Tools() {
+			if def.Tool == nil {
+				return fmt.Errorf("module tool definition returned nil")
+			}
+			srv.RegisterTool(def.Tool, def.Handler)
+		}
+	}
+	return nil
+}
+
+func loadModules(ctx context.Context, modManager *modules.ModuleManager, cfg *config.Config) error {
+	defaultModules := []modules.ModuleID{
+		"tools.core",
+		"tools.code_indexing",
+		"tools.code_search",
+		"tools.code_manipulation",
+	}
+
+	disabled := make(map[string]struct{})
+	for _, id := range cfg.DisableModules {
+		disabled[id] = struct{}{}
+	}
+
+	loaded := make(map[modules.ModuleID]struct{})
+
+	for _, id := range defaultModules {
+		entry, hasEntry := cfg.Modules[string(id)]
+		if _, isDisabled := disabled[string(id)]; isDisabled {
+			continue
+		}
+		if hasEntry && !entry.Enabled && len(entry.Config) == 0 {
+			continue
+		}
+		config := entry.Config
+		if config == nil {
+			config = map[string]any{}
+		}
+		if _, err := modManager.LoadModule(ctx, id, config); err != nil {
+			return err
+		}
+		loaded[id] = struct{}{}
+	}
+
+	for idStr, entry := range cfg.Modules {
+		id := modules.ModuleID(idStr)
+		if _, isDisabled := disabled[idStr]; isDisabled {
+			continue
+		}
+		if !entry.Enabled && len(entry.Config) == 0 {
+			continue
+		}
+		if _, exists := loaded[id]; exists {
+			continue
+		}
+		config := entry.Config
+		if config == nil {
+			config = map[string]any{}
+		}
+		if _, err := modManager.LoadModule(ctx, id, config); err != nil {
+			return err
+		}
+		loaded[id] = struct{}{}
+	}
+
+	return nil
 }

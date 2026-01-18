@@ -119,6 +119,23 @@ code-gguf-model-path: "/www/Remembrances/coderankembed.Q4_K_M.gguf"
 # Typical values are 10-20% of chunk-size
 #chunk-overlap: 200
 
+# ========== Modules Configuration ==========
+# Load or disable modules. By default, standard tools are loaded.
+# To disable a default module, add its ID to the disable list.
+#
+#modules:
+#  tools.core:
+#    enabled: true
+#  tools.code_indexing:
+#    enabled: true
+#  tools.code_search:
+#    enabled: true
+#  tools.code_manipulation:
+#    enabled: true
+#
+#disable:
+#  - tools.code_manipulation
+
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
 log: "/www/MCP/remembrances-mcp/remembrances-mcp.log"

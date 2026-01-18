@@ -70,7 +70,6 @@ func (tm *ToolManager) GetCodeEmbedder() embedder.Embedder {
 
 // RegisterTools registers all MCP tools with the server
 func (tm *ToolManager) RegisterTools(srv *mcpserver.Server) error {
-	// Helper to register a tool and return error if creation returned nil
 	reg := func(name string, tool *protocol.Tool, handler func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error {
 		if tool == nil {
 			return fmt.Errorf("tool %s creation returned nil", name)
@@ -79,7 +78,17 @@ func (tm *ToolManager) RegisterTools(srv *mcpserver.Server) error {
 		return nil
 	}
 
-	// Delegate to smaller registration groups
+	if err := tm.RegisterToolsWith(reg); err != nil {
+		return err
+	}
+
+	slog.Info("Successfully registered all MCP tools")
+	return nil
+}
+
+// RegisterToolsWith registers all MCP tools using a provided registration callback.
+// This allows callers (like module systems) to collect tools without a server.
+func (tm *ToolManager) RegisterToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
 	if err := tm.registerRemembranceTools(reg); err != nil {
 		return err
 	}
@@ -102,7 +111,6 @@ func (tm *ToolManager) RegisterTools(srv *mcpserver.Server) error {
 		return err
 	}
 
-	slog.Info("Successfully registered all MCP tools")
 	return nil
 }
 
