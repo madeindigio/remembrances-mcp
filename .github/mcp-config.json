@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "hyper-mcp": {
+      "type": "local",
+      "command": "hyper-mcp",
+      "args": [
+        "--config-file",
+        "/home/sevir/.config/hyper-mcp/search.yaml"
+      ],
+      "tools": [
+        "*"
+      ]
+    }
+  }
+}

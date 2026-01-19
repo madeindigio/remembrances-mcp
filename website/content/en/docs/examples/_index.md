@@ -1,7 +1,7 @@
 ---
 title: "Examples"
 linkTitle: "Examples"
-weight: 4
+weight: 30
 description: >
   Practical examples and use cases for Remembrances
 ---

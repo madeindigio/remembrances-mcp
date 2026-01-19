@@ -1,7 +1,7 @@
 ---
 title: "Troubleshooting"
 linkTitle: "Troubleshooting"
-weight: 6
+weight: 40
 description: >
   Common problems and solutions for Remembrances MCP
 ---

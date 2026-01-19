@@ -1,7 +1,7 @@
 ---
 title: "Solución de Problemas"
-linkTitle: "Solución de Problemas"
-weight: 6
+linkTitle: "Troubleshooting"
+weight: 40
 description: >
   Problemas comunes y soluciones para Remembrances MCP
 ---

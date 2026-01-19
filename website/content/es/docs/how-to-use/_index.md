@@ -1,7 +1,7 @@
 ---
 title: "Sistema de Ayuda (how_to_use)"
 linkTitle: "Sistema de Ayuda"
-weight: 7
+weight: 6
 description: >
   Documentación bajo demanda para reducir el consumo de tokens
 ---

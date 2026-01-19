@@ -1,9 +1,9 @@
 ---
-title: "Indexación de Código"
-linkTitle: "Indexación de Código"
-weight: 5
+title: "Referencia: Indexación de Código"
+linkTitle: "Ref: Code Indexing"
+weight: 20
 description: >
-  Indexa tu base de código para búsqueda semántica y navegación inteligente
+  Referencia técnica completa del sistema de indexación de código
 ---
 
 La función de Indexación de Código permite a los agentes de IA comprender, buscar y navegar por tu código mediante búsqueda semántica. En lugar de una simple coincidencia de texto, tu asistente de IA puede encontrar código por significado – busca "autenticación de usuario" y encuentra las funciones de login, gestores de sesión y módulos de seguridad relevantes.

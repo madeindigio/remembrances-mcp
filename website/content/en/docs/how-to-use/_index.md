@@ -1,7 +1,7 @@
 ---
 title: "Help System (how_to_use)"
 linkTitle: "Help System"
-weight: 7
+weight: 6
 description: >
   On-demand documentation for reduced token consumption
 ---

@@ -1,9 +1,9 @@
 ---
-title: "Events & Logs"
-linkTitle: "Events & Logs"
-weight: 6
+title: "Reference: Events & Logs"
+linkTitle: "Ref: Events"
+weight: 21
 description: >
-  Store and search temporal events with semantic search and time-based filters
+  Technical reference for the temporal event storage system
 ---
 
 The Events feature provides temporal storage for AI agents to track activities, conversations, logs, and milestones. Unlike regular memories, events are designed for time-ordered data that can be searched both semantically and by time ranges.

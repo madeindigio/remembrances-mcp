@@ -10,30 +10,30 @@ import (
 )
 
 func init() {
-	modules.RegisterModule(CoreToolsModule{})
+	modules.RegisterModule(KnowledgeGraphToolsModule{})
 }
 
-// CoreToolsModule provides misc MCP tools.
-type CoreToolsModule struct {
+// KnowledgeGraphToolsModule provides knowledge graph and vector tools.
+type KnowledgeGraphToolsModule struct {
 	toolManager *mcp_tools.ToolManager
 	tools       []modules.ToolDefinition
 }
 
 // ModuleInfo returns module metadata.
-func (CoreToolsModule) ModuleInfo() modules.ModuleInfo {
+func (KnowledgeGraphToolsModule) ModuleInfo() modules.ModuleInfo {
 	return modules.ModuleInfo{
-		ID:          "tools.core",
-		Name:        "Misc MCP Tools",
-		Description: "Registers misc Remembrances MCP tools",
+		ID:          "tools.knowledge_graph",
+		Name:        "Knowledge Graph Tools",
+		Description: "Registers MCP tools for entities, relationships, traversal, and vectors",
 		Version:     "1.0.0",
 		Author:      "Remembrances Team",
 		License:     "MIT",
-		New:         func() modules.Module { return new(CoreToolsModule) },
+		New:         func() modules.Module { return new(KnowledgeGraphToolsModule) },
 	}
 }
 
 // Provision configures the module.
-func (m *CoreToolsModule) Provision(ctx context.Context, cfg modules.ModuleConfig) error {
+func (m *KnowledgeGraphToolsModule) Provision(ctx context.Context, cfg modules.ModuleConfig) error {
 	if cfg.Storage == nil {
 		return fmt.Errorf("storage is required")
 	}
@@ -58,7 +58,10 @@ func (m *CoreToolsModule) Provision(ctx context.Context, cfg modules.ModuleConfi
 		return nil
 	}
 
-	if err := m.toolManager.RegisterMiscToolsWith(reg); err != nil {
+	if err := m.toolManager.RegisterGraphToolsWith(reg); err != nil {
+		return err
+	}
+	if err := m.toolManager.RegisterVectorToolsWith(reg); err != nil {
 		return err
 	}
 
@@ -67,6 +70,6 @@ func (m *CoreToolsModule) Provision(ctx context.Context, cfg modules.ModuleConfi
 }
 
 // Tools returns the tool definitions.
-func (m *CoreToolsModule) Tools() []modules.ToolDefinition {
+func (m *KnowledgeGraphToolsModule) Tools() []modules.ToolDefinition {
 	return m.tools
 }

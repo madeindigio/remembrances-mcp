@@ -1,9 +1,9 @@
 ---
-title: "Eventos y Logs"
-linkTitle: "Eventos y Logs"
-weight: 6
+title: "Referencia: Eventos y Logs"
+linkTitle: "Ref: Events"
+weight: 21
 description: >
-  Almacena y busca eventos temporales con búsqueda semántica y filtros de tiempo
+  Referencia técnica del sistema de almacenamiento temporal de eventos
 ---
 
 La función de Eventos proporciona almacenamiento temporal para que los agentes de IA rastreen actividades, conversaciones, logs y hitos. A diferencia de las memorias regulares, los eventos están diseñados para datos ordenados en el tiempo que pueden buscarse tanto semánticamente como por rangos de tiempo.

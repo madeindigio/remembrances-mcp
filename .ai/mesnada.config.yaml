@@ -1,0 +1,127 @@
+# Mesnada Configuration File
+# This file defines model configurations and agent behaviors
+
+# Default model to use when none is specified
+default_model: "claude-sonnet-4.5"
+
+# List of available models with their descriptions (legacy/shared across all engines)
+# These models are available for all engines when engine-specific models are not defined
+models:
+  - id: "claude-sonnet-4.5"
+    description: "Use this model for coding tasks with a good programming practices"
+
+  - id: "claude-opus-4.5"
+    description: "Highest capability for complex reasoning and analysis"
+
+  - id: "claude-haiku-4.5"
+    description: "Fast responses for simple tasks and quick iterations"
+
+  - id: "gpt-5.1-codex-max"
+    description: "Advanced coding capabilities with extended context"
+
+  - id: "gpt-5.1-codex"
+    description: "Optimized for code generation and refactoring"
+
+  - id: "gpt-5.2"
+    description: "Use this model for orchestration and complex reasoning tasks, also for good professional coding tasks"
+
+  - id: "gpt-5.1"
+    description: "Stable GPT model for production use"
+
+  - id: "gpt-5"
+    description: "Base GPT-5 model"
+
+  - id: "gpt-5.1-codex-mini"
+    description: "Lightweight coding model for quick tasks"
+
+  - id: "gpt-5-mini"
+    description: "Fast and efficient for simple queries"
+
+  - id: "gpt-4.1"
+    description: "Reliable GPT-4 variant"
+
+  - id: "gemini-3-pro-preview"
+    description: "Use this model for multimodal tasks and big context requirements"
+
+# Engine-specific model configurations (optional)
+# If defined, these override the global models list for each engine
+engines:
+  copilot:
+    default_model: "gpt-5.1-codex"
+    models:
+      - id: "gpt-5.1-codex-max"
+        description: "Advanced coding capabilities with extended context"
+      - id: "gpt-5.1-codex"
+        description: "Optimized for code generation and refactoring"
+      - id: "gpt-5.2"
+        description: "Latest GPT model with improved reasoning"
+      - id: "gpt-5.1"
+        description: "Stable GPT model for production use"
+      - id: "gpt-5"
+        description: "Base GPT-5 model"
+      - id: "gpt-5.1-codex-mini"
+        description: "Lightweight coding model for quick tasks"
+      - id: "gpt-5-mini"
+        description: "Fast and efficient for simple queries"
+      - id: "gpt-4.1"
+        description: "Reliable GPT-4 variant"
+
+  claude:
+    default_model: "claude-sonnet-4.5"
+    models:
+      - id: "claude-sonnet-4.5"
+        description: "Balanced performance and speed for general tasks"
+      - id: "claude-opus-4.5"
+        description: "Highest capability for complex reasoning and analysis"
+      - id: "claude-haiku-4.5"
+        description: "Fast responses for simple tasks and quick iterations"
+      - id: "claude-sonnet-4"
+        description: "Previous generation Sonnet model"
+      - id: "sonnet"
+        description: "Alias for latest Sonnet (Claude Code specific)"
+      - id: "opus"
+        description: "Alias for latest Opus (Claude Code specific)"
+      - id: "haiku"
+        description: "Alias for latest Haiku (Claude Code specific)"
+
+  gemini:
+    default_model: "gemini-3-pro-preview"
+    models:
+      - id: "gemini-3-pro-preview"
+        description: "For complex tasks that require deep reasoning and creativity"
+      - id: "gemini-2.5-flash"
+        description: "For tasks that need a balance of speed and reasoning"
+      - id: "gemini-2.5-flash-lite"
+        description: "For simple tasks that need to be done quickly"
+
+  opencode:
+    default_model: "openrouter/z-ai/glm-4.7"
+    models:
+      - id: "openrouter/z-ai/glm-4.7"
+        description: "GLM-4.7 is Z.AI’s latest flagship model, featuring upgrades in two key areas: enhanced programming capabilities and more stable multi-step reasoning/execution. It demonstrates significant improvements in executing complex agent tasks while delivering more natural conversational experiences and superior front-end aesthetics"
+      - id: "openrouter/minimax/minimax-m2.1"
+        description: "MiniMax-M2.1 is a lightweight, state-of-the-art large language model optimized for coding, agentic workflows, and modern application development"
+      - id: "openrouter/moonshotai/kimi-k2-thinking"
+        description: "The model is optimized for persistent step-by-step thought, dynamic tool invocation, and complex reasoning workflows that span hundreds of turns. It interleaves step-by-step reasoning with tool use, enabling autonomous research, coding, and writing that can persist for hundreds of sequential actions without drift"
+      - id: "openrouter/deepseek/deepseek-v3.2"
+        description: "DeepSeek-V3.2 is a large language model designed to harmonize high computational efficiency with strong reasoning and agentic tool-use performance"
+      - id: "openrouter/qwen/qwen3-coder"
+        description: "It is a powerful coding agent model specializing in autonomous programming via tool calling and environment interaction, combining coding proficiency with versatile general-purpose abilities"
+
+# Server configuration
+server:
+  host: "127.0.0.1"
+  port: 8767
+
+# Orchestrator configuration
+orchestrator:
+  store_path: "../.mesnada/tasks.json"
+  log_dir: "../.mesnada/logs"
+  max_parallel: 5
+
+  # Additional MCP config to pass to Copilot CLI for every spawned task.
+  # This is passed as: copilot --additional-mcp-config <value>
+  # Use @<path> to reference a JSON file relative to the task working directory.
+  # Example: @.github/mcp-config.json
+  default_mcp_config: "/www/MCP/remembrances-mcp/.github/mcp-config.json"
+  persona_path: "../.mesnada/personas"

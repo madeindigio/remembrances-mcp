@@ -526,6 +526,11 @@ func registerModuleTools(modManager *modules.ModuleManager, srv *mcpserver.Serve
 func loadModules(ctx context.Context, modManager *modules.ModuleManager, cfg *config.Config) error {
 	defaultModules := []modules.ModuleID{
 		"tools.core",
+		"tools.facts",
+		"tools.kb",
+		"tools.remember",
+		"tools.events",
+		"tools.knowledge_graph",
 		"tools.code_indexing",
 		"tools.code_search",
 		"tools.code_manipulation",

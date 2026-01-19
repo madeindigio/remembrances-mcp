@@ -157,6 +157,16 @@ ollama-model: "nomic-embed-text:latest"
 #modules:
 #  tools.core:
 #    enabled: true
+#  tools.facts:
+#    enabled: true
+#  tools.kb:
+#    enabled: true
+#  tools.remember:
+#    enabled: true
+#  tools.events:
+#    enabled: true
+#  tools.knowledge_graph:
+#    enabled: true
 #  tools.code_indexing:
 #    enabled: true
 #  tools.code_search:

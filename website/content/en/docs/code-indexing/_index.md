@@ -1,9 +1,9 @@
 ---
-title: "Code Indexing"
-linkTitle: "Code Indexing"
-weight: 5
+title: "Reference: Code Indexing"
+linkTitle: "Ref: Code Indexing"
+weight: 20
 description: >
-  Index your codebase for semantic search and intelligent navigation
+  Complete technical reference for the code indexing system
 ---
 
 The Code Indexing feature enables AI agents to understand, search, and navigate your codebase using semantic search. Instead of simple text matching, your AI assistant can find code by meaning – search for "user authentication" and find the relevant login functions, session handlers, and security modules.

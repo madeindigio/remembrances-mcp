@@ -1,7 +1,7 @@
 ---
 title: "Ejemplos"
 linkTitle: "Ejemplos"
-weight: 4
+weight: 30
 description: >
   Ejemplos prácticos y casos de uso para Remembrances
 ---

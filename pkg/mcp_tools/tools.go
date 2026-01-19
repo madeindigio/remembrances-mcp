@@ -114,6 +114,41 @@ func (tm *ToolManager) RegisterToolsWith(reg func(string, *protocol.Tool, func(c
 	return nil
 }
 
+// RegisterFactToolsWith registers fact tools (save/get/list/delete fact).
+func (tm *ToolManager) RegisterFactToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	return tm.registerRemembranceTools(reg)
+}
+
+// RegisterVectorToolsWith registers vector tools (add/search/update/delete vector).
+func (tm *ToolManager) RegisterVectorToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	return tm.registerVectorTools(reg)
+}
+
+// RegisterGraphToolsWith registers knowledge graph tools (entities/relationships/traverse/get).
+func (tm *ToolManager) RegisterGraphToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	return tm.registerGraphTools(reg)
+}
+
+// RegisterKBToolsWith registers knowledge base tools.
+func (tm *ToolManager) RegisterKBToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	return tm.registerKBTools(reg)
+}
+
+// RegisterRememberToolsWith registers remember tools (to_remember/last_to_remember).
+func (tm *ToolManager) RegisterRememberToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	return tm.registerRememberTools(reg)
+}
+
+// RegisterEventToolsWith registers event tools.
+func (tm *ToolManager) RegisterEventToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	return tm.registerEventTools(reg)
+}
+
+// RegisterMiscToolsWith registers misc tools (hybrid_search/get_stats/how_to_use).
+func (tm *ToolManager) RegisterMiscToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	return tm.registerMiscTools(reg)
+}
+
 // registration helper groups keep RegisterTools small and readable
 func (tm *ToolManager) registerRemembranceTools(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
 	if err := reg("save_fact", tm.saveFactTool(), tm.saveFactHandler); err != nil {

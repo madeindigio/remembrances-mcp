@@ -10,30 +10,30 @@ import (
 )
 
 func init() {
-	modules.RegisterModule(CoreToolsModule{})
+	modules.RegisterModule(KBToolsModule{})
 }
 
-// CoreToolsModule provides misc MCP tools.
-type CoreToolsModule struct {
+// KBToolsModule provides knowledge base tools.
+type KBToolsModule struct {
 	toolManager *mcp_tools.ToolManager
 	tools       []modules.ToolDefinition
 }
 
 // ModuleInfo returns module metadata.
-func (CoreToolsModule) ModuleInfo() modules.ModuleInfo {
+func (KBToolsModule) ModuleInfo() modules.ModuleInfo {
 	return modules.ModuleInfo{
-		ID:          "tools.core",
-		Name:        "Misc MCP Tools",
-		Description: "Registers misc Remembrances MCP tools",
+		ID:          "tools.kb",
+		Name:        "Knowledge Base Tools",
+		Description: "Registers MCP tools for knowledge base documents",
 		Version:     "1.0.0",
 		Author:      "Remembrances Team",
 		License:     "MIT",
-		New:         func() modules.Module { return new(CoreToolsModule) },
+		New:         func() modules.Module { return new(KBToolsModule) },
 	}
 }
 
 // Provision configures the module.
-func (m *CoreToolsModule) Provision(ctx context.Context, cfg modules.ModuleConfig) error {
+func (m *KBToolsModule) Provision(ctx context.Context, cfg modules.ModuleConfig) error {
 	if cfg.Storage == nil {
 		return fmt.Errorf("storage is required")
 	}
@@ -58,7 +58,7 @@ func (m *CoreToolsModule) Provision(ctx context.Context, cfg modules.ModuleConfi
 		return nil
 	}
 
-	if err := m.toolManager.RegisterMiscToolsWith(reg); err != nil {
+	if err := m.toolManager.RegisterKBToolsWith(reg); err != nil {
 		return err
 	}
 
@@ -67,6 +67,6 @@ func (m *CoreToolsModule) Provision(ctx context.Context, cfg modules.ModuleConfi
 }
 
 // Tools returns the tool definitions.
-func (m *CoreToolsModule) Tools() []modules.ToolDefinition {
+func (m *KBToolsModule) Tools() []modules.ToolDefinition {
 	return m.tools
 }

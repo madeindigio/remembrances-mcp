@@ -1,7 +1,7 @@
 ---
 title: "Roadmap"
 linkTitle: "Roadmap"
-weight: 7
+weight: 50
 description: >
   What features and characteristics are planned for future versions of Remembrances
 ---
