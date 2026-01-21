@@ -19,9 +19,10 @@ import (
 	"github.com/madeindigio/remembrances-mcp/internal/kb"
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
 	"github.com/madeindigio/remembrances-mcp/internal/transport"
+	_ "github.com/madeindigio/remembrances-mcp/modules/commercial/webui"
+	_ "github.com/madeindigio/remembrances-mcp/modules/standard"
 	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
 	"github.com/madeindigio/remembrances-mcp/pkg/modules"
-	_ "github.com/madeindigio/remembrances-mcp/modules/standard"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
@@ -158,30 +159,17 @@ func Main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	// Select transport:
+	// Select primary MCP transport:
 	// - stdio (default)
 	// - MCP Streamable HTTP when --mcp-http is passed (recommended)
 	// - legacy SSE when --sse is passed (deprecated; mapped to Streamable HTTP)
-	// - HTTP JSON API when --http is passed (separate REST-like API; not MCP transport)
+	// HTTP JSON API (--http) can run alongside any MCP transport
 	var t mcptransport.ServerTransport
 	var httpTransport *transport.HTTPTransport
+	var mcpHTTPTransport mcptransport.ServerTransport
 
-	if cfg.HTTP {
-		// HTTP JSON API transport
-		addr := cfg.HTTPAddr
-		// allow env var to override if set
-		if env := os.Getenv("GOMEM_HTTP_ADDR"); env != "" {
-			addr = env
-		}
-		if addr == "" {
-			addr = ":8080"
-		}
-		slog.Info("HTTP transport enabled", "address", addr)
-
-		// We'll create the HTTP transport after the MCP server is created
-		// because it needs access to the server for routing.
-		t = mcptransport.NewStdioServerTransport() // temporary, will be replaced
-	} else if cfg.MCPStreamableHTTP || cfg.SSE {
+	// Setup MCP Streamable HTTP transport if enabled
+	if cfg.MCPStreamableHTTP || cfg.SSE {
 		// MCP Streamable HTTP transport.
 		// Note: --sse is deprecated and treated as an alias to Streamable HTTP.
 		addr := cfg.MCPStreamableHTTPAddr
@@ -211,12 +199,13 @@ func Main() {
 
 		addr = normalizeBindAddr(addr, "3000")
 		slog.Info("MCP Streamable HTTP transport enabled", "address", addr, "endpoint", endpoint)
-		t = mcptransport.NewStreamableHTTPServerTransport(
+		mcpHTTPTransport = mcptransport.NewStreamableHTTPServerTransport(
 			addr,
 			mcptransport.WithStreamableHTTPServerTransportOptionLogger(streamableHTTPLogger()),
 			mcptransport.WithStreamableHTTPServerTransportOptionEndpoint(endpoint),
 			mcptransport.WithStreamableHTTPServerTransportOptionStateMode(mcptransport.Stateful),
 		)
+		t = mcpHTTPTransport
 	} else {
 		slog.Info("Starting MCP over stdio (default)")
 		t = mcptransport.NewStdioServerTransport()
@@ -424,14 +413,19 @@ func Main() {
 		if env := os.Getenv("GOMEM_HTTP_ADDR"); env != "" {
 			addr = env
 		}
-		if addr == "" {
-			addr = ":8080"
-		}
+		addr = normalizeBindAddr(addr, "8080")
 
 		httpTransport, err = transport.CreateHTTPServerTransport(addr, srv)
 		if err != nil {
 			slog.Error("failed to create HTTP transport", "error", err)
 			os.Exit(1)
+		}
+
+		// Register HTTP routes from modules
+		httpProviders := modManager.GetHTTPEndpointProviders()
+		if len(httpProviders) > 0 {
+			httpTransport.RegisterModuleRoutes(httpProviders)
+			slog.Info("Registered HTTP endpoint providers", "count", len(httpProviders))
 		}
 	}
 
@@ -494,18 +488,50 @@ func Main() {
 		}
 	}()
 
-	// Run the server (blocking)
+	// Run the server (blocking or concurrent based on configuration)
 	slog.Info("Starting Remembrances-MCP server")
-	if cfg.HTTP {
-		// Run HTTP transport
+
+	// Determine which transports to run
+	hasHTTP := cfg.HTTP && httpTransport != nil
+	hasMCPHTTP := mcpHTTPTransport != nil
+
+	if hasHTTP && hasMCPHTTP {
+		// Both HTTP JSON API and MCP Streamable HTTP are enabled
+		// Run MCP HTTP in background, HTTP JSON API as main (blocking)
+		slog.Info("Starting both MCP Streamable HTTP and HTTP JSON API transports")
+
+		// Start MCP HTTP server in goroutine
+		go func() {
+			if err := srv.Run(); err != nil {
+				slog.Error("MCP Streamable HTTP server error", "error", err)
+			}
+		}()
+
+		// Run HTTP JSON API (blocking)
 		if err := httpTransport.Start(); err != nil && err != http.ErrServerClosed {
-			slog.Error("HTTP transport server error", "error", err)
+			slog.Error("HTTP JSON API transport server error", "error", err)
+			os.Exit(1)
+		}
+	} else if hasHTTP {
+		// Only HTTP JSON API is enabled, but stdio MCP transport should also run
+		slog.Info("Starting HTTP JSON API transport with stdio MCP transport")
+
+		// Start MCP server (stdio) in background
+		go func() {
+			if err := srv.Run(); err != nil {
+				slog.Error("MCP stdio server error", "error", err)
+			}
+		}()
+
+		// Run HTTP JSON API (blocking)
+		if err := httpTransport.Start(); err != nil && err != http.ErrServerClosed {
+			slog.Error("HTTP JSON API transport server error", "error", err)
 			os.Exit(1)
 		}
 	} else {
-		// Run MCP server with stdio or SSE transport
+		// Run MCP server (stdio or MCP Streamable HTTP)
 		if err := srv.Run(); err != nil {
-			slog.Error("server run error", "error", err)
+			slog.Error("MCP server error", "error", err)
 			os.Exit(1)
 		}
 	}
@@ -561,21 +587,27 @@ func loadModules(ctx context.Context, modManager *modules.ModuleManager, cfg *co
 		loaded[id] = struct{}{}
 	}
 
+	slog.Info("Checking for additional modules in config", "module_count", len(cfg.Modules))
 	for idStr, entry := range cfg.Modules {
 		id := modules.ModuleID(idStr)
+		slog.Info("Processing module from config", "id", idStr, "enabled", entry.Enabled, "has_config", len(entry.Config) > 0)
 		if _, isDisabled := disabled[idStr]; isDisabled {
+			slog.Info("Module is disabled, skipping", "id", idStr)
 			continue
 		}
 		if !entry.Enabled && len(entry.Config) == 0 {
+			slog.Info("Module not enabled and has no config, skipping", "id", idStr)
 			continue
 		}
 		if _, exists := loaded[id]; exists {
+			slog.Info("Module already loaded, skipping", "id", idStr)
 			continue
 		}
 		config := entry.Config
 		if config == nil {
 			config = map[string]any{}
 		}
+		slog.Info("Loading module", "id", idStr)
 		if _, err := modManager.LoadModule(ctx, id, config); err != nil {
 			return err
 		}

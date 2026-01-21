@@ -10,7 +10,10 @@
 # Environment variables use the GOMEM_ prefix (e.g., GOMEM_MCP_HTTP_ADDR).
 # Command-line flags take precedence over YAML, and environment variables over both.
 
+# ========== MCP Streamable HTTP Transport ==========
 # Enable MCP Streamable HTTP transport (recommended) (default: false)
+# This transport allows MCP clients to connect via HTTP/SSE instead of stdio.
+# Can run simultaneously with HTTP JSON API transport (see below).
 #mcp-http: false
 
 # Port or address to bind MCP Streamable HTTP transport (default: "3000")
@@ -19,10 +22,14 @@
 # MCP Streamable HTTP endpoint path (default: "/mcp")
 #mcp-http-endpoint: "/mcp"
 
+# ========== HTTP JSON API Transport ==========
 # Enable HTTP JSON API transport (default: false)
+# This enables a REST-like API and module HTTP endpoints (e.g., commercial webui).
+# Can run simultaneously with MCP Streamable HTTP transport (see above).
 #http: false
 
-# Address to bind HTTP transport (host:port) (default: ":8080")
+# Address to bind HTTP transport (host:port) (default: "8080")
+# Can be just a port number ("8080") or host:port ("localhost:8080")
 #http-addr: "8080"
 
 # Enable REST API server (default: false)

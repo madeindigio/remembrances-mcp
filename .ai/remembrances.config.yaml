@@ -11,19 +11,20 @@
 # Command-line flags take precedence over YAML, and environment variables over both.
 
 # Enable MCP Streamable HTTP transport (recommended) (default: false)
-#mcp-http: false
+mcp-http: true
 
 # Port or address to bind MCP Streamable HTTP transport (default: "3000")
-#mcp-http-addr: "3000"
+mcp-http-addr: "3030"
 
 # MCP Streamable HTTP endpoint path (default: "/mcp")
-#mcp-http-endpoint: "/mcp"
+mcp-http-endpoint: "/mcp"
 
 # Enable HTTP JSON API transport (default: false)
-#http: false
+http: true
 
-# Address to bind HTTP transport (host:port) (default: ":8080")
-#http-addr: "8080"
+# Address to bind HTTP transport (host:port) (default: "8080")
+# Can be just a port number ("8080") or host:port ("localhost:8080")
+http-addr: "8080"
 
 # Enable REST API server (default: false)
 #rest-api-serve: false
@@ -144,3 +145,9 @@ code-indexing-max-file-size: 524288
 # ========== Logging Configuration ==========
 # Path to the log file (logs will be written to both stdout and file) (default: "")
 log: "/www/MCP/remembrances-mcp/remembrances-mcp.log"
+
+modules:
+  commercial_webui:
+    enabled: true
+    config:
+      port: "8080"

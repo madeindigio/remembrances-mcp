@@ -16,12 +16,8 @@
       }
     },
     "remembrances": {
-      "type": "stdio",
-      "command": "remembrances-mcp-beta",
-      "args": [
-        "--config",
-        "./.ai/remembrances.config.yaml"
-      ]
+      "type": "http",
+      "url": "http://127.0.0.1:3030/mcp"
     },
     "mesnada": {
       "type": "http",

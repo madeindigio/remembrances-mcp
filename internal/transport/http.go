@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
+	"github.com/madeindigio/remembrances-mcp/pkg/modules"
 )
 
 const (
@@ -160,4 +162,29 @@ func CreateHTTPServerTransport(addr string, mcpServer *mcpserver.Server) (*HTTPT
 		return nil, fmt.Errorf("failed to setup MCP routes: %w", err)
 	}
 	return transport, nil
+}
+
+// RegisterModuleRoutes registers HTTP routes from module providers
+func (h *HTTPTransport) RegisterModuleRoutes(providers []modules.HTTPEndpointProvider) {
+	for _, provider := range providers {
+		basePath := provider.BasePath()
+		routes := provider.Routes()
+
+		slog.Info("Registering module HTTP routes", "base_path", basePath, "routes", len(routes))
+
+		for _, route := range routes {
+			fullPath := basePath + route.Path
+
+			// Handle wildcard paths for static files
+			if strings.HasSuffix(route.Path, "/*") {
+				// Strip the /* from the path
+				baseStaticPath := strings.TrimSuffix(fullPath, "/*")
+				h.mux.HandleFunc(baseStaticPath+"/", route.Handler)
+				slog.Debug("Registered wildcard route", "method", route.Method, "path", baseStaticPath+"/")
+			} else {
+				h.mux.HandleFunc(fullPath, route.Handler)
+				slog.Debug("Registered route", "method", route.Method, "path", fullPath)
+			}
+		}
+	}
 }

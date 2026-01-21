@@ -279,21 +279,44 @@ go run ./cmd/remembrances-mcp/main.go --mcp-http --mcp-http-addr="3000"
 GOMEM_MCP_HTTP=true GOMEM_MCP_HTTP_ADDR="3000" go run ./cmd/remembrances-mcp/main.go --mcp-http
 
 # Start HTTP JSON API transport
-go run ./cmd/remembrances-mcp/main.go --http --http-addr=":8080"
+go run ./cmd/remembrances-mcp/main.go --http --http-addr="8080"
 
 # Or via environment variable
-GOMEM_HTTP=true GOMEM_HTTP_ADDR=":8080" go run ./cmd/remembrances-mcp/main.go
+GOMEM_HTTP=true GOMEM_HTTP_ADDR="8080" go run ./cmd/remembrances-mcp/main.go
+
+# Run BOTH transports simultaneously (MCP on 3000, HTTP API on 8080)
+go run ./cmd/remembrances-mcp/main.go --mcp-http --mcp-http-addr="3000" --http --http-addr="8080"
 ```
 
 ### Transport Options
 
-The server supports these transport modes:
+The server supports these transport modes (can run multiple simultaneously):
 
 1. **stdio (default)**: Standard input/output for MCP protocol communication
 2. **MCP Streamable HTTP**: Recommended network transport for MCP tools (endpoint: `/mcp`)
-3. **HTTP**: Simple HTTP JSON API for direct REST-style access
+3. **HTTP JSON API**: REST-style API for direct access and module HTTP endpoints
 
-> Note: Legacy **SSE** transport is deprecated/obsolete and is mapped to Streamable HTTP.
+> **Note**: MCP Streamable HTTP and HTTP JSON API can run **simultaneously** on different ports, allowing you to serve both MCP clients and custom web applications (like the commercial Web UI module) at the same time.
+
+> **Legacy**: SSE transport is deprecated/obsolete and is mapped to Streamable HTTP.
+
+#### Simultaneous Transport Example
+
+Running both MCP Streamable HTTP (port 3000) and HTTP JSON API (port 8080):
+
+```yaml
+# config.yaml
+mcp-http: true
+mcp-http-addr: "3000"
+mcp-http-endpoint: "/mcp"
+
+http: true
+http-addr: "8080"
+```
+
+This configuration enables:
+- **Port 3000**: MCP protocol for tool calls via `/mcp` endpoint
+- **Port 8080**: HTTP JSON API + module endpoints (e.g., `/admin` for Web UI)
 
 #### HTTP Transport Endpoints
 
@@ -302,6 +325,7 @@ When using `--http`, the server exposes these endpoints:
 - `GET /health` - Health check endpoint
 - `GET /mcp/tools` - List available MCP tools
 - `POST /mcp/tools/call` - Call an MCP tool
+- Module-specific endpoints (e.g., `/admin/*` for commercial webui module)
 
 Example HTTP usage:
 

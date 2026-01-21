@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "remembrances-mcp": {
+      "type": "stdio",
+      "command": "remembrances-mcp-beta",
+      "args": [
+        "--config",
+        "/www/MCP/remembrances-mcp/.ai/remembrances.config.yaml"
+      ],
+      "env": {}
+    },
+    "hyper-mcp": {
+      "type": "stdio",
+      "command": "hyper-mcp",
+      "args": [
+        "--config-file",
+        "/home/sevir/.config/hyper-mcp/search.yaml"
+      ],
+      "env": {}
+    }
+  }
+}

@@ -123,3 +123,17 @@ func (mm *ModuleManager) GetToolProviders() []ToolProvider {
 	}
 	return providers
 }
+
+// GetHTTPEndpointProviders returns all loaded HTTPEndpointProvider modules.
+func (mm *ModuleManager) GetHTTPEndpointProviders() []HTTPEndpointProvider {
+	mm.mu.RLock()
+	defer mm.mu.RUnlock()
+
+	var providers []HTTPEndpointProvider
+	for _, instance := range mm.instances {
+		if hp, ok := instance.(HTTPEndpointProvider); ok {
+			providers = append(providers, hp)
+		}
+	}
+	return providers
+}

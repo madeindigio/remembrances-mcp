@@ -1,3 +1,6 @@
 [submodule "website/themes/docsy"]
 	path = website/themes/docsy
 	url = https://github.com/google/docsy.git
+[submodule "modules/commercial"]
+	path = modules/commercial
+	url = git@github.com-josedigio:madeindigio/remembrances-commercial-modules.git
