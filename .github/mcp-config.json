@@ -10,6 +10,14 @@
       "tools": [
         "*"
       ]
+    },
+    "remembrances": {
+      "type": "http",
+      "url": "http://127.0.0.1:3030/mcp"
+    },
+    "mesnada": {
+      "type": "http",
+      "url": "http://127.0.0.1:8767/mcp"
     }
   }
 }

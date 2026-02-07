@@ -24,7 +24,7 @@ http: true
 
 # Address to bind HTTP transport (host:port) (default: "8080")
 # Can be just a port number ("8080") or host:port ("localhost:8080")
-http-addr: "8080"
+http-addr: "localhost:8084"
 
 # Enable REST API server (default: false)
 #rest-api-serve: false
@@ -150,4 +150,4 @@ modules:
   commercial_webui:
     enabled: true
     config:
-      port: "8080"
+      port: "8084"

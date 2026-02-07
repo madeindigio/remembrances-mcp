@@ -1,6 +1,10 @@
 package modules
 
-import "context"
+import (
+	"context"
+
+	"github.com/madeindigio/remembrances-mcp/internal/storage"
+)
 
 // ModuleID identifies a module uniquely (e.g., "tools.reasoning").
 type ModuleID string
@@ -34,4 +38,11 @@ type Validator interface {
 // CleanerUpper releases resources when a module is unloaded.
 type CleanerUpper interface {
 	Cleanup() error
+}
+
+// StorageWrapperProvider allows modules to wrap the primary storage.
+// This enables modules to intercept and enhance storage operations.
+type StorageWrapperProvider interface {
+	Module
+	WrapStorage(primary storage.FullStorage) storage.FullStorage
 }

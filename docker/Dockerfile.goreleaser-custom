@@ -16,7 +16,7 @@ LABEL description="Custom goreleaser-cross image with Rust and llama.cpp build s
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.83.0
+    RUST_VERSION=1.86.0
 
 # Install additional dependencies for llama.cpp and Rust
 RUN apt-get update && apt-get install -y \
@@ -25,6 +25,10 @@ RUN apt-get update && apt-get install -y \
     cmake \
     ninja-build \
     pkg-config \
+    # MinGW toolchain (Windows GNU, POSIX threads)
+    mingw-w64 \
+    gcc-mingw-w64-x86-64 \
+    g++-mingw-w64-x86-64 \
     # Libraries for llama.cpp
     libcurl4-openssl-dev \
     # Rust dependencies
@@ -33,12 +37,21 @@ RUN apt-get update && apt-get install -y \
     # Cleanup
     && rm -rf /var/lib/apt/lists/*
 
+# Prefer POSIX-threaded MinGW toolchain when available
+RUN if [ -x /usr/bin/x86_64-w64-mingw32-gcc-posix ]; then \
+        update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix; \
+    fi && \
+    if [ -x /usr/bin/x86_64-w64-mingw32-g++-posix ]; then \
+        update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix; \
+    fi
+
 # Install Rust using rustup
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- \
     -y \
     --default-toolchain ${RUST_VERSION} \
     --profile minimal \
     --no-modify-path && \
+    /usr/local/cargo/bin/rustup component add rustfmt && \
     # Add Rust cross-compilation targets in the same layer to save space
     /usr/local/cargo/bin/rustup target add \
         x86_64-unknown-linux-gnu \

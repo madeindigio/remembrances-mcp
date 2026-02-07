@@ -155,6 +155,7 @@ type MemoryStats struct {
 	EntityCount       int   `json:"entity_count"`
 	RelationshipCount int   `json:"relationship_count"`
 	DocumentCount     int   `json:"document_count"`
+	EventCount        int   `json:"event_count"`
 	TotalSize         int64 `json:"total_size_bytes"`
 }
 

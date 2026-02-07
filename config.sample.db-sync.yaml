@@ -1,0 +1,474 @@
+# Sample Configuration for DB Sync Server Module
+# 
+# This file demonstrates how to configure the db-sync-server commercial module
+# for Remembrances-MCP. The module provides real-time database replication with
+# intelligent query merging across multiple secondary SurrealDB instances.
+#
+# Quick Start:
+# 1. Copy this file: cp config.sample.db-sync.yaml config.yaml
+# 2. Customize the secondary database URLs and credentials
+# 3. Set environment variables for passwords
+# 4. Start: ./remembrances-mcp --config config.yaml
+#
+# Documentation:
+# - Module README: modules/commercial/db-sync-server/README.md
+# - Technical docs: docs/DB_SYNC_SERVER.md
+# - Main config: config.sample.yaml
+
+# ============================================================================
+# BASIC CONFIGURATION
+# ============================================================================
+# This is the minimal configuration to get started with db-sync-server.
+
+# Primary SurrealDB connection (required)
+surrealdb-url: "ws://localhost:8000"
+surrealdb-user: "root"
+surrealdb-pass: "root"
+surrealdb-namespace: "main"
+surrealdb-database: "remembrances"
+
+# Enable db-sync-server module
+modules:
+  - id: commercial_db-sync-server
+    config:
+      # Enable the module
+      enabled: true
+      
+      # Secondary database configuration
+      secondary_databases:
+        - name: backup-1
+          url: ws://localhost:8001/rpc        # Secondary SurrealDB WebSocket URL
+          username: root                       # Authentication username
+          password: ${BACKUP_PASSWORD}         # Use environment variable for security
+          # Optional: override namespace/database (defaults to primary if not set)
+          # namespace: main
+          # database: remembrances
+          priority: 1                          # Lower number = higher priority
+
+# ============================================================================
+# PRODUCTION CONFIGURATION
+# ============================================================================
+# This configuration is optimized for production deployments with high
+# availability, monitoring, and security best practices.
+
+# Production Primary Database
+# surrealdb-url: "wss://primary-db.prod.example.com:8000"  # Use WSS (secure) in production
+# surrealdb-user: "prod_user"
+# surrealdb-pass: "${PRIMARY_DB_PASSWORD}"                 # Always use env vars
+# surrealdb-namespace: "production"
+# surrealdb-database: "remembrances"
+
+# modules:
+#   - id: commercial_db-sync-server
+#     config:
+#       enabled: true
+#       
+#       # Multiple secondary databases for high availability
+#       secondary_databases:
+#         # Primary backup (highest priority)
+#         - name: production-replica-1
+#           url: wss://replica1.prod.example.com:8000/rpc
+#           username: repl_user
+#           password: ${REPLICA_1_PASSWORD}
+#           namespace: production
+#           database: remembrances
+#           priority: 1
+#         
+#         # Secondary backup (medium priority)
+#         - name: production-replica-2
+#           url: wss://replica2.prod.example.com:8000/rpc
+#           username: repl_user
+#           password: ${REPLICA_2_PASSWORD}
+#           namespace: production
+#           database: remembrances
+#           priority: 2
+#         
+#         # Disaster recovery (lowest priority, different region)
+#         - name: dr-replica
+#           url: wss://dr.remote.example.com:8000/rpc
+#           username: repl_user
+#           password: ${DR_PASSWORD}
+#           namespace: production
+#           database: remembrances
+#           priority: 3
+#       
+#       # Connection settings (production-tuned)
+#       connect_timeout: 10s        # Longer timeout for stability
+#       max_retries: 5              # More retries for reliability
+#       retry_backoff: 60s          # Longer backoff for production
+#       
+#       # Sync queue settings (high-throughput)
+#       queue_size: 5000            # Larger queue for bursts
+#       worker_count: 8             # More workers for parallelism
+#       batch_size: 500             # Larger batches for efficiency
+#       batch_timeout: 1s           # Quick processing
+#       operation_timeout: 30s      # Allow time for large operations
+#       
+#       # Query merger settings
+#       query_timeout: 3s           # Allow time for geo-distributed queries
+
+# ============================================================================
+# MULTI-REGION CONFIGURATION
+# ============================================================================
+# This configuration demonstrates replication to multiple geographic regions
+# for compliance, performance, and disaster recovery.
+
+# modules:
+#   - id: commercial_db-sync-server
+#     config:
+#       enabled: true
+#       
+#       secondary_databases:
+#         # US East region
+#         - name: us-east-replica
+#           url: wss://db-us-east.example.com:8000/rpc
+#           username: repl_user
+#           password: ${US_EAST_PASSWORD}
+#           namespace: production
+#           database: remembrances_us
+#           priority: 1                         # Same priority = parallel sync
+#         
+#         # EU West region
+#         - name: eu-west-replica
+#           url: wss://db-eu-west.example.com:8000/rpc
+#           username: repl_user
+#           password: ${EU_WEST_PASSWORD}
+#           namespace: production
+#           database: remembrances_eu
+#           priority: 1                         # Same priority = parallel sync
+#         
+#         # APAC South region
+#         - name: apac-south-replica
+#           url: wss://db-apac.example.com:8000/rpc
+#           username: repl_user
+#           password: ${APAC_PASSWORD}
+#           namespace: production
+#           database: remembrances_apac
+#           priority: 1                         # Same priority = parallel sync
+#       
+#       # Tuned for cross-region replication
+#       worker_count: 12              # 4 workers per region
+#       batch_size: 200               # Moderate batches
+#       operation_timeout: 60s        # Higher timeout for cross-region
+#       query_timeout: 5s             # Allow for geographic latency
+
+# ============================================================================
+# ANALYTICS REPLICA CONFIGURATION
+# ============================================================================
+# This configuration adds a dedicated analytics database that doesn't impact
+# primary performance. Analytics replica has lower priority and can handle
+# larger batches.
+
+# modules:
+#   - id: commercial_db-sync-server
+#     config:
+#       enabled: true
+#       
+#       secondary_databases:
+#         # Production replica (high priority)
+#         - name: production-replica
+#           url: wss://replica.prod.example.com:8000/rpc
+#           username: repl_user
+#           password: ${REPLICA_PASSWORD}
+#           priority: 1
+#         
+#         # Analytics replica (low priority)
+#         - name: analytics-replica
+#           url: ws://analytics-db.internal:8000/rpc
+#           username: analytics_user
+#           password: ${ANALYTICS_PASSWORD}
+#           namespace: analytics
+#           database: remembrances_analytics
+#           priority: 10                        # Low priority (after production)
+#       
+#       # Settings optimized for analytics
+#       worker_count: 6               # Mixed workload
+#       batch_size: 1000              # Large batches for analytics
+#       batch_timeout: 10s            # Wait for large batches
+#       query_timeout: 10s            # Analytics queries can be slow
+
+# ============================================================================
+# DEVELOPMENT/TESTING CONFIGURATION
+# ============================================================================
+# This configuration is for development and testing environments with minimal
+# resources and local databases.
+
+# Development Primary Database
+# surrealdb-url: "ws://localhost:8000"
+# surrealdb-user: "root"
+# surrealdb-pass: "root"
+# surrealdb-namespace: "test"
+# surrealdb-database: "remembrances_dev"
+
+# modules:
+#   - id: commercial_db-sync-server
+#     config:
+#       enabled: true
+#       
+#       secondary_databases:
+#         - name: dev-backup
+#           url: ws://localhost:8001/rpc
+#           username: root
+#           password: root                    # OK for dev, use env vars in prod
+#           namespace: test
+#           database: remembrances_backup
+#           priority: 1
+#       
+#       # Minimal settings for development
+#       connect_timeout: 5s
+#       max_retries: 3
+#       retry_backoff: 10s              # Shorter backoff for dev
+#       queue_size: 500                 # Smaller queue
+#       worker_count: 2                 # Minimal workers
+#       batch_size: 50                  # Smaller batches
+#       batch_timeout: 2s
+#       operation_timeout: 10s
+#       query_timeout: 1s
+
+# ============================================================================
+# DISASTER RECOVERY (DR) CONFIGURATION
+# ============================================================================
+# This configuration is optimized for disaster recovery with strict RPO/RTO
+# requirements (Recovery Point Objective / Recovery Time Objective).
+
+# modules:
+#   - id: commercial_db-sync-server
+#     config:
+#       enabled: true
+#       
+#       secondary_databases:
+#         # DR site in different region/datacenter
+#         - name: dr-primary
+#           url: wss://dr-db.remote.example.com:8000/rpc
+#           username: dr_user
+#           password: ${DR_PASSWORD}
+#           namespace: production
+#           database: remembrances
+#           priority: 1
+#       
+#       # Optimized for low RPO (30 seconds target)
+#       worker_count: 8               # High throughput
+#       batch_size: 100               # Small batches (low latency)
+#       batch_timeout: 500ms          # Process immediately
+#       operation_timeout: 30s        # Allow for network delays
+#       query_timeout: 3s
+#       
+#       # Aggressive connection settings
+#       connect_timeout: 5s
+#       max_retries: 10               # Never give up
+#       retry_backoff: 30s
+
+# ============================================================================
+# COMPLIANCE/AUDIT CONFIGURATION
+# ============================================================================
+# This configuration maintains an immutable audit trail. Since deletes don't
+# propagate to secondaries, this creates a perfect audit database.
+
+# modules:
+#   - id: commercial_db-sync-server
+#     config:
+#       enabled: true
+#       
+#       secondary_databases:
+#         # Production replica
+#         - name: production-replica
+#           url: wss://replica.prod.example.com:8000/rpc
+#           username: repl_user
+#           password: ${REPLICA_PASSWORD}
+#           priority: 1
+#         
+#         # Audit/compliance replica (separate namespace for security)
+#         - name: audit-replica
+#           url: wss://audit-db.compliance.example.com:8000/rpc
+#           username: audit_user
+#           password: ${AUDIT_PASSWORD}
+#           namespace: audit                    # Separate namespace
+#           database: remembrances_audit
+#           priority: 2                         # Process after production
+#       
+#       # Standard settings
+#       worker_count: 6
+#       batch_size: 500
+#       operation_timeout: 20s
+
+# ============================================================================
+# RESOURCE-CONSTRAINED CONFIGURATION
+# ============================================================================
+# This configuration minimizes resource usage for memory/CPU-constrained
+# environments (e.g., edge devices, small VPS).
+
+# modules:
+#   - id: commercial_db-sync-server
+#     config:
+#       enabled: true
+#       
+#       secondary_databases:
+#         - name: backup
+#           url: ws://backup.local:8000/rpc
+#           username: root
+#           password: ${BACKUP_PASSWORD}
+#           priority: 1
+#       
+#       # Minimal resource usage
+#       queue_size: 200               # Small queue (less memory)
+#       worker_count: 1               # Single worker (less CPU)
+#       batch_size: 50                # Small batches (less memory)
+#       batch_timeout: 5s             # Wait longer to fill batches
+#       operation_timeout: 15s
+#       query_timeout: 1s             # Timeout secondaries quickly
+#       
+#       # Conservative connection settings
+#       connect_timeout: 5s
+#       max_retries: 3
+#       retry_backoff: 60s
+
+# ============================================================================
+# ENVIRONMENT VARIABLES
+# ============================================================================
+# Set these environment variables for secure credential management:
+#
+# export BACKUP_PASSWORD="your-secure-password-here"
+# export REPLICA_1_PASSWORD="replica-1-password"
+# export REPLICA_2_PASSWORD="replica-2-password"
+# export DR_PASSWORD="dr-password"
+# export ANALYTICS_PASSWORD="analytics-password"
+# export AUDIT_PASSWORD="audit-password"
+# export PRIMARY_DB_PASSWORD="primary-password"
+#
+# For systemd services, add to service file:
+# [Service]
+# Environment="BACKUP_PASSWORD=your-password"
+#
+# For Docker, use --env or --env-file:
+# docker run --env BACKUP_PASSWORD=your-password ...
+#
+# For Kubernetes, use Secrets:
+# kubectl create secret generic db-passwords \
+#   --from-literal=backup-password=your-password
+
+# ============================================================================
+# ADDITIONAL OPTIONS
+# ============================================================================
+# The configuration below shows other Remembrances-MCP options that work
+# alongside db-sync-server. See config.sample.yaml for complete options.
+
+# MCP transport (HTTP recommended for production)
+# mcp-http: true
+# mcp-http-addr: "3000"
+# mcp-http-endpoint: "/mcp"
+
+# HTTP API transport
+# http: true
+# http-addr: "8080"
+
+# Logging
+# log-level: info                 # debug, info, warn, error
+# log-file: /var/log/remembrances-mcp.log
+
+# Embeddings (for semantic search)
+# ollama-url: "http://localhost:11434"
+# ollama-model: "nomic-embed-text:latest"
+
+# Or use GGUF local model
+# gguf-model-path: "/path/to/nomic-embed-text-v1.5.Q4_K_M.gguf"
+# gguf-threads: 8
+# gguf-gpu-layers: 32
+
+# ============================================================================
+# PERFORMANCE TUNING GUIDE
+# ============================================================================
+#
+# High Write Throughput:
+#   worker_count: 8-16
+#   batch_size: 500-1000
+#   queue_size: 5000-10000
+#   batch_timeout: 500ms-1s
+#
+# Low Latency (Fast Sync):
+#   worker_count: 4-8
+#   batch_size: 50-100
+#   queue_size: 1000
+#   batch_timeout: 100ms-500ms
+#
+# Resource Constrained:
+#   worker_count: 1-2
+#   batch_size: 50-100
+#   queue_size: 200-500
+#   batch_timeout: 2s-5s
+#
+# Geo-Distributed:
+#   worker_count: 8-12
+#   batch_size: 200-500
+#   operation_timeout: 30s-60s
+#   query_timeout: 5s-10s
+#
+# See docs/DB_SYNC_SERVER.md for detailed tuning guide.
+
+# ============================================================================
+# MONITORING
+# ============================================================================
+#
+# Key metrics to monitor:
+# - Queue size (alert if > 80% capacity)
+# - Sync latency (target < 500ms p95)
+# - Query timeout rate (target < 1%)
+# - Connection health (all secondaries connected)
+# - Dead-letter queue size (should be near 0)
+#
+# Enable health check endpoint:
+# GET /health/db-sync
+#
+# Example response:
+# {
+#   "status": "healthy",
+#   "queue": {"size": 45, "capacity": 1000},
+#   "secondaries": [
+#     {"name": "backup-1", "connected": true, "latency_ms": 12}
+#   ]
+# }
+
+# ============================================================================
+# TROUBLESHOOTING
+# ============================================================================
+#
+# Connection failures:
+# - Verify URL format: ws://host:port/rpc (note: /rpc endpoint)
+# - Check network connectivity: telnet host port
+# - Verify credentials and permissions
+# - Check firewall rules
+#
+# High queue size:
+# - Increase worker_count
+# - Increase batch_size
+# - Check secondary database performance
+#
+# Sync delays:
+# - Reduce batch_timeout
+# - Increase worker_count
+# - Check network latency
+#
+# See modules/commercial/db-sync-server/README.md#troubleshooting
+
+# ============================================================================
+# SUPPORT
+# ============================================================================
+#
+# Documentation:
+# - Module README: modules/commercial/db-sync-server/README.md
+# - Technical docs: docs/DB_SYNC_SERVER.md
+# - Main README: README.md
+#
+# For issues or questions:
+# - Check troubleshooting section above
+# - Review documentation
+# - Search GitHub issues
+# - Open new issue with details
+
+# ============================================================================
+# VERSION INFORMATION
+# ============================================================================
+#
+# Config version: 1.0
+# Module version: 1.18.0
+# Last updated: 2026-01-23
+# Status: Production Ready

@@ -108,14 +108,29 @@ check_requirements() {
 build_shared_libraries() {
     log_step "Building shared libraries for all platforms..."
 
+    local docker_env=()
+    if [ -n "${TARGET_PLATFORM}" ]; then
+        docker_env+=("-e" "TARGET_PLATFORM=${TARGET_PLATFORM}")
+    fi
+    if [ -n "${TARGET_ARCH}" ]; then
+        docker_env+=("-e" "TARGET_ARCH=${TARGET_ARCH}")
+    fi
+
+    local host_remembrances_dir="${HOME}/www/MCP/Remembrances"
+    if [ ! -d "${host_remembrances_dir}" ]; then
+        log_warn "Host Remembrances directory not found at ${host_remembrances_dir}."
+        log_warn "Set HOME or create the directory to allow Docker volume mounting."
+    fi
+
     # Run the build-libs-cross.sh script inside the Docker container
     docker run --rm \
         -v "${PROJECT_ROOT}:/go/src/github.com/madeindigio/remembrances-mcp" \
-        -v "~/www/MCP/Remembrances:~/www/MCP/Remembrances" \
+        -v "${host_remembrances_dir}:${host_remembrances_dir}" \
         -w /go/src/github.com/madeindigio/remembrances-mcp \
         -e PROJECT_ROOT=/go/src/github.com/madeindigio/remembrances-mcp \
-        -e LLAMA_CPP_DIR=~/www/MCP/Remembrances/go-llama.cpp \
-        -e SURREALDB_DIR=~/www/MCP/Remembrances/surrealdb-embedded \
+        -e LLAMA_CPP_DIR=${host_remembrances_dir}/go-llama.cpp \
+        -e SURREALDB_DIR=${host_remembrances_dir}/surrealdb-embedded \
+        "${docker_env[@]}" \
         --entrypoint /bin/bash \
         "${GORELEASER_CROSS_IMAGE}" \
         scripts/build-libs-cross.sh

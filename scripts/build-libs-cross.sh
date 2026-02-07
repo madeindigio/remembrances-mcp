@@ -8,6 +8,10 @@ PROJECT_ROOT="${PROJECT_ROOT:-/go/src/github.com/madeindigio/remembrances-mcp}"
 LLAMA_CPP_DIR="${LLAMA_CPP_DIR:-$HOME/www/MCP/Remembrances/go-llama.cpp}"
 SURREALDB_DIR="${SURREALDB_DIR:-$HOME/www/MCP/Remembrances/surrealdb-embedded}"
 DIST_LIBS_DIR="${PROJECT_ROOT}/dist/libs"
+TARGET_PLATFORM="${TARGET_PLATFORM:-}"
+TARGET_ARCH="${TARGET_ARCH:-}"
+BUILD_LLAMA_CPP="${BUILD_LLAMA_CPP:-1}"
+BUILD_LLAMA_SHIM="${BUILD_LLAMA_SHIM:-1}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -25,6 +29,21 @@ log_warn() {
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+should_build_target() {
+    local platform=$1
+    local arch=$2
+
+    if [ -n "${TARGET_PLATFORM}" ] && [ "${platform}" != "${TARGET_PLATFORM}" ]; then
+        return 1
+    fi
+
+    if [ -n "${TARGET_ARCH}" ] && [ "${arch}" != "${TARGET_ARCH}" ]; then
+        return 1
+    fi
+
+    return 0
 }
 
 # Function to build llama.cpp for a specific platform
@@ -46,6 +65,10 @@ build_llama_cpp() {
         return 1
     fi
 
+    if command -v git >/dev/null 2>&1; then
+        git -C "${LLAMA_CPP_DIR}/llama.cpp" config --global --add safe.directory "${LLAMA_CPP_DIR}/llama.cpp" || true
+    fi
+
     # Create a build directory for this platform
     local build_dir="${LLAMA_CPP_DIR}/build-${platform}-${arch}"
     mkdir -p "${build_dir}"
@@ -55,6 +78,8 @@ build_llama_cpp() {
 
     # Platform-specific CMake flags
     local cmake_flags="-DLLAMA_STATIC=OFF -DBUILD_SHARED_LIBS=ON -DLLAMA_CURL=OFF"
+    local cmake_cflags="${CFLAGS}"
+    local cmake_cxxflags="${CXXFLAGS}"
 
     case "${platform}" in
         darwin)
@@ -83,11 +108,14 @@ build_llama_cpp() {
             fi
             # Windows-specific flags for DLL
             cmake_flags="${cmake_flags} -DCMAKE_SHARED_LIBRARY_PREFIX=''"
+            local win_defines="-DWINVER=0x0A00 -D_WIN32_WINNT=0x0A00 -DNTDDI_VERSION=0x0A000000 -DGGML_WIN32_DISABLE_THREAD_PRIORITY"
+            cmake_cflags="${cmake_cflags:+${cmake_cflags} }${win_defines}"
+            cmake_cxxflags="${cmake_cxxflags:+${cmake_cxxflags} }${win_defines}"
             ;;
     esac
 
     # Run CMake
-    CC="${cc}" CXX="${cxx}" cmake "${LLAMA_CPP_DIR}/llama.cpp" \
+    CFLAGS="${cmake_cflags}" CXXFLAGS="${cmake_cxxflags}" CC="${cc}" CXX="${cxx}" cmake "${LLAMA_CPP_DIR}/llama.cpp" \
         ${cmake_flags} \
         -DCMAKE_C_COMPILER="${cc}" \
         -DCMAKE_CXX_COMPILER="${cxx}" \
@@ -209,6 +237,34 @@ build_surrealdb_embedded() {
 
     # Build with cargo
     log_info "Building Rust library for target: ${rust_target}..."
+
+    if [ "${platform}" = "windows" ]; then
+        # Prefer the POSIX-threaded MinGW toolchain to get std::thread/condition_variable support.
+        if command -v x86_64-w64-mingw32-gcc-posix >/dev/null 2>&1; then
+            export CC=x86_64-w64-mingw32-gcc-posix
+        elif command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+            export CC=x86_64-w64-mingw32-gcc
+        fi
+
+        if command -v x86_64-w64-mingw32-g++-posix >/dev/null 2>&1; then
+            export CXX=x86_64-w64-mingw32-g++-posix
+        elif command -v x86_64-w64-mingw32-g++ >/dev/null 2>&1; then
+            export CXX=x86_64-w64-mingw32-g++
+        fi
+
+        if command -v x86_64-w64-mingw32-ar >/dev/null 2>&1; then
+            export AR=x86_64-w64-mingw32-ar
+        fi
+
+        export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER="${CXX:-x86_64-w64-mingw32-g++}"
+        export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_AR="${AR:-x86_64-w64-mingw32-ar}"
+
+        # Ensure thread support is enabled for libstdc++ on MinGW.
+        export CFLAGS="${CFLAGS} -mthreads -D_GLIBCXX_HAS_GTHREADS"
+        export CXXFLAGS="${CXXFLAGS} -mthreads -D_GLIBCXX_HAS_GTHREADS"
+        export LDFLAGS="${LDFLAGS} -lwinpthread"
+    fi
+
     cargo build --release --target "${rust_target}"
 
     # Copy library to output directory
@@ -244,10 +300,18 @@ build_for_platform() {
     log_info "=========================================="
 
     # Build llama.cpp
-    build_llama_cpp "${platform}" "${arch}" "${cc}" "${cxx}" || log_error "Failed to build llama.cpp"
+    if [ "${BUILD_LLAMA_CPP}" = "1" ]; then
+        build_llama_cpp "${platform}" "${arch}" "${cc}" "${cxx}" || log_error "Failed to build llama.cpp"
+    else
+        log_warn "Skipping llama.cpp build for ${platform}-${arch} (BUILD_LLAMA_CPP=0)"
+    fi
 
     # Build llama shim (depends on libllama)
-    build_llama_shim "${platform}" "${arch}" "${cc}" || log_error "Failed to build libllama_shim"
+    if [ "${BUILD_LLAMA_SHIM}" = "1" ] && [ "${BUILD_LLAMA_CPP}" = "1" ]; then
+        build_llama_shim "${platform}" "${arch}" "${cc}" || log_error "Failed to build libllama_shim"
+    else
+        log_warn "Skipping libllama_shim for ${platform}-${arch} (BUILD_LLAMA_SHIM=0 or BUILD_LLAMA_CPP=0)"
+    fi
 
     # Build surrealdb-embedded
     build_surrealdb_embedded "${platform}" "${arch}" || log_error "Failed to build surrealdb-embedded"
@@ -269,19 +333,29 @@ main() {
     # Note: These compilers are available in the goreleaser-cross Docker image
 
     # Linux amd64
-    build_for_platform "linux" "amd64" "x86_64-linux-gnu-gcc" "x86_64-linux-gnu-g++"
+    if should_build_target "linux" "amd64"; then
+        build_for_platform "linux" "amd64" "x86_64-linux-gnu-gcc" "x86_64-linux-gnu-g++"
+    fi
 
     # Linux arm64
-    build_for_platform "linux" "arm64" "aarch64-linux-gnu-gcc" "aarch64-linux-gnu-g++"
+    if should_build_target "linux" "arm64"; then
+        build_for_platform "linux" "arm64" "aarch64-linux-gnu-gcc" "aarch64-linux-gnu-g++"
+    fi
 
     # macOS amd64
-    build_for_platform "darwin" "amd64" "o64-clang" "o64-clang++"
+    if should_build_target "darwin" "amd64"; then
+        build_for_platform "darwin" "amd64" "o64-clang" "o64-clang++"
+    fi
 
     # macOS arm64
-    build_for_platform "darwin" "arm64" "oa64-clang" "oa64-clang++"
+    if should_build_target "darwin" "arm64"; then
+        build_for_platform "darwin" "arm64" "oa64-clang" "oa64-clang++"
+    fi
 
     # Windows amd64
-    build_for_platform "windows" "amd64" "x86_64-w64-mingw32-gcc" "x86_64-w64-mingw32-g++"
+    if should_build_target "windows" "amd64"; then
+        build_for_platform "windows" "amd64" "x86_64-w64-mingw32-gcc" "x86_64-w64-mingw32-g++"
+    fi
 
  
     log_info "=========================================="

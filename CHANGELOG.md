@@ -1,5 +1,40 @@
 # Changelog
 
+## [v1.18.0](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.17.3...v1.18.0) (2026-01-23)
+
+### Features
+
+* **db-sync-server:** Add commercial database synchronization module
+  ([FINAL](https://github.com-josedigio/madeindigio/remembrances-mcp/modules/commercial/db-sync-server))
+  - Real-time asynchronous replication to multiple secondary SurrealDB instances
+  - Intelligent query merging with primary database precedence
+  - Complete FullStorage interface implementation (64/64 methods)
+  - Configurable worker pool, batching, and retry logic
+  - Multi-database support with priority-based failover
+  - Production-ready with comprehensive test coverage
+  - Graceful degradation when secondary databases unavailable
+  - Smart deduplication strategies for vectors, documents, and facts
+  - No delete propagation (data retention on secondaries)
+  - Pause/resume capabilities for maintenance windows
+
+### Documentation
+
+* Add comprehensive db-sync-server documentation
+  - Module README with quick start and configuration reference
+  - Technical documentation (docs/DB_SYNC_SERVER.md) with architecture deep-dive
+  - Complete configuration sample (config.sample.db-sync.yaml)
+  - Troubleshooting guide with common issues and solutions
+  - Performance tuning guide for different workloads
+  - Operational guide with deployment and maintenance procedures
+  - Monitoring and observability recommendations
+  - Advanced scenarios (multi-region, DR, compliance)
+
+### Notes
+
+* This release completes the 10-phase implementation of the db-sync-server commercial module
+* All phases (scaffold, connection, sync queue, dedup, write/read paths, testing, documentation) are complete
+* Module is production-ready for enterprise deployments requiring high availability and data redundancy
+
 ### [v1.17.3](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.17.1...v1.17.3) (2025-12-20)
 
 #### Fixes

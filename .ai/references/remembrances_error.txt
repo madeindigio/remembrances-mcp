@@ -1,0 +1,1356 @@
+ENFAF LD_LIBRARY_PATH=/home/jose/.config/remembrances-beta/remembrances-mcp-beta/:$LD_LIBRARY_PATH /home/jose/.config/remembrances-beta/remembrances-mcp-beta/remembrances-mcp-beta --config .ai/remembrances.config.yaml
+time=2026-02-05T10:19:04.553+01:00 level=INFO msg="Build info" version=1.19.3-dirty commit=f95f272 variant=cuda lib_mode=shared-libs
+time=2026-02-05T10:19:04.553+01:00 level=INFO msg="MCP Streamable HTTP transport enabled" address=:3888 endpoint=/mcp
+time=2026-02-05T10:19:04.594+01:00 level=INFO msg="Loaded libraries from binary directory" dir=/home/jose/.config/remembrances-beta/remembrances-mcp-beta variant=cuda build_lib_mode=shared-libs
+time=2026-02-05T10:19:04.594+01:00 level=INFO msg="Embedded libraries loaded" platform=linux/amd64 variant=cuda portable=false dir=/home/jose/.config/remembrances-beta/remembrances-mcp-beta
+time=2026-02-05T10:19:04.594+01:00 level=INFO msg="Connecting to embedded SurrealDB" url=surrealkv://.remembrances/remembrances.db
+time=2026-02-05T10:19:05.905+01:00 level=INFO msg="Successfully connected to embedded SurrealDB"
+time=2026-02-05T10:19:05.905+01:00 level=INFO msg="Initializing SurrealDB schema..."
+time=2026-02-05T10:19:05.906+01:00 level=INFO msg="Schema is up to date" version=12
+time=2026-02-05T10:19:05.906+01:00 level=INFO msg="Schema initialization completed"
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 3050 Ti Laptop GPU, compute capability 8.6, VMM: yes
+llama_model_load_from_file_impl: using device CUDA0 (NVIDIA GeForce RTX 3050 Ti Laptop GPU) (0000:01:00.0) - 3675 MiB free
+llama_model_loader: loaded meta data with 23 key-value pairs and 112 tensors from /home/jose/.config/remembrances/models/nomic-embed-text-v1.5.Q4_K_M.gguf (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = nomic-bert
+llama_model_loader: - kv   1:                               general.name str              = nomic-embed-text-v1.5
+llama_model_loader: - kv   2:                     nomic-bert.block_count u32              = 12
+llama_model_loader: - kv   3:                  nomic-bert.context_length u32              = 2048
+llama_model_loader: - kv   4:                nomic-bert.embedding_length u32              = 768
+llama_model_loader: - kv   5:             nomic-bert.feed_forward_length u32              = 3072
+llama_model_loader: - kv   6:            nomic-bert.attention.head_count u32              = 12
+llama_model_loader: - kv   7:    nomic-bert.attention.layer_norm_epsilon f32              = 0.000000
+llama_model_loader: - kv   8:                          general.file_type u32              = 15
+llama_model_loader: - kv   9:                nomic-bert.attention.causal bool             = false
+llama_model_loader: - kv  10:                    nomic-bert.pooling_type u32              = 1
+llama_model_loader: - kv  11:                  nomic-bert.rope.freq_base f32              = 1000.000000
+llama_model_loader: - kv  12:            tokenizer.ggml.token_type_count u32              = 2
+llama_model_loader: - kv  13:                tokenizer.ggml.bos_token_id u32              = 101
+llama_model_loader: - kv  14:                tokenizer.ggml.eos_token_id u32              = 102
+llama_model_loader: - kv  15:                       tokenizer.ggml.model str              = bert
+llama_model_loader: - kv  16:                      tokenizer.ggml.tokens arr[str,30522]   = ["[PAD]", "[unused0]", "[unused1]", "...
+llama_model_loader: - kv  17:                      tokenizer.ggml.scores arr[f32,30522]   = [-1000.000000, -1000.000000, -1000.00...
+llama_model_loader: - kv  18:                  tokenizer.ggml.token_type arr[i32,30522]   = [3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...
+llama_model_loader: - kv  19:            tokenizer.ggml.unknown_token_id u32              = 100
+llama_model_loader: - kv  20:          tokenizer.ggml.seperator_token_id u32              = 102
+llama_model_loader: - kv  21:            tokenizer.ggml.padding_token_id u32              = 0
+llama_model_loader: - kv  22:               general.quantization_version u32              = 2
+llama_model_loader: - type  f32:   51 tensors
+llama_model_loader: - type q4_K:   43 tensors
+llama_model_loader: - type q5_K:   12 tensors
+llama_model_loader: - type q6_K:    6 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 79.49 MiB (4.88 BPW) 
+init_tokenizer: initializing tokenizer for type 3
+load: control token:    101 '[CLS]' is not marked as EOG
+load: control token:    103 '[MASK]' is not marked as EOG
+load: control token:      0 '[PAD]' is not marked as EOG
+load: control token:    100 '[UNK]' is not marked as EOG
+load: control token:    102 '[SEP]' is not marked as EOG
+load: special_eos_id is not in special_eog_ids - the tokenizer config may be incorrect
+load: printing all EOG tokens:
+load:   - 102 ('[SEP]')
+load: special tokens cache size = 5
+load: token to piece cache size = 0.2032 MB
+print_info: arch             = nomic-bert
+print_info: vocab_only       = 0
+print_info: n_ctx_train      = 2048
+print_info: n_embd           = 768
+print_info: n_embd_inp       = 768
+print_info: n_layer          = 12
+print_info: n_head           = 12
+print_info: n_head_kv        = 12
+print_info: n_rot            = 64
+print_info: n_swa            = 0
+print_info: is_swa_any       = 0
+print_info: n_embd_head_k    = 64
+print_info: n_embd_head_v    = 64
+print_info: n_gqa            = 1
+print_info: n_embd_k_gqa     = 768
+print_info: n_embd_v_gqa     = 768
+print_info: f_norm_eps       = 1.0e-12
+print_info: f_norm_rms_eps   = 0.0e+00
+print_info: f_clamp_kqv      = 0.0e+00
+print_info: f_max_alibi_bias = 0.0e+00
+print_info: f_logit_scale    = 0.0e+00
+print_info: f_attn_scale     = 0.0e+00
+print_info: n_ff             = 3072
+print_info: n_expert         = 0
+print_info: n_expert_used    = 0
+print_info: n_expert_groups  = 0
+print_info: n_group_used     = 0
+print_info: causal attn      = 0
+print_info: pooling type     = 1
+print_info: rope type        = 2
+print_info: rope scaling     = linear
+print_info: freq_base_train  = 1000.0
+print_info: freq_scale_train = 1
+print_info: n_ctx_orig_yarn  = 2048
+print_info: rope_finetuned   = unknown
+print_info: model type       = 137M
+print_info: model params     = 136.73 M
+print_info: general.name     = nomic-embed-text-v1.5
+print_info: vocab type       = WPM
+print_info: n_vocab          = 30522
+print_info: n_merges         = 0
+print_info: BOS token        = 101 '[CLS]'
+print_info: EOS token        = 102 '[SEP]'
+print_info: UNK token        = 100 '[UNK]'
+print_info: SEP token        = 102 '[SEP]'
+print_info: PAD token        = 0 '[PAD]'
+print_info: MASK token       = 103 '[MASK]'
+print_info: LF token         = 0 '[PAD]'
+print_info: EOG token        = 102 '[SEP]'
+print_info: max token length = 21
+load_tensors: loading model tensors, this can take a while... (mmap = false)
+load_tensors: layer   0 assigned to device CPU, is_swa = 0
+load_tensors: layer   1 assigned to device CPU, is_swa = 0
+load_tensors: layer   2 assigned to device CPU, is_swa = 0
+load_tensors: layer   3 assigned to device CPU, is_swa = 0
+load_tensors: layer   4 assigned to device CPU, is_swa = 0
+load_tensors: layer   5 assigned to device CPU, is_swa = 0
+load_tensors: layer   6 assigned to device CPU, is_swa = 0
+load_tensors: layer   7 assigned to device CPU, is_swa = 0
+load_tensors: layer   8 assigned to device CPU, is_swa = 0
+load_tensors: layer   9 assigned to device CPU, is_swa = 0
+load_tensors: layer  10 assigned to device CPU, is_swa = 0
+load_tensors: layer  11 assigned to device CPU, is_swa = 0
+load_tensors: layer  12 assigned to device CPU, is_swa = 0
+create_tensor: loading tensor token_embd.weight
+create_tensor: loading tensor token_types.weight
+create_tensor: loading tensor token_embd_norm.weight
+create_tensor: loading tensor token_embd_norm.bias
+create_tensor: loading tensor blk.0.attn_qkv.weight
+create_tensor: loading tensor blk.0.attn_output.weight
+create_tensor: loading tensor blk.0.attn_output_norm.weight
+create_tensor: loading tensor blk.0.attn_output_norm.bias
+create_tensor: loading tensor blk.0.ffn_up.weight
+create_tensor: loading tensor blk.0.ffn_down.weight
+create_tensor: loading tensor blk.0.ffn_gate.weight
+create_tensor: loading tensor blk.0.layer_output_norm.weight
+create_tensor: loading tensor blk.0.layer_output_norm.bias
+create_tensor: loading tensor blk.1.attn_qkv.weight
+create_tensor: loading tensor blk.1.attn_output.weight
+create_tensor: loading tensor blk.1.attn_output_norm.weight
+create_tensor: loading tensor blk.1.attn_output_norm.bias
+create_tensor: loading tensor blk.1.ffn_up.weight
+create_tensor: loading tensor blk.1.ffn_down.weight
+create_tensor: loading tensor blk.1.ffn_gate.weight
+create_tensor: loading tensor blk.1.layer_output_norm.weight
+create_tensor: loading tensor blk.1.layer_output_norm.bias
+create_tensor: loading tensor blk.2.attn_qkv.weight
+create_tensor: loading tensor blk.2.attn_output.weight
+create_tensor: loading tensor blk.2.attn_output_norm.weight
+create_tensor: loading tensor blk.2.attn_output_norm.bias
+create_tensor: loading tensor blk.2.ffn_up.weight
+create_tensor: loading tensor blk.2.ffn_down.weight
+create_tensor: loading tensor blk.2.ffn_gate.weight
+create_tensor: loading tensor blk.2.layer_output_norm.weight
+create_tensor: loading tensor blk.2.layer_output_norm.bias
+create_tensor: loading tensor blk.3.attn_qkv.weight
+create_tensor: loading tensor blk.3.attn_output.weight
+create_tensor: loading tensor blk.3.attn_output_norm.weight
+create_tensor: loading tensor blk.3.attn_output_norm.bias
+create_tensor: loading tensor blk.3.ffn_up.weight
+create_tensor: loading tensor blk.3.ffn_down.weight
+create_tensor: loading tensor blk.3.ffn_gate.weight
+create_tensor: loading tensor blk.3.layer_output_norm.weight
+create_tensor: loading tensor blk.3.layer_output_norm.bias
+create_tensor: loading tensor blk.4.attn_qkv.weight
+create_tensor: loading tensor blk.4.attn_output.weight
+create_tensor: loading tensor blk.4.attn_output_norm.weight
+create_tensor: loading tensor blk.4.attn_output_norm.bias
+create_tensor: loading tensor blk.4.ffn_up.weight
+create_tensor: loading tensor blk.4.ffn_down.weight
+create_tensor: loading tensor blk.4.ffn_gate.weight
+create_tensor: loading tensor blk.4.layer_output_norm.weight
+create_tensor: loading tensor blk.4.layer_output_norm.bias
+create_tensor: loading tensor blk.5.attn_qkv.weight
+create_tensor: loading tensor blk.5.attn_output.weight
+create_tensor: loading tensor blk.5.attn_output_norm.weight
+create_tensor: loading tensor blk.5.attn_output_norm.bias
+create_tensor: loading tensor blk.5.ffn_up.weight
+create_tensor: loading tensor blk.5.ffn_down.weight
+create_tensor: loading tensor blk.5.ffn_gate.weight
+create_tensor: loading tensor blk.5.layer_output_norm.weight
+create_tensor: loading tensor blk.5.layer_output_norm.bias
+create_tensor: loading tensor blk.6.attn_qkv.weight
+create_tensor: loading tensor blk.6.attn_output.weight
+create_tensor: loading tensor blk.6.attn_output_norm.weight
+create_tensor: loading tensor blk.6.attn_output_norm.bias
+create_tensor: loading tensor blk.6.ffn_up.weight
+create_tensor: loading tensor blk.6.ffn_down.weight
+create_tensor: loading tensor blk.6.ffn_gate.weight
+create_tensor: loading tensor blk.6.layer_output_norm.weight
+create_tensor: loading tensor blk.6.layer_output_norm.bias
+create_tensor: loading tensor blk.7.attn_qkv.weight
+create_tensor: loading tensor blk.7.attn_output.weight
+create_tensor: loading tensor blk.7.attn_output_norm.weight
+create_tensor: loading tensor blk.7.attn_output_norm.bias
+create_tensor: loading tensor blk.7.ffn_up.weight
+create_tensor: loading tensor blk.7.ffn_down.weight
+create_tensor: loading tensor blk.7.ffn_gate.weight
+create_tensor: loading tensor blk.7.layer_output_norm.weight
+create_tensor: loading tensor blk.7.layer_output_norm.bias
+create_tensor: loading tensor blk.8.attn_qkv.weight
+create_tensor: loading tensor blk.8.attn_output.weight
+create_tensor: loading tensor blk.8.attn_output_norm.weight
+create_tensor: loading tensor blk.8.attn_output_norm.bias
+create_tensor: loading tensor blk.8.ffn_up.weight
+create_tensor: loading tensor blk.8.ffn_down.weight
+create_tensor: loading tensor blk.8.ffn_gate.weight
+create_tensor: loading tensor blk.8.layer_output_norm.weight
+create_tensor: loading tensor blk.8.layer_output_norm.bias
+create_tensor: loading tensor blk.9.attn_qkv.weight
+create_tensor: loading tensor blk.9.attn_output.weight
+create_tensor: loading tensor blk.9.attn_output_norm.weight
+create_tensor: loading tensor blk.9.attn_output_norm.bias
+create_tensor: loading tensor blk.9.ffn_up.weight
+create_tensor: loading tensor blk.9.ffn_down.weight
+create_tensor: loading tensor blk.9.ffn_gate.weight
+create_tensor: loading tensor blk.9.layer_output_norm.weight
+create_tensor: loading tensor blk.9.layer_output_norm.bias
+create_tensor: loading tensor blk.10.attn_qkv.weight
+create_tensor: loading tensor blk.10.attn_output.weight
+create_tensor: loading tensor blk.10.attn_output_norm.weight
+create_tensor: loading tensor blk.10.attn_output_norm.bias
+create_tensor: loading tensor blk.10.ffn_up.weight
+create_tensor: loading tensor blk.10.ffn_down.weight
+create_tensor: loading tensor blk.10.ffn_gate.weight
+create_tensor: loading tensor blk.10.layer_output_norm.weight
+create_tensor: loading tensor blk.10.layer_output_norm.bias
+create_tensor: loading tensor blk.11.attn_qkv.weight
+create_tensor: loading tensor blk.11.attn_output.weight
+create_tensor: loading tensor blk.11.attn_output_norm.weight
+create_tensor: loading tensor blk.11.attn_output_norm.bias
+create_tensor: loading tensor blk.11.ffn_up.weight
+create_tensor: loading tensor blk.11.ffn_down.weight
+create_tensor: loading tensor blk.11.ffn_gate.weight
+create_tensor: loading tensor blk.11.layer_output_norm.weight
+create_tensor: loading tensor blk.11.layer_output_norm.bias
+load_tensors: tensor 'token_embd.weight' (q4_K) (and 0 others) cannot be used with preferred buffer type CUDA_Host, using CPU instead
+load_tensors: offloading 0 repeating layers to GPU
+load_tensors: offloaded 0/13 layers to GPU
+load_tensors:          CPU model buffer size =    12.57 MiB
+load_tensors:    CUDA_Host model buffer size =    66.91 MiB
+load_all_data: no device found for buffer type CPU for async uploads
+load_all_data: buffer type CUDA_Host is not the default buffer type for device CUDA0 for async uploads
+........................................................
+llama_context: constructing llama_context
+llama_context: n_seq_max     = 1
+llama_context: n_ctx         = 512
+llama_context: n_ctx_seq     = 512
+llama_context: n_batch       = 384
+llama_context: n_ubatch      = 384
+llama_context: causal_attn   = 0
+llama_context: flash_attn    = auto
+llama_context: kv_unified    = false
+llama_context: freq_base     = 1000.0
+llama_context: freq_scale    = 1
+llama_context: n_ctx_seq (512) < n_ctx_train (2048) -- the full capacity of the model will not be utilized
+set_abort_callback: call
+llama_context:        CPU  output buffer size =     0.12 MiB
+llama_context: enumerating backends
+llama_context: backend_ptrs.size() = 2
+llama_context: max_nodes = 1024
+llama_context: worst-case: n_tokens = 384, n_seqs = 1, n_outputs = 1
+graph_reserve: reserving a graph for ubatch with n_tokens =    1, n_seqs =  1, n_outputs =    1
+llama_context: Flash Attention was auto, set to enabled
+graph_reserve: reserving a graph for ubatch with n_tokens =  384, n_seqs =  1, n_outputs =  384
+graph_reserve: reserving a graph for ubatch with n_tokens =    1, n_seqs =  1, n_outputs =    1
+graph_reserve: reserving a graph for ubatch with n_tokens =  384, n_seqs =  1, n_outputs =  384
+llama_context:      CUDA0 compute buffer size =    16.74 MiB
+llama_context:  CUDA_Host compute buffer size =     1.69 MiB
+llama_context: graph nodes  = 336
+llama_context: graph splits = 112 (with bs=384), 1 (with bs=1)
+time=2026-02-05T10:19:06.202+01:00 level=INFO msg="GGUF embedder initialized with dynamic limits" ubatch_size=384 max_tokens=269 max_chars=403 chars_per_token=1 model_path=/home/jose/.config/remembrances/models/nomic-embed-text-v1.5.Q4_K_M.gguf
+llama_model_load_from_file_impl: using device CUDA0 (NVIDIA GeForce RTX 3050 Ti Laptop GPU) (0000:01:00.0) - 3657 MiB free
+llama_model_loader: loaded meta data with 30 key-value pairs and 112 tensors from /home/jose/.config/remembrances/models/coderankembed.Q4_K_M.gguf (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+llama_model_loader: - kv   0:                       general.architecture str              = nomic-bert
+llama_model_loader: - kv   1:                               general.type str              = model
+llama_model_loader: - kv   2:                               general.name str              = CodeEmbed
+llama_model_loader: - kv   3:                       general.organization str              = Nomic Uiuc
+llama_model_loader: - kv   4:                         general.size_label str              = 137M
+llama_model_loader: - kv   5:                            general.license str              = mit
+llama_model_loader: - kv   6:                   general.base_model.count u32              = 1
+llama_model_loader: - kv   7:                  general.base_model.0.name str              = Snowflake Arctic Embed M Long
+llama_model_loader: - kv   8:          general.base_model.0.organization str              = Snowflake
+llama_model_loader: - kv   9:              general.base_model.0.repo_url str              = https://huggingface.co/Snowflake/snow...
+llama_model_loader: - kv  10:                     nomic-bert.block_count u32              = 12
+llama_model_loader: - kv  11:                  nomic-bert.context_length u32              = 2048
+llama_model_loader: - kv  12:                nomic-bert.embedding_length u32              = 768
+llama_model_loader: - kv  13:             nomic-bert.feed_forward_length u32              = 3072
+llama_model_loader: - kv  14:            nomic-bert.attention.head_count u32              = 12
+llama_model_loader: - kv  15:    nomic-bert.attention.layer_norm_epsilon f32              = 0.000000
+llama_model_loader: - kv  16:                nomic-bert.attention.causal bool             = false
+llama_model_loader: - kv  17:                    nomic-bert.pooling_type u32              = 2
+llama_model_loader: - kv  18:                  nomic-bert.rope.freq_base f32              = 1000.000000
+llama_model_loader: - kv  19:            tokenizer.ggml.token_type_count u32              = 2
+llama_model_loader: - kv  20:                       tokenizer.ggml.model str              = bert
+llama_model_loader: - kv  21:                         tokenizer.ggml.pre str              = jina-v2-en
+llama_model_loader: - kv  22:                      tokenizer.ggml.tokens arr[str,30528]   = ["[PAD]", "[unused0]", "[unused1]", "...
+llama_model_loader: - kv  23:                  tokenizer.ggml.token_type arr[i32,30528]   = [3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...
+llama_model_loader: - kv  24:            tokenizer.ggml.unknown_token_id u32              = 100
+llama_model_loader: - kv  25:          tokenizer.ggml.seperator_token_id u32              = 102
+llama_model_loader: - kv  26:            tokenizer.ggml.padding_token_id u32              = 0
+llama_model_loader: - kv  27:               tokenizer.ggml.mask_token_id u32              = 103
+llama_model_loader: - kv  28:               general.quantization_version u32              = 2
+llama_model_loader: - kv  29:                          general.file_type u32              = 15
+llama_model_loader: - type  f32:   51 tensors
+llama_model_loader: - type q4_K:   42 tensors
+llama_model_loader: - type q5_K:   12 tensors
+llama_model_loader: - type q6_K:    7 tensors
+print_info: file format = GGUF V3 (latest)
+print_info: file type   = Q4_K - Medium
+print_info: file size   = 85.26 MiB (5.23 BPW) 
+init_tokenizer: initializing tokenizer for type 3
+load: control token:    101 '[CLS]' is not marked as EOG
+load: control token:    103 '[MASK]' is not marked as EOG
+load: control token:      0 '[PAD]' is not marked as EOG
+load: control token:    100 '[UNK]' is not marked as EOG
+load: control token:    102 '[SEP]' is not marked as EOG
+load: printing all EOG tokens:
+load: special tokens cache size = 5
+load: token to piece cache size = 0.2032 MB
+print_info: arch             = nomic-bert
+print_info: vocab_only       = 0
+print_info: n_ctx_train      = 2048
+print_info: n_embd           = 768
+print_info: n_embd_inp       = 768
+print_info: n_layer          = 12
+print_info: n_head           = 12
+print_info: n_head_kv        = 12
+print_info: n_rot            = 64
+print_info: n_swa            = 0
+print_info: is_swa_any       = 0
+print_info: n_embd_head_k    = 64
+print_info: n_embd_head_v    = 64
+print_info: n_gqa            = 1
+print_info: n_embd_k_gqa     = 768
+print_info: n_embd_v_gqa     = 768
+print_info: f_norm_eps       = 1.0e-12
+print_info: f_norm_rms_eps   = 0.0e+00
+print_info: f_clamp_kqv      = 0.0e+00
+print_info: f_max_alibi_bias = 0.0e+00
+print_info: f_logit_scale    = 0.0e+00
+print_info: f_attn_scale     = 0.0e+00
+print_info: n_ff             = 3072
+print_info: n_expert         = 0
+print_info: n_expert_used    = 0
+print_info: n_expert_groups  = 0
+print_info: n_group_used     = 0
+print_info: causal attn      = 0
+print_info: pooling type     = 2
+print_info: rope type        = 2
+print_info: rope scaling     = linear
+print_info: freq_base_train  = 1000.0
+print_info: freq_scale_train = 1
+print_info: n_ctx_orig_yarn  = 2048
+print_info: rope_finetuned   = unknown
+print_info: model type       = 137M
+print_info: model params     = 136.73 M
+print_info: general.name     = CodeEmbed
+print_info: vocab type       = WPM
+print_info: n_vocab          = 30528
+print_info: n_merges         = 0
+print_info: BOS token        = 101 '[CLS]'
+print_info: UNK token        = 100 '[UNK]'
+print_info: SEP token        = 102 '[SEP]'
+print_info: PAD token        = 0 '[PAD]'
+print_info: MASK token       = 103 '[MASK]'
+print_info: LF token         = 0 '[PAD]'
+print_info: max token length = 21
+load_tensors: loading model tensors, this can take a while... (mmap = false)
+load_tensors: layer   0 assigned to device CPU, is_swa = 0
+load_tensors: layer   1 assigned to device CPU, is_swa = 0
+load_tensors: layer   2 assigned to device CPU, is_swa = 0
+load_tensors: layer   3 assigned to device CPU, is_swa = 0
+load_tensors: layer   4 assigned to device CPU, is_swa = 0
+load_tensors: layer   5 assigned to device CPU, is_swa = 0
+load_tensors: layer   6 assigned to device CPU, is_swa = 0
+load_tensors: layer   7 assigned to device CPU, is_swa = 0
+load_tensors: layer   8 assigned to device CPU, is_swa = 0
+load_tensors: layer   9 assigned to device CPU, is_swa = 0
+load_tensors: layer  10 assigned to device CPU, is_swa = 0
+load_tensors: layer  11 assigned to device CPU, is_swa = 0
+load_tensors: layer  12 assigned to device CPU, is_swa = 0
+create_tensor: loading tensor token_embd.weight
+create_tensor: loading tensor token_types.weight
+create_tensor: loading tensor token_embd_norm.weight
+create_tensor: loading tensor token_embd_norm.bias
+create_tensor: loading tensor blk.0.attn_qkv.weight
+create_tensor: loading tensor blk.0.attn_output.weight
+create_tensor: loading tensor blk.0.attn_output_norm.weight
+create_tensor: loading tensor blk.0.attn_output_norm.bias
+create_tensor: loading tensor blk.0.ffn_up.weight
+create_tensor: loading tensor blk.0.ffn_down.weight
+create_tensor: loading tensor blk.0.ffn_gate.weight
+create_tensor: loading tensor blk.0.layer_output_norm.weight
+create_tensor: loading tensor blk.0.layer_output_norm.bias
+create_tensor: loading tensor blk.1.attn_qkv.weight
+create_tensor: loading tensor blk.1.attn_output.weight
+create_tensor: loading tensor blk.1.attn_output_norm.weight
+create_tensor: loading tensor blk.1.attn_output_norm.bias
+create_tensor: loading tensor blk.1.ffn_up.weight
+create_tensor: loading tensor blk.1.ffn_down.weight
+create_tensor: loading tensor blk.1.ffn_gate.weight
+create_tensor: loading tensor blk.1.layer_output_norm.weight
+create_tensor: loading tensor blk.1.layer_output_norm.bias
+create_tensor: loading tensor blk.2.attn_qkv.weight
+create_tensor: loading tensor blk.2.attn_output.weight
+create_tensor: loading tensor blk.2.attn_output_norm.weight
+create_tensor: loading tensor blk.2.attn_output_norm.bias
+create_tensor: loading tensor blk.2.ffn_up.weight
+create_tensor: loading tensor blk.2.ffn_down.weight
+create_tensor: loading tensor blk.2.ffn_gate.weight
+create_tensor: loading tensor blk.2.layer_output_norm.weight
+create_tensor: loading tensor blk.2.layer_output_norm.bias
+create_tensor: loading tensor blk.3.attn_qkv.weight
+create_tensor: loading tensor blk.3.attn_output.weight
+create_tensor: loading tensor blk.3.attn_output_norm.weight
+create_tensor: loading tensor blk.3.attn_output_norm.bias
+create_tensor: loading tensor blk.3.ffn_up.weight
+create_tensor: loading tensor blk.3.ffn_down.weight
+create_tensor: loading tensor blk.3.ffn_gate.weight
+create_tensor: loading tensor blk.3.layer_output_norm.weight
+create_tensor: loading tensor blk.3.layer_output_norm.bias
+create_tensor: loading tensor blk.4.attn_qkv.weight
+create_tensor: loading tensor blk.4.attn_output.weight
+create_tensor: loading tensor blk.4.attn_output_norm.weight
+create_tensor: loading tensor blk.4.attn_output_norm.bias
+create_tensor: loading tensor blk.4.ffn_up.weight
+create_tensor: loading tensor blk.4.ffn_down.weight
+create_tensor: loading tensor blk.4.ffn_gate.weight
+create_tensor: loading tensor blk.4.layer_output_norm.weight
+create_tensor: loading tensor blk.4.layer_output_norm.bias
+create_tensor: loading tensor blk.5.attn_qkv.weight
+create_tensor: loading tensor blk.5.attn_output.weight
+create_tensor: loading tensor blk.5.attn_output_norm.weight
+create_tensor: loading tensor blk.5.attn_output_norm.bias
+create_tensor: loading tensor blk.5.ffn_up.weight
+create_tensor: loading tensor blk.5.ffn_down.weight
+create_tensor: loading tensor blk.5.ffn_gate.weight
+create_tensor: loading tensor blk.5.layer_output_norm.weight
+create_tensor: loading tensor blk.5.layer_output_norm.bias
+create_tensor: loading tensor blk.6.attn_qkv.weight
+create_tensor: loading tensor blk.6.attn_output.weight
+create_tensor: loading tensor blk.6.attn_output_norm.weight
+create_tensor: loading tensor blk.6.attn_output_norm.bias
+create_tensor: loading tensor blk.6.ffn_up.weight
+create_tensor: loading tensor blk.6.ffn_down.weight
+create_tensor: loading tensor blk.6.ffn_gate.weight
+create_tensor: loading tensor blk.6.layer_output_norm.weight
+create_tensor: loading tensor blk.6.layer_output_norm.bias
+create_tensor: loading tensor blk.7.attn_qkv.weight
+create_tensor: loading tensor blk.7.attn_output.weight
+create_tensor: loading tensor blk.7.attn_output_norm.weight
+create_tensor: loading tensor blk.7.attn_output_norm.bias
+create_tensor: loading tensor blk.7.ffn_up.weight
+create_tensor: loading tensor blk.7.ffn_down.weight
+create_tensor: loading tensor blk.7.ffn_gate.weight
+create_tensor: loading tensor blk.7.layer_output_norm.weight
+create_tensor: loading tensor blk.7.layer_output_norm.bias
+create_tensor: loading tensor blk.8.attn_qkv.weight
+create_tensor: loading tensor blk.8.attn_output.weight
+create_tensor: loading tensor blk.8.attn_output_norm.weight
+create_tensor: loading tensor blk.8.attn_output_norm.bias
+create_tensor: loading tensor blk.8.ffn_up.weight
+create_tensor: loading tensor blk.8.ffn_down.weight
+create_tensor: loading tensor blk.8.ffn_gate.weight
+create_tensor: loading tensor blk.8.layer_output_norm.weight
+create_tensor: loading tensor blk.8.layer_output_norm.bias
+create_tensor: loading tensor blk.9.attn_qkv.weight
+create_tensor: loading tensor blk.9.attn_output.weight
+create_tensor: loading tensor blk.9.attn_output_norm.weight
+create_tensor: loading tensor blk.9.attn_output_norm.bias
+create_tensor: loading tensor blk.9.ffn_up.weight
+create_tensor: loading tensor blk.9.ffn_down.weight
+create_tensor: loading tensor blk.9.ffn_gate.weight
+create_tensor: loading tensor blk.9.layer_output_norm.weight
+create_tensor: loading tensor blk.9.layer_output_norm.bias
+create_tensor: loading tensor blk.10.attn_qkv.weight
+create_tensor: loading tensor blk.10.attn_output.weight
+create_tensor: loading tensor blk.10.attn_output_norm.weight
+create_tensor: loading tensor blk.10.attn_output_norm.bias
+create_tensor: loading tensor blk.10.ffn_up.weight
+create_tensor: loading tensor blk.10.ffn_down.weight
+create_tensor: loading tensor blk.10.ffn_gate.weight
+create_tensor: loading tensor blk.10.layer_output_norm.weight
+create_tensor: loading tensor blk.10.layer_output_norm.bias
+create_tensor: loading tensor blk.11.attn_qkv.weight
+create_tensor: loading tensor blk.11.attn_output.weight
+create_tensor: loading tensor blk.11.attn_output_norm.weight
+create_tensor: loading tensor blk.11.attn_output_norm.bias
+create_tensor: loading tensor blk.11.ffn_up.weight
+create_tensor: loading tensor blk.11.ffn_down.weight
+create_tensor: loading tensor blk.11.ffn_gate.weight
+create_tensor: loading tensor blk.11.layer_output_norm.weight
+create_tensor: loading tensor blk.11.layer_output_norm.bias
+load_tensors: tensor 'token_embd.weight' (q6_K) (and 0 others) cannot be used with preferred buffer type CUDA_Host, using CPU instead
+load_tensors: offloading 0 repeating layers to GPU
+load_tensors: offloaded 0/13 layers to GPU
+load_tensors:          CPU model buffer size =    18.34 MiB
+load_tensors:    CUDA_Host model buffer size =    66.91 MiB
+load_all_data: no device found for buffer type CPU for async uploads
+load_all_data: buffer type CUDA_Host is not the default buffer type for device CUDA0 for async uploads
+......................................................
+llama_init_from_model: model default pooling_type is [2], but [1] was specified
+llama_context: constructing llama_context
+llama_context: n_seq_max     = 1
+llama_context: n_ctx         = 512
+llama_context: n_ctx_seq     = 512
+llama_context: n_batch       = 384
+llama_context: n_ubatch      = 384
+llama_context: causal_attn   = 0
+llama_context: flash_attn    = auto
+llama_context: kv_unified    = false
+llama_context: freq_base     = 1000.0
+llama_context: freq_scale    = 1
+llama_context: n_ctx_seq (512) < n_ctx_train (2048) -- the full capacity of the model will not be utilized
+set_abort_callback: call
+llama_context:        CPU  output buffer size =     0.12 MiB
+llama_context: enumerating backends
+llama_context: backend_ptrs.size() = 2
+llama_context: max_nodes = 1024
+llama_context: worst-case: n_tokens = 384, n_seqs = 1, n_outputs = 1
+graph_reserve: reserving a graph for ubatch with n_tokens =    1, n_seqs =  1, n_outputs =    1
+llama_context: Flash Attention was auto, set to enabled
+graph_reserve: reserving a graph for ubatch with n_tokens =  384, n_seqs =  1, n_outputs =  384
+graph_reserve: reserving a graph for ubatch with n_tokens =    1, n_seqs =  1, n_outputs =    1
+graph_reserve: reserving a graph for ubatch with n_tokens =  384, n_seqs =  1, n_outputs =  384
+llama_context:      CUDA0 compute buffer size =    16.74 MiB
+llama_context:  CUDA_Host compute buffer size =     1.69 MiB
+llama_context: graph nodes  = 336
+llama_context: graph splits = 112 (with bs=384), 1 (with bs=1)
+time=2026-02-05T10:19:06.277+01:00 level=INFO msg="GGUF embedder initialized with dynamic limits" ubatch_size=384 max_tokens=269 max_chars=403 chars_per_token=1 model_path=/home/jose/.config/remembrances/models/coderankembed.Q4_K_M.gguf
+time=2026-02-05T10:19:06.277+01:00 level=INFO msg="Using specialized code embedder for code indexing"
+time=2026-02-05T10:19:06.278+01:00 level=INFO msg="Checking for additional modules in config" module_count=0
+time=2026-02-05T10:19:06.278+01:00 level=WARN msg="failed to start knowledge base watcher" error="stat ./knowledge-base: no such file or directory"
+time=2026-02-05T10:19:06.278+01:00 level=INFO msg="Remembrances-MCP server initialized successfully"
+time=2026-02-05T10:19:06.278+01:00 level=INFO msg="Starting Remembrances-MCP server"
+starting mcp server at http://:3888/mcp
+2026/02/05 10:19:14 mcp_logger.go:33: [Info] streamableHTTPServerTransport Error: code: 400, message: lack session
+time=2026-02-05T10:19:23.204+01:00 level=INFO msg="Job queued for project" job_id=job_1770283163204545597 project=/home/jose/Escritorio/Proyectos/ENFAF/enfaf-api
+time=2026-02-05T10:19:23.204+01:00 level=INFO msg="Starting job for project" job_id=job_1770283163204545597 project=/home/jose/Escritorio/Proyectos/ENFAF/enfaf-api
+time=2026-02-05T10:19:23.205+01:00 level=INFO msg="Scanning project" path=/home/jose/Escritorio/Proyectos/ENFAF/enfaf-api
+time=2026-02-05T10:19:23.220+01:00 level=INFO msg="Found files to index" count=420
+set_n_threads: n_threads = 8, n_threads_batch = 8
+decode: cannot decode batches with this context (calling encode() instead)
+ggml_cuda_compute_forward: ADD failed
+CUDA error: no kernel image is available for execution on the device
+  current device: 0, in function ggml_cuda_compute_forward at /home/sevir/www/MCP/Remembrances/go-llama.cpp/llama.cpp/ggml/src/ggml-cuda/ggml-cuda.cu:2722
+  err
+/home/sevir/www/MCP/Remembrances/go-llama.cpp/llama.cpp/ggml/src/ggml-cuda/ggml-cuda.cu:90: CUDA error
+[Nuevo LWP 81594]
+[Nuevo LWP 81593]
+[Nuevo LWP 81592]
+[Nuevo LWP 81591]
+[Nuevo LWP 81590]
+[Nuevo LWP 81589]
+[Nuevo LWP 81588]
+[Nuevo LWP 81542]
+[Nuevo LWP 81479]
+[Nuevo LWP 81478]
+[Nuevo LWP 81477]
+[Nuevo LWP 81473]
+[Nuevo LWP 81472]
+[Nuevo LWP 81471]
+[Nuevo LWP 81467]
+[Nuevo LWP 81466]
+[Nuevo LWP 81465]
+[Nuevo LWP 81464]
+[Nuevo LWP 81463]
+[Nuevo LWP 81462]
+[Nuevo LWP 81461]
+[Nuevo LWP 81460]
+[Nuevo LWP 81459]
+[Nuevo LWP 81458]
+[Nuevo LWP 81457]
+[Nuevo LWP 81456]
+[Nuevo LWP 81455]
+[Nuevo LWP 81454]
+[Nuevo LWP 81453]
+[Nuevo LWP 81452]
+[Nuevo LWP 81451]
+[Nuevo LWP 81450]
+[Nuevo LWP 81449]
+[Nuevo LWP 81448]
+[Nuevo LWP 81447]
+[Nuevo LWP 81446]
+[Nuevo LWP 81445]
+[Nuevo LWP 81444]
+[Nuevo LWP 81443]
+[Nuevo LWP 81442]
+[Nuevo LWP 81441]
+[Nuevo LWP 81440]
+[Nuevo LWP 81439]
+[Nuevo LWP 81438]
+[Nuevo LWP 81437]
+[Nuevo LWP 81436]
+[Nuevo LWP 81435]
+[Nuevo LWP 81434]
+[Nuevo LWP 81433]
+[Nuevo LWP 81432]
+[Nuevo LWP 81431]
+[Nuevo LWP 81430]
+[Nuevo LWP 81429]
+[Nuevo LWP 81428]
+[Nuevo LWP 81427]
+[Nuevo LWP 81426]
+[Nuevo LWP 81425]
+[Nuevo LWP 81424]
+[Nuevo LWP 81423]
+[Nuevo LWP 81422]
+[Nuevo LWP 81421]
+[Nuevo LWP 81420]
+[Nuevo LWP 81419]
+[Nuevo LWP 81418]
+[Nuevo LWP 81417]
+[Nuevo LWP 81416]
+[Nuevo LWP 81415]
+[Nuevo LWP 81414]
+[Nuevo LWP 81413]
+[Nuevo LWP 81412]
+[Nuevo LWP 81411]
+[Nuevo LWP 81410]
+[Nuevo LWP 81409]
+[Nuevo LWP 81408]
+[Nuevo LWP 81407]
+[Nuevo LWP 81406]
+[Nuevo LWP 81405]
+[Nuevo LWP 81404]
+[Nuevo LWP 81403]
+[Nuevo LWP 81402]
+[Nuevo LWP 81401]
+aviso: Missing auto-load script at offset 0 in section .debug_gdb_scripts
+of file /home/jose/.config/remembrances-beta/remembrances-mcp-beta/remembrances-mcp-beta.
+Use `info auto-load python-scripts [REGEXP]' to list them.
+[Depuración de hilo usando libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+runtime.futex () at /home/sevir/.g/go/src/runtime/sys_linux_amd64.s:558
+aviso: 558	/home/sevir/.g/go/src/runtime/sys_linux_amd64.s: No existe el archivo o el directorio
+#0  runtime.futex () at /home/sevir/.g/go/src/runtime/sys_linux_amd64.s:558
+558	in /home/sevir/.g/go/src/runtime/sys_linux_amd64.s
+#1  0x0000000000433d50 in runtime.futexsleep (addr=0xfffffffffffffe00, val=0, ns=4688131) at /home/sevir/.g/go/src/runtime/os_linux.go:69
+aviso: 69	/home/sevir/.g/go/src/runtime/os_linux.go: No existe el archivo o el directorio
+#2  0x000000000040e947 in runtime.notesleep (n=0x2b21280 <runtime.m0+320>) at /home/sevir/.g/go/src/runtime/lock_futex.go:170
+aviso: 170	/home/sevir/.g/go/src/runtime/lock_futex.go: No existe el archivo o el directorio
+#3  0x000000000043fad3 in runtime.mPark () at /home/sevir/.g/go/src/runtime/proc.go:1866
+aviso: 1866	/home/sevir/.g/go/src/runtime/proc.go: No existe el archivo o el directorio
+#4  runtime.stoplockedm () at /home/sevir/.g/go/src/runtime/proc.go:3140
+3140	in /home/sevir/.g/go/src/runtime/proc.go
+#5  0x0000000000441e1a in runtime.schedule () at /home/sevir/.g/go/src/runtime/proc.go:3974
+3974	in /home/sevir/.g/go/src/runtime/proc.go
+#6  0x00000000004422ab in runtime.park_m (gp=0xc0001ac1c0) at /home/sevir/.g/go/src/runtime/proc.go:4102
+4102	in /home/sevir/.g/go/src/runtime/proc.go
+#7  0x0000000000474b0e in runtime.mcall () at /home/sevir/.g/go/src/runtime/asm_amd64.s:459
+aviso: 459	/home/sevir/.g/go/src/runtime/asm_amd64.s: No existe el archivo o el directorio
+#8  0x00007fff9b487c58 in ?? ()
+#9  0x00000000004791ff in runtime.newproc (fn=0x474a0f <runtime.rt0_go+303>) at <autogenerated>:1
+aviso: 1	<autogenerated>: No existe el archivo o el directorio
+#10 0x0000000000474a85 in runtime.mstart () at /home/sevir/.g/go/src/runtime/asm_amd64.s:395
+aviso: 395	/home/sevir/.g/go/src/runtime/asm_amd64.s: No existe el archivo o el directorio
+#11 0x0000000000474a0f in runtime.rt0_go () at /home/sevir/.g/go/src/runtime/asm_amd64.s:358
+358	in /home/sevir/.g/go/src/runtime/asm_amd64.s
+#12 0x00007fff00000003 in ?? ()
+#13 0x00007fff9b487db8 in ?? ()
+#14 0x00007e3898c7aa50 in ?? () from /lib/x86_64-linux-gnu/libstdc++.so.6
+#15 0x0000000000000003 in ?? ()
+#16 0x00007fff9b487db8 in ?? ()
+#17 0x00007e389862a1ca in __libc_start_call_main (main=0xffffffffffffffff, argc=0, argv=0x1) at ../sysdeps/nptl/libc_start_call_main.h:58
+aviso: 58	../sysdeps/nptl/libc_start_call_main.h: No existe el archivo o el directorio
+Backtrace stopped: previous frame inner to this frame (corrupt stack?)
+[Inferior 1 (process 81400) detached]
+SIGABRT: abort
+PC=0x7e389869eb2c m=13 sigcode=18446744073709551610
+signal arrived during cgo execution
+
+goroutine 13 gp=0xc000285500 m=13 mp=0xc000380e08 [syscall]:
+runtime.cgocall(0x7aa960, 0xc0001f4270)
+	/home/sevir/.g/go/src/runtime/cgocall.go:167 +0x4b fp=0xc0003d4a60 sp=0xc0003d4a28 pc=0x468b0b
+github.com/ebitengine/purego.RegisterFunc.func1({0xc0002a8000?, 0xa?, 0xa?})
+	/home/sevir/go/pkg/mod/github.com/ebitengine/purego@v0.7.1/func.go:302 +0xc65 fp=0xc0003d4ee0 sp=0xc0003d4a60 pc=0x7a8085
+reflect.callReflect(0xc0002a16e0, 0xc0003d53a0, 0xc0003d5278, 0xc0003d5280)
+	/home/sevir/.g/go/src/reflect/value.go:767 +0x53d fp=0xc0003d5228 sp=0xc0003d4ee0 pc=0x4c0fdd
+reflect.callReflect(0xc0002a16e0, 0xc0003d53a0, 0xc0003d5278, 0xc0003d5280)
+	<autogenerated>:1 +0x45 fp=0xc0003d5258 sp=0xc0003d5228 pc=0x4ccea5
+reflect.makeFuncStub()
+	/home/sevir/.g/go/src/reflect/asm_amd64.s:47 +0x6e fp=0xc0003d53a0 sp=0xc0003d5258 pc=0x4cc5ce
+github.com/madeindigio/remembrances-mcp/internal/llama.(*Model).Embed(0xc0002a1740, {0xc3da30, 0xc0003a8410}, {0xc000543100, 0x193}, 0x8)
+	/www/MCP/remembrances-mcp/internal/llama/shim.go:282 +0x20d fp=0xc0003d5488 sp=0xc0003d53a0 pc=0x8150ad
+github.com/madeindigio/remembrances-mcp/pkg/embedder.(*GGUFEmbedder).embedSingle(0xc0002a42d0, {0xc3da30, 0xc0003a8410}, {0xc000543100, 0x193})
+	/www/MCP/remembrances-mcp/pkg/embedder/gguf.go:263 +0x2b2 fp=0xc0003d5628 sp=0xc0003d5488 pc=0x81ff12
+github.com/madeindigio/remembrances-mcp/pkg/embedder.(*GGUFEmbedder).EmbedDocuments(0xc0002a42d0, {0xc3da30, 0xc0003a8410}, {0xc0001fe090, 0x1, 0x0?})
+	/www/MCP/remembrances-mcp/pkg/embedder/gguf.go:155 +0x359 fp=0xc0003d5848 sp=0xc0003d5628 pc=0x81f359
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).generateEmbeddings(0xc0002a2300, {0xc3da30, 0xc0003a8410}, {0xc00011e038, 0x1, 0xcc8?})
+	/www/MCP/remembrances-mcp/internal/indexer/indexer_embeddings.go:49 +0x374 fp=0xc0003d5a78 sp=0xc0003d5848 pc=0x82a154
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFileWithParser(0xc0002a2300, {0xc3da30, 0xc0003a8410}, {0xc0003a01e1, 0x2e}, {0xc0002b8fc0?, 0x2f?}, {{0xc0003da4b0, 0x41}, {0xc0003da4e0, ...}, ...}, ...)
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:273 +0x4c8 fp=0xc0003d5c90 sp=0xc0003d5a78 pc=0x828888
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles.func1.1({{0xc0003da4b0, 0x41}, {0xc0003da4e0, 0x11}, {0xb4856e, 0x8}, 0xcc8, {0xc0003bc500, 0x40}}, 0xc0003be070, ...)
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:165 +0x1ab fp=0xc0003d5df0 sp=0xc0003d5c90 pc=0x827fab
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles.func1()
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:171 +0x2db fp=0xc0003d5fe0 sp=0xc0003d5df0 pc=0x827d9b
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0003d5fe8 sp=0xc0003d5fe0 pc=0x476b41
+created by github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles in goroutine 19
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:149 +0xed
+
+goroutine 1 gp=0xc0000061c0 m=nil [IO wait]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc00003f338 sp=0xc00003f318 pc=0x46eace
+runtime.netpollblock(0xc00003f388?, 0x406766?, 0x0?)
+	/home/sevir/.g/go/src/runtime/netpoll.go:575 +0xf7 fp=0xc00003f370 sp=0xc00003f338 pc=0x432ff7
+internal/poll.runtime_pollWait(0x7e3898852030, 0x72)
+	/home/sevir/.g/go/src/runtime/netpoll.go:351 +0x85 fp=0xc00003f390 sp=0xc00003f370 pc=0x46ddc5
+internal/poll.(*pollDesc).wait(0xc0002a2500?, 0x900000036?, 0x0)
+	/home/sevir/.g/go/src/internal/poll/fd_poll_runtime.go:84 +0x27 fp=0xc00003f3b8 sp=0xc00003f390 pc=0x4d7b67
+internal/poll.(*pollDesc).waitRead(...)
+	/home/sevir/.g/go/src/internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Accept(0xc0002a2500)
+	/home/sevir/.g/go/src/internal/poll/fd_unix.go:620 +0x295 fp=0xc00003f460 sp=0xc00003f3b8 pc=0x4d9295
+net.(*netFD).accept(0xc0002a2500)
+	/home/sevir/.g/go/src/net/fd_unix.go:172 +0x29 fp=0xc00003f518 sp=0xc00003f460 pc=0x5b5029
+net.(*TCPListener).accept(0xc0002c0a00)
+	/home/sevir/.g/go/src/net/tcpsock_posix.go:159 +0x1e fp=0xc00003f568 sp=0xc00003f518 pc=0x5c5e5e
+net.(*TCPListener).Accept(0xc0002c0a00)
+	/home/sevir/.g/go/src/net/tcpsock.go:372 +0x30 fp=0xc00003f598 sp=0xc00003f568 pc=0x5c5190
+net/http.(*onceCloseListener).Accept(0xc000120120?)
+	<autogenerated>:1 +0x24 fp=0xc00003f5b0 sp=0xc00003f598 pc=0x6d8624
+net/http.(*Server).Serve(0xc0002a80f0, {0xc3cbf0, 0xc0002c0a00})
+	/home/sevir/.g/go/src/net/http/server.go:3330 +0x30c fp=0xc00003f6e0 sp=0xc00003f5b0 pc=0x6b58ac
+net/http.(*Server).ListenAndServe(0xc0002a80f0)
+	/home/sevir/.g/go/src/net/http/server.go:3259 +0x71 fp=0xc00003f710 sp=0xc00003f6e0 pc=0x6b5571
+github.com/ThinkInAIXYZ/go-mcp/transport.(*streamableHTTPServerTransport).Run(0xc0002a2080)
+	/home/sevir/go/pkg/mod/github.com/!think!in!a!i!x!y!z/go-mcp@v0.2.21/transport/streamable_http_server.go:157 +0xb4 fp=0xc00003f788 sp=0xc00003f710 pc=0x85cd74
+github.com/ThinkInAIXYZ/go-mcp/server.(*Server).Run(0xc0002c6fc0)
+	/home/sevir/go/pkg/mod/github.com/!think!in!a!i!x!y!z/go-mcp@v0.2.21/server/server.go:139 +0x68 fp=0xc00003f7d0 sp=0xc00003f788 pc=0x865728
+main.Main()
+	/www/MCP/remembrances-mcp/cmd/remembrances-mcp/main.go:537 +0x2077 fp=0xc00003ff40 sp=0xc00003f7d0 pc=0x8b6277
+main.main()
+	/www/MCP/remembrances-mcp/cmd/remembrances-mcp/main.go:131 +0xf fp=0xc00003ff50 sp=0xc00003ff40 pc=0x8b41ef
+runtime.main()
+	/home/sevir/.g/go/src/runtime/proc.go:272 +0x28b fp=0xc00003ffe0 sp=0xc00003ff50 pc=0x43a62b
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc00003ffe8 sp=0xc00003ffe0 pc=0x476b41
+
+goroutine 2 gp=0xc000006c40 m=nil [force gc (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000084fa8 sp=0xc000084f88 pc=0x46eace
+runtime.goparkunlock(...)
+	/home/sevir/.g/go/src/runtime/proc.go:430
+runtime.forcegchelper()
+	/home/sevir/.g/go/src/runtime/proc.go:337 +0xb3 fp=0xc000084fe0 sp=0xc000084fa8 pc=0x43a973
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000084fe8 sp=0xc000084fe0 pc=0x476b41
+created by runtime.init.7 in goroutine 1
+	/home/sevir/.g/go/src/runtime/proc.go:325 +0x1a
+
+goroutine 3 gp=0xc000007180 m=nil [GC sweep wait]:
+runtime.gopark(0x1?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000085780 sp=0xc000085760 pc=0x46eace
+runtime.goparkunlock(...)
+	/home/sevir/.g/go/src/runtime/proc.go:430
+runtime.bgsweep(0xc0000b2000)
+	/home/sevir/.g/go/src/runtime/mgcsweep.go:317 +0xdf fp=0xc0000857c8 sp=0xc000085780 pc=0x4250ff
+runtime.gcenable.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:204 +0x25 fp=0xc0000857e0 sp=0xc0000857c8 pc=0x4197c5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0000857e8 sp=0xc0000857e0 pc=0x476b41
+created by runtime.gcenable in goroutine 1
+	/home/sevir/.g/go/src/runtime/mgc.go:204 +0x66
+
+goroutine 4 gp=0xc000007340 m=nil [GC scavenge wait]:
+runtime.gopark(0x2eeac8?, 0x3b9aca00?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000085f78 sp=0xc000085f58 pc=0x46eace
+runtime.goparkunlock(...)
+	/home/sevir/.g/go/src/runtime/proc.go:430
+runtime.(*scavengerState).park(0x2b1fa00)
+	/home/sevir/.g/go/src/runtime/mgcscavenge.go:425 +0x49 fp=0xc000085fa8 sp=0xc000085f78 pc=0x422ae9
+runtime.bgscavenge(0xc0000b2000)
+	/home/sevir/.g/go/src/runtime/mgcscavenge.go:658 +0x59 fp=0xc000085fc8 sp=0xc000085fa8 pc=0x423079
+runtime.gcenable.gowrap2()
+	/home/sevir/.g/go/src/runtime/mgc.go:205 +0x25 fp=0xc000085fe0 sp=0xc000085fc8 pc=0x419765
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000085fe8 sp=0xc000085fe0 pc=0x476b41
+created by runtime.gcenable in goroutine 1
+	/home/sevir/.g/go/src/runtime/mgc.go:205 +0xa5
+
+goroutine 5 gp=0xc000007c00 m=nil [finalizer wait]:
+runtime.gopark(0x0?, 0xbaae38?, 0x0?, 0xe0?, 0x1000000010?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000084620 sp=0xc000084600 pc=0x46eace
+runtime.runfinq()
+	/home/sevir/.g/go/src/runtime/mfinal.go:193 +0x107 fp=0xc0000847e0 sp=0xc000084620 pc=0x418847
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0000847e8 sp=0xc0000847e0 pc=0x476b41
+created by runtime.createfing in goroutine 1
+	/home/sevir/.g/go/src/runtime/mfinal.go:163 +0x3d
+
+goroutine 6 gp=0xc0001ac000 m=nil [chan receive]:
+runtime.gopark(0xc000086760?, 0x59ca05?, 0xa0?, 0x4e?, 0xc464c0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000086718 sp=0xc0000866f8 pc=0x46eace
+runtime.chanrecv(0xc00002a310, 0x0, 0x1)
+	/home/sevir/.g/go/src/runtime/chan.go:639 +0x41c fp=0xc000086790 sp=0xc000086718 pc=0x40935c
+runtime.chanrecv1(0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/chan.go:489 +0x12 fp=0xc0000867b8 sp=0xc000086790 pc=0x408f12
+runtime.unique_runtime_registerUniqueMapCleanup.func1(...)
+	/home/sevir/.g/go/src/runtime/mgc.go:1781
+runtime.unique_runtime_registerUniqueMapCleanup.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1784 +0x2f fp=0xc0000867e0 sp=0xc0000867b8 pc=0x41c7ef
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0000867e8 sp=0xc0000867e0 pc=0x476b41
+created by unique.runtime_registerUniqueMapCleanup in goroutine 1
+	/home/sevir/.g/go/src/runtime/mgc.go:1779 +0x96
+
+goroutine 7 gp=0xc0001ac1c0 m=nil [select, locked to thread]:
+runtime.gopark(0xc000086fa8?, 0x2?, 0xa8?, 0x6e?, 0xc000086f94?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000086e30 sp=0xc000086e10 pc=0x46eace
+runtime.selectgo(0xc000086fa8, 0xc000086f90, 0x0?, 0x0, 0x0?, 0x1)
+	/home/sevir/.g/go/src/runtime/select.go:335 +0x7a5 fp=0xc000086f58 sp=0xc000086e30 pc=0x44c505
+runtime.ensureSigM.func1()
+	/home/sevir/.g/go/src/runtime/signal_unix.go:1077 +0x19f fp=0xc000086fe0 sp=0xc000086f58 pc=0x46673f
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000086fe8 sp=0xc000086fe0 pc=0x476b41
+created by runtime.ensureSigM in goroutine 1
+	/home/sevir/.g/go/src/runtime/signal_unix.go:1060 +0xc8
+
+goroutine 8 gp=0xc0001ac380 m=5 mp=0xc000100008 [syscall]:
+runtime.notetsleepg(0x2b4d580, 0xffffffffffffffff)
+	/home/sevir/.g/go/src/runtime/lock_futex.go:246 +0x29 fp=0xc0000877a0 sp=0xc000087778 pc=0x40ec29
+os/signal.signal_recv()
+	/home/sevir/.g/go/src/runtime/sigqueue.go:152 +0x29 fp=0xc0000877c0 sp=0xc0000877a0 pc=0x470aa9
+os/signal.loop()
+	/home/sevir/.g/go/src/os/signal/signal_unix.go:23 +0x13 fp=0xc0000877e0 sp=0xc0000877c0 pc=0x6df193
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0000877e8 sp=0xc0000877e0 pc=0x476b41
+created by os/signal.Notify.func1.1 in goroutine 1
+	/home/sevir/.g/go/src/os/signal/signal.go:151 +0x1f
+
+goroutine 18 gp=0xc000284380 m=nil [select]:
+runtime.gopark(0xc0000807b0?, 0x2?, 0x8?, 0x1?, 0xc00008079c?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000080640 sp=0xc000080620 pc=0x46eace
+runtime.selectgo(0xc0000807b0, 0xc000080798, 0x0?, 0x0, 0x0?, 0x1)
+	/home/sevir/.g/go/src/runtime/select.go:335 +0x7a5 fp=0xc000080768 sp=0xc000080640 pc=0x44c505
+os/signal.NotifyContext.func1()
+	/home/sevir/.g/go/src/os/signal/signal.go:288 +0x66 fp=0xc0000807e0 sp=0xc000080768 pc=0x6ded26
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0000807e8 sp=0xc0000807e0 pc=0x476b41
+created by os/signal.NotifyContext in goroutine 1
+	/home/sevir/.g/go/src/os/signal/signal.go:287 +0x156
+
+goroutine 19 gp=0xc0002848c0 m=nil [semacquire]:
+runtime.gopark(0x2b4caf3?, 0x0?, 0x0?, 0x4f?, 0x47a67c?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0003d7848 sp=0xc0003d7828 pc=0x46eace
+runtime.goparkunlock(...)
+	/home/sevir/.g/go/src/runtime/proc.go:430
+runtime.semacquire1(0xc00012c558, 0x0, 0x1, 0x0, 0x12)
+	/home/sevir/.g/go/src/runtime/sema.go:178 +0x225 fp=0xc0003d78b0 sp=0xc0003d7848 pc=0x44d5a5
+sync.runtime_Semacquire(0x4a2a20?)
+	/home/sevir/.g/go/src/runtime/sema.go:71 +0x25 fp=0xc0003d78e8 sp=0xc0003d78b0 pc=0x46ff65
+sync.(*WaitGroup).Wait(0xc0003be000?)
+	/home/sevir/.g/go/src/sync/waitgroup.go:118 +0x48 fp=0xc0003d7910 sp=0xc0003d78e8 pc=0x4829c8
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles(0xc0002a2300, {0xc3da30, 0xc0003a8410}, {0xc0003a01e1, 0x2e}, {0xc0002b8fc0, 0x2f}, {0xc000366000, 0x1a4, 0x2aa})
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:188 +0x372 fp=0xc0003d7b48 sp=0xc0003d7910 pc=0x827652
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).IndexProject(0xc0002a2300, {0xc3da30, 0xc0003a8410}, {0xc0002b8fc0?, 0xb52664?}, {0x0, 0x0})
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:109 +0x591 fp=0xc0003d7d48 sp=0xc0003d7b48 pc=0x826d51
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*JobManager).processJob(0xc0002f20e0, 0xc000486000)
+	/www/MCP/remembrances-mcp/internal/indexer/job_manager.go:153 +0x2b7 fp=0xc0003d7f38 sp=0xc0003d7d48 pc=0x82c817
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*JobManager).worker(0xc0002f20e0)
+	/www/MCP/remembrances-mcp/internal/indexer/job_manager.go:128 +0x65 fp=0xc0003d7fc8 sp=0xc0003d7f38 pc=0x82c465
+github.com/madeindigio/remembrances-mcp/internal/indexer.NewJobManager.gowrap1()
+	/www/MCP/remembrances-mcp/internal/indexer/job_manager.go:83 +0x25 fp=0xc0003d7fe0 sp=0xc0003d7fc8 pc=0x82bfa5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0003d7fe8 sp=0xc0003d7fe0 pc=0x476b41
+created by github.com/madeindigio/remembrances-mcp/internal/indexer.NewJobManager in goroutine 1
+	/www/MCP/remembrances-mcp/internal/indexer/job_manager.go:83 +0x185
+
+goroutine 20 gp=0xc000284a80 m=nil [select]:
+runtime.gopark(0xc000081778?, 0x2?, 0x0?, 0x0?, 0xc000081774?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000081610 sp=0xc0000815f0 pc=0x46eace
+runtime.selectgo(0xc000081778, 0xc000081770, 0x0?, 0x0, 0x0?, 0x1)
+	/home/sevir/.g/go/src/runtime/select.go:335 +0x7a5 fp=0xc000081738 sp=0xc000081610 pc=0x44c505
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*JobManager).worker(0xc0002f20e0)
+	/www/MCP/remembrances-mcp/internal/indexer/job_manager.go:124 +0xbc fp=0xc0000817c8 sp=0xc000081738 pc=0x82c4bc
+github.com/madeindigio/remembrances-mcp/internal/indexer.NewJobManager.gowrap1()
+	/www/MCP/remembrances-mcp/internal/indexer/job_manager.go:83 +0x25 fp=0xc0000817e0 sp=0xc0000817c8 pc=0x82bfa5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0000817e8 sp=0xc0000817e0 pc=0x476b41
+created by github.com/madeindigio/remembrances-mcp/internal/indexer.NewJobManager in goroutine 1
+	/www/MCP/remembrances-mcp/internal/indexer/job_manager.go:83 +0x185
+
+goroutine 21 gp=0xc000284c40 m=nil [chan receive]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000081e48 sp=0xc000081e28 pc=0x46eace
+runtime.chanrecv(0xc00002a690, 0x0, 0x1)
+	/home/sevir/.g/go/src/runtime/chan.go:639 +0x41c fp=0xc000081ec0 sp=0xc000081e48 pc=0x40935c
+runtime.chanrecv1(0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/chan.go:489 +0x12 fp=0xc000081ee8 sp=0xc000081ec0 pc=0x408f12
+main.Main.func2()
+	/www/MCP/remembrances-mcp/cmd/remembrances-mcp/main.go:440 +0x85 fp=0xc000081fe0 sp=0xc000081ee8 pc=0x8b69c5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000081fe8 sp=0xc000081fe0 pc=0x476b41
+created by main.Main in goroutine 1
+	/www/MCP/remembrances-mcp/cmd/remembrances-mcp/main.go:439 +0x1cea
+
+goroutine 22 gp=0xc000284e00 m=nil [select]:
+runtime.gopark(0xc000082770?, 0x2?, 0x70?, 0x0?, 0xc000082724?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0000825c0 sp=0xc0000825a0 pc=0x46eace
+runtime.selectgo(0xc000082770, 0xc000082720, 0x0?, 0x0, 0x0?, 0x1)
+	/home/sevir/.g/go/src/runtime/select.go:335 +0x7a5 fp=0xc0000826e8 sp=0xc0000825c0 pc=0x44c505
+github.com/ThinkInAIXYZ/go-mcp/server/session.(*Manager).StartHeartbeatAndCleanInvalidSessions(0xc0002f2000)
+	/home/sevir/go/pkg/mod/github.com/!think!in!a!i!x!y!z/go-mcp@v0.2.21/server/session/manager.go:124 +0x12e fp=0xc0000827b8 sp=0xc0000826e8 pc=0x8572ee
+github.com/ThinkInAIXYZ/go-mcp/server.(*Server).Run.func1()
+	/home/sevir/go/pkg/mod/github.com/!think!in!a!i!x!y!z/go-mcp@v0.2.21/server/server.go:136 +0x3b fp=0xc0000827e0 sp=0xc0000827b8 pc=0x8657db
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0000827e8 sp=0xc0000827e0 pc=0x476b41
+created by github.com/ThinkInAIXYZ/go-mcp/server.(*Server).Run in goroutine 1
+	/home/sevir/go/pkg/mod/github.com/!think!in!a!i!x!y!z/go-mcp@v0.2.21/server/server.go:133 +0x56
+
+goroutine 23 gp=0xc000285180 m=nil [IO wait]:
+runtime.gopark(0x45774f?, 0xc0002a2580?, 0x0?, 0x0?, 0xb?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0003d3918 sp=0xc0003d38f8 pc=0x46eace
+runtime.netpollblock(0x48cc38?, 0x406766?, 0x0?)
+	/home/sevir/.g/go/src/runtime/netpoll.go:575 +0xf7 fp=0xc0003d3950 sp=0xc0003d3918 pc=0x432ff7
+internal/poll.runtime_pollWait(0x7e3898851f18, 0x72)
+	/home/sevir/.g/go/src/runtime/netpoll.go:351 +0x85 fp=0xc0003d3970 sp=0xc0003d3950 pc=0x46ddc5
+internal/poll.(*pollDesc).wait(0xc0002a2580?, 0xc0002f1000?, 0x0)
+	/home/sevir/.g/go/src/internal/poll/fd_poll_runtime.go:84 +0x27 fp=0xc0003d3998 sp=0xc0003d3970 pc=0x4d7b67
+internal/poll.(*pollDesc).waitRead(...)
+	/home/sevir/.g/go/src/internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Read(0xc0002a2580, {0xc0002f1000, 0x1000, 0x1000})
+	/home/sevir/.g/go/src/internal/poll/fd_unix.go:165 +0x27a fp=0xc0003d3a30 sp=0xc0003d3998 pc=0x4d887a
+net.(*netFD).Read(0xc0002a2580, {0xc0002f1000?, 0xc00032baa0?, 0x4d8025?})
+	/home/sevir/.g/go/src/net/fd_posix.go:55 +0x25 fp=0xc0003d3a78 sp=0xc0003d3a30 pc=0x5b3f45
+net.(*conn).Read(0xc0002b0468, {0xc0002f1000?, 0x0?, 0xc0002fd808?})
+	/home/sevir/.g/go/src/net/net.go:189 +0x45 fp=0xc0003d3ac0 sp=0xc0003d3a78 pc=0x5bdc05
+net.(*TCPConn).Read(0xc0002fd800?, {0xc0002f1000?, 0xc0002a2580?, 0xc00032baf8?})
+	<autogenerated>:1 +0x25 fp=0xc0003d3af0 sp=0xc0003d3ac0 pc=0x5cd0c5
+net/http.(*connReader).Read(0xc0002fd800, {0xc0002f1000, 0x1000, 0x1000})
+	/home/sevir/.g/go/src/net/http/server.go:798 +0x14b fp=0xc0003d3b40 sp=0xc0003d3af0 pc=0x6abaab
+bufio.(*Reader).fill(0xc000304a20)
+	/home/sevir/.g/go/src/bufio/bufio.go:110 +0x103 fp=0xc0003d3b78 sp=0xc0003d3b40 pc=0x6452a3
+bufio.(*Reader).Peek(0xc000304a20, 0x4)
+	/home/sevir/.g/go/src/bufio/bufio.go:148 +0x53 fp=0xc0003d3b98 sp=0xc0003d3b78 pc=0x6453d3
+net/http.(*conn).serve(0xc0002d0630, {0xc3d9f8, 0xc0002fd710})
+	/home/sevir/.g/go/src/net/http/server.go:2127 +0x738 fp=0xc0003d3fb8 sp=0xc0003d3b98 pc=0x6b0df8
+net/http.(*Server).Serve.gowrap3()
+	/home/sevir/.g/go/src/net/http/server.go:3360 +0x28 fp=0xc0003d3fe0 sp=0xc0003d3fb8 pc=0x6b5ca8
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0003d3fe8 sp=0xc0003d3fe0 pc=0x476b41
+created by net/http.(*Server).Serve in goroutine 1
+	/home/sevir/.g/go/src/net/http/server.go:3360 +0x485
+
+goroutine 12 gp=0xc000285340 m=nil [sync.Mutex.Lock]:
+runtime.gopark(0xb4895c?, 0x0?, 0x48?, 0xf4?, 0x469c5d?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc00014f398 sp=0xc00014f378 pc=0x46eace
+runtime.goparkunlock(...)
+	/home/sevir/.g/go/src/runtime/proc.go:430
+runtime.semacquire1(0xc0002a431c, 0x0, 0x3, 0x1, 0x15)
+	/home/sevir/.g/go/src/runtime/sema.go:178 +0x225 fp=0xc00014f400 sp=0xc00014f398 pc=0x44d5a5
+sync.runtime_SemacquireMutex(0x0?, 0x0?, 0xc00014f4b8?)
+	/home/sevir/.g/go/src/runtime/sema.go:95 +0x25 fp=0xc00014f438 sp=0xc00014f400 pc=0x470025
+sync.(*Mutex).lockSlow(0xc0002a4318)
+	/home/sevir/.g/go/src/sync/mutex.go:173 +0x15d fp=0xc00014f488 sp=0xc00014f438 pc=0x48143d
+sync.(*Mutex).Lock(...)
+	/home/sevir/.g/go/src/sync/mutex.go:92
+github.com/madeindigio/remembrances-mcp/pkg/embedder.(*GGUFEmbedder).embedSingle(0xc0002a42d0, {0xc3da30, 0xc0003a8410}, {0xc00053a700, 0x193})
+	/www/MCP/remembrances-mcp/pkg/embedder/gguf.go:235 +0xdf fp=0xc00014f628 sp=0xc00014f488 pc=0x81fd3f
+github.com/madeindigio/remembrances-mcp/pkg/embedder.(*GGUFEmbedder).EmbedDocuments(0xc0002a42d0, {0xc3da30, 0xc0003a8410}, {0xc00034c000, 0x1, 0x0?})
+	/www/MCP/remembrances-mcp/pkg/embedder/gguf.go:155 +0x359 fp=0xc00014f848 sp=0xc00014f628 pc=0x81f359
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).generateEmbeddings(0xc0002a2300, {0xc3da30, 0xc0003a8410}, {0xc0002b0010, 0x1, 0x1a9c?})
+	/www/MCP/remembrances-mcp/internal/indexer/indexer_embeddings.go:49 +0x374 fp=0xc00014fa78 sp=0xc00014f848 pc=0x82a154
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFileWithParser(0xc0002a2300, {0xc3da30, 0xc0003a8410}, {0xc0003a01e1, 0x2e}, {0xc0002b8fc0?, 0x2f?}, {{0xc0003da5f0, 0x4f}, {0xc0003da620, ...}, ...}, ...)
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:273 +0x4c8 fp=0xc00014fc90 sp=0xc00014fa78 pc=0x828888
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles.func1.1({{0xc0003da5f0, 0x4f}, {0xc0003da620, 0x1f}, {0xb4856e, 0x8}, 0x1a9c, {0xc0003bc580, 0x40}}, 0xc0003be070, ...)
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:165 +0x1ab fp=0xc00014fdf0 sp=0xc00014fc90 pc=0x827fab
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles.func1()
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:171 +0x2db fp=0xc00014ffe0 sp=0xc00014fdf0 pc=0x827d9b
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc00014ffe8 sp=0xc00014ffe0 pc=0x476b41
+created by github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles in goroutine 19
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:149 +0xed
+
+goroutine 34 gp=0xc0001ac8c0 m=nil [select]:
+runtime.gopark(0xc00014d8c0?, 0x2?, 0xb8?, 0x5?, 0xc00014d8bc?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc00014d760 sp=0xc00014d740 pc=0x46eace
+runtime.selectgo(0xc00014d8c0, 0xc00014d8b8, 0x855ef5?, 0x0, 0xa86a60?, 0x1)
+	/home/sevir/.g/go/src/runtime/select.go:335 +0x7a5 fp=0xc00014d888 sp=0xc00014d760 pc=0x44c505
+github.com/ThinkInAIXYZ/go-mcp/server/session.(*State).dequeueMessage(0xc00020c750, {0xc3da30, 0xc000114140})
+	/home/sevir/go/pkg/mod/github.com/!think!in!a!i!x!y!z/go-mcp@v0.2.21/server/session/state.go:147 +0xfd fp=0xc00014d908 sp=0xc00014d888 pc=0x8583fd
+github.com/ThinkInAIXYZ/go-mcp/server/session.(*Manager).DequeueMessageForSend(0xc000142000?, {0xc3da30, 0xc000114140}, {0xc00013c000?, 0xc0002a6018?})
+	/home/sevir/go/pkg/mod/github.com/!think!in!a!i!x!y!z/go-mcp@v0.2.21/server/session/manager.go:91 +0x3b fp=0xc00014d930 sp=0xc00014d908 pc=0x856e5b
+github.com/ThinkInAIXYZ/go-mcp/transport.(*streamableHTTPServerTransport).handleGet(0xc0002a2080, {0xc3c828, 0xc000142000}, 0xc000132000)
+	/home/sevir/go/pkg/mod/github.com/!think!in!a!i!x!y!z/go-mcp@v0.2.21/transport/streamable_http_server.go:336 +0x5d9 fp=0xc00014da40 sp=0xc00014d930 pc=0x85eb99
+github.com/ThinkInAIXYZ/go-mcp/transport.(*streamableHTTPServerTransport).handleMCPEndpoint(0xc000128b08?, {0xc3c828?, 0xc000142000?}, 0x7e38989c05b8?)
+	/home/sevir/go/pkg/mod/github.com/!think!in!a!i!x!y!z/go-mcp@v0.2.21/transport/streamable_http_server.go:192 +0x8f fp=0xc00014dac0 sp=0xc00014da40 pc=0x85d1af
+github.com/ThinkInAIXYZ/go-mcp/transport.(*streamableHTTPServerTransport).handleMCPEndpoint-fm({0xc3c828?, 0xc000142000?}, 0xc000128b38?)
+	<autogenerated>:1 +0x36 fp=0xc00014daf0 sp=0xc00014dac0 pc=0x85fa56
+net/http.HandlerFunc.ServeHTTP(0xc0002a6000?, {0xc3c828?, 0xc000142000?}, 0x6ab4b6?)
+	/home/sevir/.g/go/src/net/http/server.go:2220 +0x29 fp=0xc00014db18 sp=0xc00014daf0 pc=0x6b2069
+net/http.(*ServeMux).ServeHTTP(0x4689d9?, {0xc3c828, 0xc000142000}, 0xc000132000)
+	/home/sevir/.g/go/src/net/http/server.go:2747 +0x1ca fp=0xc00014db68 sp=0xc00014db18 pc=0x6b3f0a
+net/http.serverHandler.ServeHTTP({0xc00011c090?}, {0xc3c828?, 0xc000142000?}, 0x6?)
+	/home/sevir/.g/go/src/net/http/server.go:3210 +0x8e fp=0xc00014db98 sp=0xc00014db68 pc=0x6cf24e
+net/http.(*conn).serve(0xc000120000, {0xc3d9f8, 0xc0002fd710})
+	/home/sevir/.g/go/src/net/http/server.go:2092 +0x5d0 fp=0xc00014dfb8 sp=0xc00014db98 pc=0x6b0c90
+net/http.(*Server).Serve.gowrap3()
+	/home/sevir/.g/go/src/net/http/server.go:3360 +0x28 fp=0xc00014dfe0 sp=0xc00014dfb8 pc=0x6b5ca8
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc00014dfe8 sp=0xc00014dfe0 pc=0x476b41
+created by net/http.(*Server).Serve in goroutine 1
+	/home/sevir/.g/go/src/net/http/server.go:3360 +0x485
+
+goroutine 14 gp=0xc0001aca80 m=nil [sync.Mutex.Lock]:
+runtime.gopark(0xb4895c?, 0x0?, 0x48?, 0x94?, 0x469c5d?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000529398 sp=0xc000529378 pc=0x46eace
+runtime.goparkunlock(...)
+	/home/sevir/.g/go/src/runtime/proc.go:430
+runtime.semacquire1(0xc0002a431c, 0x0, 0x3, 0x1, 0x15)
+	/home/sevir/.g/go/src/runtime/sema.go:178 +0x225 fp=0xc000529400 sp=0xc000529398 pc=0x44d5a5
+sync.runtime_SemacquireMutex(0x0?, 0x2?, 0xc0005294b8?)
+	/home/sevir/.g/go/src/runtime/sema.go:95 +0x25 fp=0xc000529438 sp=0xc000529400 pc=0x470025
+sync.(*Mutex).lockSlow(0xc0002a4318)
+	/home/sevir/.g/go/src/sync/mutex.go:173 +0x15d fp=0xc000529488 sp=0xc000529438 pc=0x48143d
+sync.(*Mutex).Lock(...)
+	/home/sevir/.g/go/src/sync/mutex.go:92
+github.com/madeindigio/remembrances-mcp/pkg/embedder.(*GGUFEmbedder).embedSingle(0xc0002a42d0, {0xc3da30, 0xc0003a8410}, {0xc0000d8a00, 0x193})
+	/www/MCP/remembrances-mcp/pkg/embedder/gguf.go:235 +0xdf fp=0xc000529628 sp=0xc000529488 pc=0x81fd3f
+github.com/madeindigio/remembrances-mcp/pkg/embedder.(*GGUFEmbedder).EmbedDocuments(0xc0002a42d0, {0xc3da30, 0xc0003a8410}, {0xc0001fe000, 0x1, 0x0?})
+	/www/MCP/remembrances-mcp/pkg/embedder/gguf.go:155 +0x359 fp=0xc000529848 sp=0xc000529628 pc=0x81f359
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).generateEmbeddings(0xc0002a2300, {0xc3da30, 0xc0003a8410}, {0xc00011e008, 0x1, 0x1372?})
+	/www/MCP/remembrances-mcp/internal/indexer/indexer_embeddings.go:49 +0x374 fp=0xc000529a78 sp=0xc000529848 pc=0x82a154
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFileWithParser(0xc0002a2300, {0xc3da30, 0xc0003a8410}, {0xc0003a01e1, 0x2e}, {0xc0002b8fc0?, 0x2f?}, {{0xc0003e0060, 0x60}, {0xc0003e0090, ...}, ...}, ...)
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:273 +0x4c8 fp=0xc000529c90 sp=0xc000529a78 pc=0x828888
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles.func1.1({{0xc0003e0060, 0x60}, {0xc0003e0090, 0x30}, {0xb4856e, 0x8}, 0x1372, {0xc0003bc600, 0x40}}, 0xc0003be070, ...)
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:165 +0x1ab fp=0xc000529df0 sp=0xc000529c90 pc=0x827fab
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles.func1()
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:171 +0x2db fp=0xc000529fe0 sp=0xc000529df0 pc=0x827d9b
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000529fe8 sp=0xc000529fe0 pc=0x476b41
+created by github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles in goroutine 19
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:149 +0xed
+
+goroutine 37 gp=0xc000104700 m=nil [IO wait]:
+runtime.gopark(0x4141e5?, 0x0?, 0xf8?, 0x7d?, 0xb?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000087da8 sp=0xc000087d88 pc=0x46eace
+runtime.netpollblock(0x48cc38?, 0x406766?, 0x0?)
+	/home/sevir/.g/go/src/runtime/netpoll.go:575 +0xf7 fp=0xc000087de0 sp=0xc000087da8 pc=0x432ff7
+internal/poll.runtime_pollWait(0x7e3898851e00, 0x72)
+	/home/sevir/.g/go/src/runtime/netpoll.go:351 +0x85 fp=0xc000087e00 sp=0xc000087de0 pc=0x46ddc5
+internal/poll.(*pollDesc).wait(0xc00011a000?, 0xc00011c0a1?, 0x0)
+	/home/sevir/.g/go/src/internal/poll/fd_poll_runtime.go:84 +0x27 fp=0xc000087e28 sp=0xc000087e00 pc=0x4d7b67
+internal/poll.(*pollDesc).waitRead(...)
+	/home/sevir/.g/go/src/internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Read(0xc00011a000, {0xc00011c0a1, 0x1, 0x1})
+	/home/sevir/.g/go/src/internal/poll/fd_unix.go:165 +0x27a fp=0xc000087ec0 sp=0xc000087e28 pc=0x4d887a
+net.(*netFD).Read(0xc00011a000, {0xc00011c0a1?, 0xc000087f48?, 0x4703d0?})
+	/home/sevir/.g/go/src/net/fd_posix.go:55 +0x25 fp=0xc000087f08 sp=0xc000087ec0 pc=0x5b3f45
+net.(*conn).Read(0xc00011e000, {0xc00011c0a1?, 0x0?, 0x2b4cae0?})
+	/home/sevir/.g/go/src/net/net.go:189 +0x45 fp=0xc000087f50 sp=0xc000087f08 pc=0x5bdc05
+net.(*TCPConn).Read(0x2a90b00?, {0xc00011c0a1?, 0x0?, 0x0?})
+	<autogenerated>:1 +0x25 fp=0xc000087f80 sp=0xc000087f50 pc=0x5cd0c5
+net/http.(*connReader).backgroundRead(0xc00011c090)
+	/home/sevir/.g/go/src/net/http/server.go:690 +0x37 fp=0xc000087fc8 sp=0xc000087f80 pc=0x6ab617
+net/http.(*connReader).startBackgroundRead.gowrap2()
+	/home/sevir/.g/go/src/net/http/server.go:686 +0x25 fp=0xc000087fe0 sp=0xc000087fc8 pc=0x6ab545
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000087fe8 sp=0xc000087fe0 pc=0x476b41
+created by net/http.(*connReader).startBackgroundRead in goroutine 34
+	/home/sevir/.g/go/src/net/http/server.go:686 +0xb6
+
+goroutine 54 gp=0xc0002856c0 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0xc0002c0a98?, 0x70?, 0x3f?, 0x47ff73?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000083f38 sp=0xc000083f18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc000083fc8 sp=0xc000083f38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc000083fe0 sp=0xc000083fc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000083fe8 sp=0xc000083fe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 55 gp=0xc000384380 m=nil [GC worker (idle)]:
+runtime.gopark(0xc0002f20e0?, 0xc000486000?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000080f38 sp=0xc000080f18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc000080fc8 sp=0xc000080f38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc000080fe0 sp=0xc000080fc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000080fe8 sp=0xc000080fe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 53 gp=0xc000384540 m=nil [GC worker (idle)]:
+runtime.gopark(0x100010000?, 0xc3c828?, 0x98?, 0x31?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000376f38 sp=0xc000376f18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc000376fc8 sp=0xc000376f38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc000376fe0 sp=0xc000376fc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000376fe8 sp=0xc000376fe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 56 gp=0xc000384700 m=nil [GC worker (idle)]:
+runtime.gopark(0x8640a0?, 0xc0002c7060?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000376738 sp=0xc000376718 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0003767c8 sp=0xc000376738 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0003767e0 sp=0xc0003767c8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0003767e8 sp=0xc0003767e0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 57 gp=0xc0003848c0 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000377738 sp=0xc000377718 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0003777c8 sp=0xc000377738 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0003777e0 sp=0xc0003777c8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0003777e8 sp=0xc0003777e0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 58 gp=0xc000384a80 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000377f38 sp=0xc000377f18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc000377fc8 sp=0xc000377f38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc000377fe0 sp=0xc000377fc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000377fe8 sp=0xc000377fe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 59 gp=0xc000384c40 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000378738 sp=0xc000378718 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0003787c8 sp=0xc000378738 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0003787e0 sp=0xc0003787c8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0003787e8 sp=0xc0003787e0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 60 gp=0xc000384e00 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000378f38 sp=0xc000378f18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc000378fc8 sp=0xc000378f38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc000378fe0 sp=0xc000378fc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000378fe8 sp=0xc000378fe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 61 gp=0xc000384fc0 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000379738 sp=0xc000379718 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0003797c8 sp=0xc000379738 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0003797e0 sp=0xc0003797c8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0003797e8 sp=0xc0003797e0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 62 gp=0xc000385180 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000379f38 sp=0xc000379f18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc000379fc8 sp=0xc000379f38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc000379fe0 sp=0xc000379fc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000379fe8 sp=0xc000379fe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 63 gp=0xc000385340 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0005b8738 sp=0xc0005b8718 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0005b87c8 sp=0xc0005b8738 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0005b87e0 sp=0xc0005b87c8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0005b87e8 sp=0xc0005b87e0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 64 gp=0xc000385500 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0005b8f38 sp=0xc0005b8f18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0005b8fc8 sp=0xc0005b8f38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0005b8fe0 sp=0xc0005b8fc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0005b8fe8 sp=0xc0005b8fe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 65 gp=0xc0003856c0 m=nil [GC worker (idle)]:
+runtime.gopark(0x0?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0005b9738 sp=0xc0005b9718 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0005b97c8 sp=0xc0005b9738 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0005b97e0 sp=0xc0005b97c8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0005b97e8 sp=0xc0005b97e0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 82 gp=0xc000385880 m=nil [GC worker (idle)]:
+runtime.gopark(0x72883e879fc?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0005b9f38 sp=0xc0005b9f18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0005b9fc8 sp=0xc0005b9f38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0005b9fe0 sp=0xc0005b9fc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0005b9fe8 sp=0xc0005b9fe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 83 gp=0xc000385a40 m=nil [GC worker (idle)]:
+runtime.gopark(0x72883e8d4b1?, 0x1?, 0x73?, 0x72?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0005ba738 sp=0xc0005ba718 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0005ba7c8 sp=0xc0005ba738 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0005ba7e0 sp=0xc0005ba7c8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0005ba7e8 sp=0xc0005ba7e0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 84 gp=0xc000385c00 m=nil [GC worker (idle)]:
+runtime.gopark(0x72883e875ae?, 0x1?, 0xfb?, 0x7?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0005baf38 sp=0xc0005baf18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0005bafc8 sp=0xc0005baf38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0005bafe0 sp=0xc0005bafc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0005bafe8 sp=0xc0005bafe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 85 gp=0xc000385dc0 m=nil [GC worker (idle)]:
+runtime.gopark(0x72883e8759a?, 0x1?, 0x32?, 0x9f?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0005bb738 sp=0xc0005bb718 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0005bb7c8 sp=0xc0005bb738 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0005bb7e0 sp=0xc0005bb7c8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0005bb7e8 sp=0xc0005bb7e0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 86 gp=0xc0005bc000 m=nil [GC worker (idle)]:
+runtime.gopark(0x72883e875e2?, 0x1?, 0x68?, 0x97?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0005bbf38 sp=0xc0005bbf18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0005bbfc8 sp=0xc0005bbf38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0005bbfe0 sp=0xc0005bbfc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0005bbfe8 sp=0xc0005bbfe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 87 gp=0xc0005bc1c0 m=nil [GC worker (idle)]:
+runtime.gopark(0x72883e87906?, 0x1?, 0xbf?, 0x12?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0005b4738 sp=0xc0005b4718 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0005b47c8 sp=0xc0005b4738 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0005b47e0 sp=0xc0005b47c8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0005b47e8 sp=0xc0005b47e0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 88 gp=0xc0005bc380 m=nil [GC worker (idle)]:
+runtime.gopark(0x72883e875a3?, 0x1?, 0xac?, 0x75?, 0x0?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc0005b4f38 sp=0xc0005b4f18 pc=0x46eace
+runtime.gcBgMarkWorker(0xc0003ac620)
+	/home/sevir/.g/go/src/runtime/mgc.go:1412 +0xe9 fp=0xc0005b4fc8 sp=0xc0005b4f38 pc=0x41bb09
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x25 fp=0xc0005b4fe0 sp=0xc0005b4fc8 pc=0x41b9e5
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0005b4fe8 sp=0xc0005b4fe0 pc=0x476b41
+created by runtime.gcBgMarkStartWorkers in goroutine 19
+	/home/sevir/.g/go/src/runtime/mgc.go:1328 +0x105
+
+goroutine 15 gp=0xc0005bcfc0 m=nil [sync.Mutex.Lock]:
+runtime.gopark(0x7e3849fadd80?, 0x59?, 0x0?, 0x40?, 0x469ec5?)
+	/home/sevir/.g/go/src/runtime/proc.go:424 +0xce fp=0xc000525398 sp=0xc000525378 pc=0x46eace
+runtime.goparkunlock(...)
+	/home/sevir/.g/go/src/runtime/proc.go:430
+runtime.semacquire1(0xc0002a431c, 0x0, 0x3, 0x1, 0x15)
+	/home/sevir/.g/go/src/runtime/sema.go:178 +0x225 fp=0xc000525400 sp=0xc000525398 pc=0x44d5a5
+sync.runtime_SemacquireMutex(0xc0005bcfc0?, 0xc0?, 0xc0005254b8?)
+	/home/sevir/.g/go/src/runtime/sema.go:95 +0x25 fp=0xc000525438 sp=0xc000525400 pc=0x470025
+sync.(*Mutex).lockSlow(0xc0002a4318)
+	/home/sevir/.g/go/src/sync/mutex.go:173 +0x15d fp=0xc000525488 sp=0xc000525438 pc=0x48143d
+sync.(*Mutex).Lock(...)
+	/home/sevir/.g/go/src/sync/mutex.go:92
+github.com/madeindigio/remembrances-mcp/pkg/embedder.(*GGUFEmbedder).embedSingle(0xc0002a42d0, {0xc3da30, 0xc0003a8410}, {0xc000439000, 0x193})
+	/www/MCP/remembrances-mcp/pkg/embedder/gguf.go:235 +0xdf fp=0xc000525628 sp=0xc000525488 pc=0x81fd3f
+github.com/madeindigio/remembrances-mcp/pkg/embedder.(*GGUFEmbedder).EmbedDocuments(0xc0002a42d0, {0xc3da30, 0xc0003a8410}, {0xc0001167c0, 0x1, 0x0?})
+	/www/MCP/remembrances-mcp/pkg/embedder/gguf.go:155 +0x359 fp=0xc000525848 sp=0xc000525628 pc=0x81f359
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).generateEmbeddings(0xc0002a2300, {0xc3da30, 0xc0003a8410}, {0xc000088610, 0x1, 0xf1e?})
+	/www/MCP/remembrances-mcp/internal/indexer/indexer_embeddings.go:49 +0x374 fp=0xc000525a78 sp=0xc000525848 pc=0x82a154
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFileWithParser(0xc0002a2300, {0xc3da30, 0xc0003a8410}, {0xc0003a01e1, 0x2e}, {0xc0002b8fc0?, 0x2f?}, {{0xc0003e0120, 0x5d}, {0xc0003e0150, ...}, ...}, ...)
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:273 +0x4c8 fp=0xc000525c90 sp=0xc000525a78 pc=0x828888
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles.func1.1({{0xc0003e0120, 0x5d}, {0xc0003e0150, 0x2d}, {0xb4856e, 0x8}, 0xf1e, {0xc0003bc680, 0x40}}, 0xc0003be070, ...)
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:165 +0x1ab fp=0xc000525df0 sp=0xc000525c90 pc=0x827fab
+github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles.func1()
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:171 +0x2db fp=0xc000525fe0 sp=0xc000525df0 pc=0x827d9b
+runtime.goexit({})
+	/home/sevir/.g/go/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000525fe8 sp=0xc000525fe0 pc=0x476b41
+created by github.com/madeindigio/remembrances-mcp/internal/indexer.(*Indexer).processFiles in goroutine 19
+	/www/MCP/remembrances-mcp/internal/indexer/indexer.go:149 +0xed
+
+rax    0x0
+rbx    0x13eb7
+rcx    0x7e389869eb2c
+rdx    0x6
+rdi    0x13df8
+rsi    0x13eb7
+rbp    0x7e36c4c3ad60
+rsp    0x7e36c4c3ad20
+r8     0x0
+r9     0x7
+r10    0x8
+r11    0x246
+r12    0x6
+r13    0x5a
+r14    0x16
+r15    0x7e383e29de78
+rip    0x7e389869eb2c
+rflags 0x246
+cs     0x33
+fs     0x0
+gs     0x0
+➜ ENFAF 

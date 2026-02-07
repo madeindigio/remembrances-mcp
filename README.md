@@ -380,6 +380,14 @@ go build -o dist/remembrances-mcp ./cmd/remembrances-mcp
 cp dist/remembrances-mcp ./remembrances-mcp || (rm -f ./remembrances-mcp && cp dist/remembrances-mcp ./remembrances-mcp)
 ```
 
+### build-commercial
+
+Build the project **including commercial modules**
+
+```bash
+make build-commercial
+```
+
 ### build-and-copy
 
 Build the project and copy the binary to path
@@ -387,10 +395,16 @@ Build the project and copy the binary to path
 interactive: true
 
 ```bash
-make BUILD_TYPE=cuda build
-cp ./build/libs/cuda/*.so ./build/
+# Build CUDA libraries first (portable for Intel/AMD compatibility)
+make PORTABLE=1 build-libs-cuda-portable
+# Copy libraries to build/ so the binary can find them during compilation
+cp ./build/libs/cuda-portable/*.so ./build/
+# Build binary using the libraries
+make BUILD_TYPE=cuda build-binary-only
+# Copy libraries and binary to ~/bin
 rm -f ~/bin/remembrances-mcp-beta
-cp ./build/libs/cuda/*.so ~/bin/
+rm -f ~/bin/*.so
+cp ./build/*.so ~/bin/
 cp ./build/remembrances-mcp ~/bin/remembrances-mcp-beta
 rm -f *.log
 ```
@@ -408,6 +422,14 @@ rm -f ~/bin/remembrances-mcp-beta
 rm -f ~/bin/*.so
 cp ./build/remembrances-mcp ~/bin/remembrances-mcp-beta
 rm -f *.log
+```
+
+### build-embedded-commercial
+
+Build the embedded (purego) binary **including commercial modules**
+
+```bash
+make build-embedded-commercial
 ```
 
 ### changelog
@@ -476,6 +498,18 @@ zip -9 remembrances-mcp-linux-x64-nvidia-embedded-portable.zip remembrances-mcp
 mv remembrances-mcp-linux-x64-nvidia-embedded-portable.zip ../dist-variants/
 cd ..
 
+echo "Building Windows native (no llama.cpp shared libs)"
+# NOTE: Build this on a Windows host to avoid CGO cross-linker issues.
+# If you must cross-compile, ensure MinGW is installed and set CC=x86_64-w64-mingw32-gcc.
+# This build does NOT include GGUF; use Ollama/OpenAI only (no --gguf-model-path).
+rm -rf dist-variants/remembrances-mcp-windows-amd64
+mkdir -p dist-variants/remembrances-mcp-windows-amd64
+GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -mod=mod -o dist-variants/remembrances-mcp-windows-amd64/remembrances-mcp.exe ./cmd/remembrances-mcp
+cp README.md LICENSE.txt config.sample.yaml dist-variants/remembrances-mcp-windows-amd64/ 2>/dev/null || true
+cd dist-variants
+zip -9 remembrances-mcp-windows-amd64.zip remembrances-mcp-windows-amd64/*
+cd ..
+
 echo "-----------------------------------"
 echo "Checking if memote osx is available..."
 # if ssh connection with mac-mini-de-digio is available, build macos metal version
@@ -489,6 +523,46 @@ fi
 
 # (Optional) Docker images remain the same
 make docker-prepare-cpu && make docker-build-cpu && make docker-push-cpu
+```
+
+### dist-core
+
+Create **both** external-libs and embedded-libs distributions (core modules only)
+
+```bash
+make dist-core
+```
+
+### dist-commercial
+
+Create **both** external-libs and embedded-libs distributions (with commercial modules)
+
+```bash
+make dist-commercial
+```
+
+### dist-embedded-variant
+
+Package a single embedded (purego) variant
+
+```bash
+make dist-embedded-variant EMBEDDED_VARIANT=cpu
+```
+
+### dist-embedded-all
+
+Package all embedded variants for the current platform
+
+```bash
+make dist-embedded-all
+```
+
+### dist-osx-all
+
+macOS all-in-one: build+zip **external + embedded** (arm64 metal)
+
+```bash
+make dist-osx-all
 ```
 
 ### build-osx
@@ -508,6 +582,21 @@ cd build
 zip -9 ../dist/remembrances-mcp-darwin-aarch64.zip remembrances-mcp *.dylib config.sample*.yaml
 ```
 
+### build-osx-commercial
+
+Build for macOS (arm64 metal) **including commercial modules**
+
+```zsh
+echo "Building macOS Metal binary (commercial)..."
+export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH
+make MODULE_TAGS=commercial BUILD_TYPE=metal build-binary-only
+echo "Zipping macOS Metal binary..."
+rm -f dist/remembrances-mcp-darwin-aarch64-commercial.zip
+cp config.sample*.yaml build/
+cd build
+zip -9 ../dist/remembrances-mcp-darwin-aarch64-commercial.zip remembrances-mcp *.dylib config.sample*.yaml
+```
+
 ### build-osx-embedded
 
 Build for macOS (arm64 metal)
@@ -523,6 +612,21 @@ rm -f dist/remembrances-mcp-darwin-aarch64-embedded.zip
 cp config.sample*.yaml build/
 cd build
 zip -9 ../dist/remembrances-mcp-darwin-aarch64-embedded.zip remembrances-mcp config.sample*.yaml
+```
+
+### build-osx-embedded-commercial
+
+Build for macOS (arm64 metal) **embedded libs + commercial modules**
+
+```zsh
+echo "Building macOS Metal embedded libraries binary (commercial)..."
+export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH
+make MODULE_TAGS=commercial EMBEDDED_VARIANT=metal build-embedded
+echo "Zipping macOS Metal embedded binary..."
+rm -f dist/remembrances-mcp-darwin-aarch64-embedded-commercial.zip
+cp config.sample*.yaml build/
+cd build
+zip -9 ../dist/remembrances-mcp-darwin-aarch64-embedded-commercial.zip remembrances-mcp config.sample*.yaml
 ```
 
 ### build-libs-osx

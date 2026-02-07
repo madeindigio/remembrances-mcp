@@ -74,6 +74,27 @@ func (mm *ModuleManager) LoadModule(ctx context.Context, id ModuleID, cfg map[st
 	return instance, nil
 }
 
+// WrapStorage checks all loaded modules for StorageWrapperProvider implementations
+// and applies them in sequence, returning the final wrapped storage.
+// This should be called after all modules are loaded.
+func (mm *ModuleManager) WrapStorage(storage storage.FullStorage) storage.FullStorage {
+	mm.mu.RLock()
+	defer mm.mu.RUnlock()
+
+	wrapped := storage
+	for id, instance := range mm.instances {
+		if wrapper, ok := instance.(StorageWrapperProvider); ok {
+			mm.config.Logger.Info("Applying storage wrapper from module", "module_id", id)
+			wrapped = wrapper.WrapStorage(wrapped)
+		}
+	}
+
+	// Update the config storage reference for future modules
+	mm.config.Storage = wrapped
+
+	return wrapped
+}
+
 // UnloadModule unloads a module and releases resources.
 func (mm *ModuleManager) UnloadModule(id ModuleID) error {
 	mm.mu.Lock()

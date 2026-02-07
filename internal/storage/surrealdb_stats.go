@@ -38,7 +38,16 @@ func (s *SurrealDBStorage) GetStats(ctx context.Context, userID string) (*Memory
 	}
 	stats.RelationshipCount = relationshipCount
 
-	stats.DocumentCount = s.getCount(ctx, "SELECT count() AS count FROM knowledge_base", nil)
+	// Count distinct documents, not individual chunks.
+	// Chunked documents have source_file set; non-chunked ones only have file_path.
+	stats.DocumentCount = s.getDistinctDocumentCount(ctx)
+
+	// Count events
+	if scoped {
+		stats.EventCount = s.getCount(ctx, "SELECT count() AS count FROM events WHERE user_id = $user_id", params)
+	} else {
+		stats.EventCount = s.getCount(ctx, "SELECT count() AS count FROM events", nil)
+	}
 
 	var totalSize int64
 	if scoped {
@@ -148,9 +157,8 @@ func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField
 			newValue += s.getCount(ctx, q, map[string]interface{}{})
 		}
 	case "document_count":
-		countQuery = "SELECT count() AS count FROM knowledge_base"
-		params = map[string]interface{}{}
-		newValue = s.getCount(ctx, countQuery, params)
+		// Count distinct documents, not individual chunks
+		newValue = s.getDistinctDocumentCount(ctx)
 	case "key_value_count":
 		countQuery = "SELECT count() AS count FROM kv_memories WHERE user_id = $user_id"
 		params = map[string]interface{}{"user_id": userID}
@@ -179,6 +187,18 @@ func (s *SurrealDBStorage) updateUserStat(ctx context.Context, userID, statField
 		}
 	}
 	return nil
+}
+
+// getDistinctDocumentCount returns the number of unique documents in the
+// knowledge_base table. Chunked documents share the same source_file value
+// while non-chunked documents only have file_path set. We use the coalesce
+// operator (??) to pick source_file when present and fall back to file_path,
+// then count distinct values.
+func (s *SurrealDBStorage) getDistinctDocumentCount(ctx context.Context) int {
+	// Use SurrealDB's null-coalescing operator to get the canonical document
+	// identifier, then group and count distinct documents.
+	query := "SELECT count() AS count FROM (SELECT (source_file ?? file_path) AS doc_id FROM knowledge_base GROUP BY doc_id)"
+	return s.getCount(ctx, query, nil)
 }
 
 // getCount is a helper to run a count query and extract the count

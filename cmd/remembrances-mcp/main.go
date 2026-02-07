@@ -19,7 +19,6 @@ import (
 	"github.com/madeindigio/remembrances-mcp/internal/kb"
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
 	"github.com/madeindigio/remembrances-mcp/internal/transport"
-	_ "github.com/madeindigio/remembrances-mcp/modules/commercial/webui"
 	_ "github.com/madeindigio/remembrances-mcp/modules/standard"
 	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
 	"github.com/madeindigio/remembrances-mcp/pkg/modules"
@@ -389,6 +388,9 @@ func Main() {
 		slog.Error("failed to load modules", "error", err)
 		os.Exit(1)
 	}
+
+	// Allow modules to wrap storage (e.g., db-sync-server wraps with MergedStorage)
+	storageInstance = modManager.WrapStorage(storageInstance)
 
 	// Register tools from modules
 	if err := registerModuleTools(modManager, srv); err != nil {

@@ -72,8 +72,17 @@ case "$VARIANT" in
         # Detectar arquitectura GPU
         if command -v nvidia-smi &> /dev/null; then
             GPU_ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -1 | tr -d '.')
-            echo "Arquitectura GPU detectada: sm_$GPU_ARCH"
-            CMAKE_FLAGS="$CMAKE_FLAGS -DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER=$CUDA_HOME/bin/nvcc -DCMAKE_CUDA_ARCHITECTURES=$GPU_ARCH"
+
+            # Permite compilar fatbin con varias arquitecturas.
+            # Ejemplo: GPU_ARCH_LIST="75;80;86;89" (sin prefijo sm_)
+            GPU_ARCHES="${GPU_ARCH_LIST:-$GPU_ARCH}"
+            if [ -n "$GPU_ARCH_LIST" ]; then
+                echo "Arquitecturas GPU configuradas (fatbin): $GPU_ARCHES"
+            else
+                echo "Arquitectura GPU detectada: sm_$GPU_ARCH"
+            fi
+
+            CMAKE_FLAGS="$CMAKE_FLAGS -DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER=$CUDA_HOME/bin/nvcc -DCMAKE_CUDA_ARCHITECTURES=$GPU_ARCHES"
         else
             echo -e "${RED}Error: nvidia-smi no encontrado${NC}"
             exit 1
@@ -197,7 +206,7 @@ EOF
 
 if [ "$VARIANT" = "cuda" ]; then
     echo "CUDA version: $($CUDA_HOME/bin/nvcc --version | grep release)" >> "$BUILD_DIR/BUILD_INFO.txt"
-    echo "GPU architecture: sm_$GPU_ARCH" >> "$BUILD_DIR/BUILD_INFO.txt"
+    echo "GPU architectures: $GPU_ARCHES" >> "$BUILD_DIR/BUILD_INFO.txt"
 fi
 
 echo ""

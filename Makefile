@@ -4,7 +4,9 @@
 	docker-build-cuda docker-push-cuda docker-run-cuda docker-stop-cuda \
 	docker-build-cpu docker-push-cpu docker-run-cpu docker-stop-cpu \
 	docker-download-model docker-prepare-cuda docker-prepare-cpu docker-login docker-help build-libs-cuda-portable \
-	build-cuda-full build-cuda-system dist-cuda-full dist-cuda-system build-cuda-both dist-cuda-both
+	build-cuda-full build-cuda-system dist-cuda-full dist-cuda-system build-cuda-both dist-cuda-both \
+	build-surrealdb-windows-amd64 \
+	build-commercial build-embedded-commercial dist-embedded-variant dist-embedded-all dist-core dist-commercial
 
 # Default target
 all: build
@@ -89,6 +91,10 @@ EMBEDDED_VARIANT ?= cpu
 # NOTE: these must be recursive (=) so targets like build-embedded-cuda can override EMBEDDED_VARIANT.
 EMBEDDED_VARIANT_TAG = embedded_$(subst -,_,$(EMBEDDED_VARIANT))
 EMBEDDED_TAGS = embedded $(EMBEDDED_VARIANT_TAG)
+MODULE_TAGS ?=
+GO_BUILD_TAGS = $(strip $(MODULE_TAGS))
+EMBEDDED_GO_TAGS = $(strip $(EMBEDDED_TAGS) $(MODULE_TAGS))
+OSX_DIST_SUFFIX := $(if $(MODULE_TAGS),-commercial,)
 
 # RPATH used by embedded builds.
 #
@@ -127,6 +133,8 @@ help:
 	@echo "  make build              - Build the project with GGUF and embedded SurrealDB support"
 	@echo "  make build-binary-only  - Build Go binary without rebuilding shared libraries"
 	@echo "  make build-embedded     - Build binary embedding shared libs via go:embed/purego"
+	@echo "  make build-commercial   - Build with commercial modules (MODULE_TAGS=commercial)"
+	@echo "  make build-embedded-commercial - Embedded build with commercial modules"
 	@echo "  make llama-cpp          - Build llama.cpp library"
 	@echo "  make llama-cpp-clean    - Clean llama.cpp build artifacts"
 	@echo "  make surrealdb-embedded - Build surrealdb-embedded library"
@@ -145,6 +153,7 @@ help:
 	@echo "SurrealDB cross-compilation:"
 	@echo "  make build-surrealdb-darwin-arm64  - Build surrealdb-embedded for arm64"
 	@echo "  make build-surrealdb-darwin-amd64  - Build surrealdb-embedded for x86_64"
+	@echo "  make build-surrealdb-windows-amd64 - Build surrealdb-embedded DLL via Docker (Windows)"
 	@echo ""
 	@echo "Multi-variant library builds:"
 	@echo "  make build-libs-all-variants - Build llama.cpp for all GPU types"
@@ -168,6 +177,11 @@ help:
 	@echo "Distribution packaging:"
 	@echo "  make dist-variant VARIANT=cuda   - Package single variant with libraries as zip"
 	@echo "  make dist-all                    - Package all variants as separate zip files"
+	@echo "  make dist-embedded-variant EMBEDDED_VARIANT=cpu - Package embedded variant"
+	@echo "  make dist-embedded-all           - Package all embedded variants"
+	@echo "  make dist-core                   - Package external + embedded (core modules only)"
+	@echo "  make dist-commercial             - Package external + embedded (with commercial modules)"
+	@echo "  make dist-osx-all                - macOS: build+zip external + embedded (arm64)"
 	@echo ""
 	@echo "Cross-compilation targets (Docker):"
 	@echo "  make build-cross        - Cross-compile for all platforms using Docker"
@@ -180,6 +194,7 @@ help:
 	@echo "  BUILD_TYPE=cublas   - Build with CUDA support (Linux, deprecated, use cuda)"
 	@echo "  BUILD_TYPE=hipblas  - Build with ROCm support (Linux)"
 	@echo "  BUILD_TYPE=openblas - Build with OpenBLAS support"
+	@echo "  MODULE_TAGS=commercial - Include commercial modules in the build"
 	@echo ""
 	@echo "Environment variables:"
 	@echo "  GO_LLAMA_DIR          - Path to go-llama.cpp (default: \$$HOME/www/MCP/Remembrances/go-llama.cpp)"
@@ -292,7 +307,7 @@ build: llama-cpp surrealdb-embedded
 	@echo "  Version: $(BUILD_VERSION)"
 	@echo "  Commit: $(COMMIT_HASH)"
 	@mkdir -p $(BUILD_DIR)
-	go build -mod=mod -v -ldflags="$(RPATH_OPTION) $(GO_VERSION_LDFLAGS) -X $(VERSION_PKG).Variant=$(BUILD_VARIANT)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
+	go build -mod=mod -v $(if $(GO_BUILD_TAGS),-tags "$(GO_BUILD_TAGS)",) -ldflags="$(RPATH_OPTION) $(GO_VERSION_LDFLAGS) -X $(VERSION_PKG).Variant=$(BUILD_VARIANT)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Copying shared libraries to build directory..."
 	@# Copy SurrealDB embedded library (prefer prebuilt artifacts for this variant)
 	@echo "Copying SurrealDB embedded library..."
@@ -424,7 +439,7 @@ build-binary-only:
 	@echo "  Version: $(BUILD_VERSION)"
 	@echo "  Commit: $(COMMIT_HASH)"
 	@mkdir -p $(BUILD_DIR)
-	go build -mod=mod -v -ldflags="$(RPATH_OPTION) $(GO_VERSION_LDFLAGS) -X $(VERSION_PKG).Variant=$(BUILD_VARIANT)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
+	go build -mod=mod -v $(if $(GO_BUILD_TAGS),-tags "$(GO_BUILD_TAGS)",) -ldflags="$(RPATH_OPTION) $(GO_VERSION_LDFLAGS) -X $(VERSION_PKG).Variant=$(BUILD_VARIANT)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Binary ready: $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Prepare embedded shared libraries (SurrealDB + llama.cpp) inside the
@@ -476,7 +491,7 @@ build-embedded: prepare-embedded-libs
 	@echo "  Version: $(BUILD_VERSION)"
 	@echo "  Commit: $(COMMIT_HASH)"
 	@mkdir -p $(BUILD_DIR)
-	go build -mod=mod -tags "$(EMBEDDED_TAGS)" -v -ldflags="$(EMBEDDED_RPATH_OPTION) $(GO_VERSION_LDFLAGS) -X $(VERSION_PKG).Variant=$(EMBEDDED_VARIANT)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
+	go build -mod=mod $(if $(EMBEDDED_GO_TAGS),-tags "$(EMBEDDED_GO_TAGS)",) -v -ldflags="$(EMBEDDED_RPATH_OPTION) $(GO_VERSION_LDFLAGS) -X $(VERSION_PKG).Variant=$(EMBEDDED_VARIANT)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@echo "Copying embedded libraries next to binary for loader resolution..."
 	@cp $(EMBEDDED_LIB_PATH)/*.$(LIB_EXT) $(BUILD_DIR)/ 2>/dev/null || echo "⚠ Warning: Could not copy embedded libraries to $(BUILD_DIR)/"
 	@echo "Copying embedded libraries into embedded-libs/$(EMBEDDED_VARIANT) for RPATH lookup..."
@@ -495,6 +510,12 @@ build-embedded-cuda-portable: build-embedded
 
 build-embedded-metal: EMBEDDED_VARIANT=metal
 build-embedded-metal: build-embedded
+
+build-commercial: MODULE_TAGS=commercial
+build-commercial: build
+
+build-embedded-commercial: MODULE_TAGS=commercial
+build-embedded-commercial: build-embedded
 
 # Run the application
 run: build
@@ -648,6 +669,16 @@ build-surrealdb-target:
 	 cp "$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/$(RUST_TARGET)/release/libsurrealdb_embedded_rs.so" \
 		"$(BUILD_DIR)/libs/surrealdb-$(RUST_TARGET)/" 2>/dev/null || \
 	 echo "⚠ Could not copy surrealdb library for $(RUST_TARGET)"
+
+# Build surrealdb-embedded for Windows AMD64 using Docker (cross-compilation)
+build-surrealdb-windows-amd64:
+	@echo "Building surrealdb-embedded for Windows AMD64 using Docker..."
+	@./scripts/build-docker-image.sh --tag latest
+	@BUILD_LLAMA_CPP=0 BUILD_LLAMA_SHIM=0 TARGET_PLATFORM=windows TARGET_ARCH=amd64 GORELEASER_CROSS_IMAGE=remembrances-mcp-builder:latest ./scripts/release-cross.sh --libs-only
+	@mkdir -p $(BUILD_DIR)/libs/windows-amd64
+	@cp dist/libs/windows-amd64/*surrealdb_embedded_rs*.dll $(BUILD_DIR)/libs/windows-amd64/ 2>/dev/null || \
+		echo "⚠ Warning: surrealdb_embedded_rs.dll not found in dist/libs/windows-amd64"
+	@echo "✓ Windows surrealdb-embedded DLL copied to $(BUILD_DIR)/libs/windows-amd64/"
 	@echo "✓ surrealdb-embedded built for $(RUST_TARGET)"
 
 # Build surrealdb-embedded for macOS arm64
@@ -669,7 +700,7 @@ dist-darwin-arm64: build-darwin-arm64
 	@# libcommon is static (.a), so we link it directly
 	CGO_CFLAGS="-I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include -I$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/include" \
 	CGO_LDFLAGS="-L$(GO_LLAMA_DIR)/build-arm64/bin -L$(GO_LLAMA_DIR)/build-arm64/common -L$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/aarch64-apple-darwin/release -lllama -lggml -lggml-base -lsurrealdb_embedded_rs $(GO_LLAMA_DIR)/build-arm64/common/libcommon.a $(LLAMA_LDFLAGS) -lc++" \
-		GOARCH=arm64 GOOS=darwin go build -mod=mod -v -ldflags="$(GO_VERSION_LDFLAGS)" -o dist/darwin-arm64/$(BINARY_NAME) ./cmd/remembrances-mcp
+		GOARCH=arm64 GOOS=darwin go build -mod=mod -v $(if $(GO_BUILD_TAGS),-tags "$(GO_BUILD_TAGS)",) -ldflags="$(GO_VERSION_LDFLAGS)" -o dist/darwin-arm64/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@# Copy libraries
 	@cp $(BUILD_DIR)/libs/darwin-arm64/*.dylib dist/darwin-arm64/ 2>/dev/null || \
 	 find "$(GO_LLAMA_DIR)/build-arm64" -name "*.dylib" -exec cp {} dist/darwin-arm64/ \; 2>/dev/null || \
@@ -697,7 +728,7 @@ dist-darwin-amd64: build-darwin-amd64
 	@# Note: Metal is disabled for x86_64, libcommon is static (.a) so we link it directly
 	CGO_CFLAGS="-I$(GO_LLAMA_DIR) -I$(GO_LLAMA_DIR)/llama.cpp -I$(GO_LLAMA_DIR)/llama.cpp/common -I$(GO_LLAMA_DIR)/llama.cpp/ggml/include -I$(GO_LLAMA_DIR)/llama.cpp/include -I$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/include" \
 	CGO_LDFLAGS="-L$(GO_LLAMA_DIR)/build-x86_64/bin -L$(GO_LLAMA_DIR)/build-x86_64/common -L$(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/x86_64-apple-darwin/release -lllama -lggml -lggml-base -lsurrealdb_embedded_rs $(GO_LLAMA_DIR)/build-x86_64/common/libcommon.a -framework Accelerate -framework Foundation -lc++" \
-		GOARCH=amd64 GOOS=darwin go build -mod=mod -v -ldflags="$(GO_VERSION_LDFLAGS)" -o dist/darwin-amd64/$(BINARY_NAME) ./cmd/remembrances-mcp
+		GOARCH=amd64 GOOS=darwin go build -mod=mod -v $(if $(GO_BUILD_TAGS),-tags "$(GO_BUILD_TAGS)",) -ldflags="$(GO_VERSION_LDFLAGS)" -o dist/darwin-amd64/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@# Copy libraries
 	@cp $(BUILD_DIR)/libs/darwin-x86_64/*.dylib dist/darwin-amd64/ 2>/dev/null || \
 	 find "$(GO_LLAMA_DIR)/build-x86_64" -name "*.dylib" -exec cp {} dist/darwin-amd64/ \; 2>/dev/null || true
@@ -805,7 +836,7 @@ build-variant: surrealdb-embedded
 	@$(MAKE) build-libs-variant VARIANT=$(VARIANT)
 	@# Build the Go binary (keep binary name stable; separate variants by directory)
 	@mkdir -p $(BUILD_DIR)/variants/$(VARIANT)
-	go build -mod=mod -v $(GO_LDFLAGS) -o $(BUILD_DIR)/variants/$(VARIANT)/$(BINARY_NAME) ./cmd/remembrances-mcp
+	go build -mod=mod -v $(if $(GO_BUILD_TAGS),-tags "$(GO_BUILD_TAGS)",) $(GO_LDFLAGS) -o $(BUILD_DIR)/variants/$(VARIANT)/$(BINARY_NAME) ./cmd/remembrances-mcp
 	@# Copy SurrealDB embedded library
 	@echo "Copying SurrealDB embedded library..."
 	@cp $(SURREALDB_EMBEDDED_DIR)/surrealdb_embedded_rs/target/release/libsurrealdb_embedded_rs.so $(BUILD_DIR)/variants/$(VARIANT)/ 2>/dev/null || \
@@ -931,6 +962,76 @@ endif
 	@echo "✓ All variant packages created in dist-variants/:"
 	@ls -lh dist-variants/*.zip 2>/dev/null || echo "  (no packages found)"
 
+# Package a single embedded variant (purego + embedded shared libs) as a zip file
+dist-embedded-variant:
+	@if [ -z "$(EMBEDDED_VARIANT)" ]; then \
+		echo "Error: EMBEDDED_VARIANT not specified"; \
+		echo "Usage: make dist-embedded-variant EMBEDDED_VARIANT=cpu"; \
+		exit 1; \
+	fi
+	@echo "Packaging embedded $(EMBEDDED_VARIANT) variant for distribution..."
+	@$(MAKE) EMBEDDED_VARIANT=$(EMBEDDED_VARIANT) build-embedded
+	@DIST_NAME=remembrances-mcp-embedded-$(EMBEDDED_VARIANT)-$(PLATFORM)-$(UNAME_M); \
+	DIST_DIR=dist-variants/$$DIST_NAME; \
+	rm -rf $$DIST_DIR; \
+	mkdir -p $$DIST_DIR/embedded-libs/$(EMBEDDED_VARIANT); \
+	cp $(BUILD_DIR)/$(BINARY_NAME) $$DIST_DIR/; \
+	cp -r $(BUILD_DIR)/embedded-libs/$(EMBEDDED_VARIANT)/* $$DIST_DIR/embedded-libs/$(EMBEDDED_VARIANT)/ 2>/dev/null || true; \
+	cp README.md $$DIST_DIR/ 2>/dev/null || true; \
+	cp LICENSE.txt $$DIST_DIR/ 2>/dev/null || true; \
+	cp config.sample.yaml $$DIST_DIR/ 2>/dev/null || true; \
+	cp config.sample.gguf.yaml $$DIST_DIR/ 2>/dev/null || true; \
+	cp run-remembrances.sh $$DIST_DIR/ 2>/dev/null || true; \
+	echo "Variant: embedded-$(EMBEDDED_VARIANT)" > $$DIST_DIR/VARIANT_INFO.txt; \
+	echo "Platform: $(PLATFORM)" >> $$DIST_DIR/VARIANT_INFO.txt; \
+	echo "Architecture: $(UNAME_M)" >> $$DIST_DIR/VARIANT_INFO.txt; \
+	echo "Built: $$(date)" >> $$DIST_DIR/VARIANT_INFO.txt; \
+	cd dist-variants && zip -r $$DIST_NAME.zip $$DIST_NAME/ && ls -lh $$DIST_NAME.zip; \
+	rm -rf $$DIST_DIR; \
+	echo "✓ Embedded package created"
+
+# Package all embedded variants for distribution
+dist-embedded-all:
+	@echo "Packaging all embedded variants for distribution..."
+	@mkdir -p dist-variants
+ifeq ($(PLATFORM),darwin)
+	@$(MAKE) dist-embedded-variant EMBEDDED_VARIANT=cpu
+	@$(MAKE) dist-embedded-variant EMBEDDED_VARIANT=metal
+else ifeq ($(PLATFORM),linux)
+	@$(MAKE) dist-embedded-variant EMBEDDED_VARIANT=cpu
+	@if command -v nvcc >/dev/null 2>&1; then \
+		$(MAKE) dist-embedded-variant EMBEDDED_VARIANT=cuda; \
+		$(MAKE) dist-embedded-variant EMBEDDED_VARIANT=cuda-portable; \
+	fi
+endif
+	@echo "✓ All embedded variant packages created in dist-variants/:"
+	@ls -lh dist-variants/*embedded*.zip 2>/dev/null || echo "  (no embedded packages found)"
+
+dist-core:
+	@$(MAKE) dist-all
+	@$(MAKE) dist-embedded-all
+
+dist-commercial: MODULE_TAGS=commercial
+dist-commercial: dist-core
+
+# macOS all-in-one distribution (external + embedded for arm64 metal)
+dist-osx-all:
+	@if [ "$(PLATFORM)" != "darwin" ]; then \
+		echo "Error: dist-osx-all is only supported on macOS"; \
+		exit 1; \
+	fi
+	@echo "Creating macOS all-in-one distribution$(OSX_DIST_SUFFIX)..."
+	@$(MAKE) BUILD_TYPE=metal build-binary-only
+	@mkdir -p dist
+	@rm -f dist/remembrances-mcp-darwin-aarch64$(OSX_DIST_SUFFIX).zip
+	@cp config.sample*.yaml build/
+	@cd build && zip -9 ../dist/remembrances-mcp-darwin-aarch64$(OSX_DIST_SUFFIX).zip remembrances-mcp *.dylib config.sample*.yaml
+	@$(MAKE) EMBEDDED_VARIANT=metal build-embedded
+	@rm -f dist/remembrances-mcp-darwin-aarch64-embedded$(OSX_DIST_SUFFIX).zip
+	@cp config.sample*.yaml build/
+	@cd build && zip -9 ../dist/remembrances-mcp-darwin-aarch64-embedded$(OSX_DIST_SUFFIX).zip remembrances-mcp config.sample*.yaml
+	@echo "✓ macOS all-in-one distribution created in dist/"
+
 # Package all library variants for distribution (legacy target)
 package-libs-all:
 	@echo "Packaging all library variants..."
@@ -1010,7 +1111,7 @@ release-cross:
 build-dev: llama-cpp
 	@echo "Building $(BINARY_NAME) with race detector..."
 	@mkdir -p $(BUILD_DIR)
-	go build -race -v $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-dev ./cmd/remembrances-mcp
+	go build -race -v $(if $(GO_BUILD_TAGS),-tags "$(GO_BUILD_TAGS)",) $(GO_LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-dev ./cmd/remembrances-mcp
 	@echo "Development build complete: $(BUILD_DIR)/$(BINARY_NAME)-dev"
 
 # Check build environment

@@ -74,22 +74,29 @@ echo ""
 
 # Configurar variables de entorno para CUDA
 # Buscar la versión más reciente de CUDA instalada
-if [ -d "/usr/local/cuda-12.6" ]; then
-    export CUDA_HOME=/usr/local/cuda-12.6
-    echo -e "${GREEN}✓ Usando CUDA 12.6${NC}"
-elif [ -d "/usr/local/cuda-12" ]; then
-    export CUDA_HOME=/usr/local/cuda-12
-    echo -e "${GREEN}✓ Usando CUDA 12${NC}"
+if command -v nvcc &> /dev/null; then
+    # Detectar CUDA_HOME desde nvcc
+    NVCC_PATH=$(which nvcc)
+    CUDA_HOME=$(dirname $(dirname $NVCC_PATH))
+    echo -e "${GREEN}✓ CUDA detectado en: $CUDA_HOME${NC}"
+    
+    # Verificar versión de nvcc
+    NVCC_VERSION=$(nvcc --version | grep "release" | sed -n 's/.*release \([0-9.]*\).*/\1/p')
+    echo "nvcc versión: $NVCC_VERSION"
 else
-    export CUDA_HOME=/usr/local/cuda
-    echo -e "${YELLOW}Usando CUDA por defecto en $CUDA_HOME${NC}"
+    echo -e "${RED}Error: nvcc no encontrado. Asegúrate de tener CUDA Toolkit instalado.${NC}"
+    exit 1
 fi
-export PATH=$CUDA_HOME/bin:$PATH
-export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 
-# Verificar versión de nvcc que se usará
-NVCC_VERSION=$(${CUDA_HOME}/bin/nvcc --version | grep "release" | sed -n 's/.*release \([0-9.]*\).*/\1/p')
-echo "nvcc versión: $NVCC_VERSION"
+export CUDA_HOME
+export PATH=$CUDA_HOME/bin:$PATH
+
+# Configurar LD_LIBRARY_PATH según la ubicación de las librerías CUDA
+if [ -d "$CUDA_HOME/lib64" ]; then
+    export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+elif [ -d "$CUDA_HOME/lib" ]; then
+    export LD_LIBRARY_PATH=$CUDA_HOME/lib:$LD_LIBRARY_PATH
+fi
 
 # Detectar arquitectura CUDA de la GPU
 echo "Detectando arquitectura CUDA de la GPU..."
@@ -98,7 +105,15 @@ if [ -z "$GPU_ARCH" ]; then
     echo -e "${YELLOW}Advertencia: No se pudo detectar arquitectura GPU. Usando 86 (RTX 30xx) por defecto.${NC}"
     GPU_ARCH="86"
 fi
-echo -e "${GREEN}✓ Arquitectura CUDA detectada: sm_${GPU_ARCH}${NC}"
+
+# Permite compilar fatbin con varias arquitecturas.
+# Ejemplo: GPU_ARCH_LIST="75;80;86;89" (sin prefijo sm_)
+GPU_ARCHES="${GPU_ARCH_LIST:-$GPU_ARCH}"
+if [ -n "$GPU_ARCH_LIST" ]; then
+    echo -e "${GREEN}✓ Arquitecturas CUDA configuradas (fatbin): ${GPU_ARCHES}${NC}"
+else
+    echo -e "${GREEN}✓ Arquitectura CUDA detectada: sm_${GPU_ARCH}${NC}"
+fi
 
 # Compilar usando CMake con CUDA habilitado
 mkdir -p build
@@ -107,12 +122,16 @@ cd build
 echo "Ejecutando CMake con CUDA habilitado..."
 
 # Detectar versión de CUDA del nvcc configurado
-CUDA_VERSION_MAJOR=$(${CUDA_HOME}/bin/nvcc --version | grep "release" | sed -n 's/.*release \([0-9]*\)\..*/\1/p')
+CUDA_VERSION_MAJOR=$(nvcc --version | grep "release" | sed -n 's/.*release \([0-9]*\)\..*/\1/p')
+if [ -z "$CUDA_VERSION_MAJOR" ]; then
+    echo -e "${YELLOW}Advertencia: No se pudo detectar versión de CUDA. Asumiendo CUDA 12${NC}"
+    CUDA_VERSION_MAJOR=12
+fi
 echo "Versión CUDA detectada: $CUDA_VERSION_MAJOR.x"
 
 # IMPORTANTE: Forzar que CMake use el nvcc correcto
-export CUDACXX=${CUDA_HOME}/bin/nvcc
-export CMAKE_CUDA_COMPILER=${CUDA_HOME}/bin/nvcc
+export CUDACXX=$(which nvcc)
+export CMAKE_CUDA_COMPILER=$(which nvcc)
 echo "Forzando uso de: ${CMAKE_CUDA_COMPILER}"
 
 # Si CUDA < 12, deshabilitar características avanzadas que requieren PTX 7.8+
@@ -141,11 +160,11 @@ else
 fi
 
 cmake ../llama.cpp \
-    -DCMAKE_CUDA_COMPILER=${CUDA_HOME}/bin/nvcc \
+    -DCMAKE_CUDA_COMPILER=$(which nvcc) \
     -DGGML_CUDA=ON \
     -DLLAMA_STATIC=OFF \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_CUDA_ARCHITECTURES=${GPU_ARCH} \
+    -DCMAKE_CUDA_ARCHITECTURES=${GPU_ARCHES} \
     ${CMAKE_CUDA_FLAGS} \
     ${CMAKE_CPU_FLAGS}
 
