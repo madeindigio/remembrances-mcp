@@ -145,9 +145,35 @@ ollama-model: "nomic-embed-text:latest"
 # Symbols larger than this are split into chunks for embedding
 #code-indexing-max-symbol-size: 1500
 
-# File patterns to exclude from indexing (comma-separated)
-# Default excludes: vendor, node_modules, .git, build, dist, __pycache__
-#code-indexing-exclude-patterns: "vendor,node_modules,.git,build,dist,__pycache__,*.min.js,*.bundle.js"
+# File patterns to exclude from indexing (comma-separated).
+# User-configured patterns are MERGED with the built-in defaults listed below.
+#
+# Built-in defaults:
+#   VCS:          .git, .svn, .hg, .bzr, _darcs
+#   JS/TS/Node:   node_modules, bower_components, jspm_packages, .pnpm, .next, .nuxt, .npm, .yarn
+#   Go/PHP:       vendor
+#   Python:       .venv, venv, .env, env, __pycache__, .tox, .mypy_cache, .pytest_cache,
+#                 .ruff_cache, eggs, *.egg-info, .eggs
+#   Ruby:         .bundle
+#   Java/Kotlin:  .gradle, .m2
+#   .NET/C#:      obj, packages, .nuget
+#   Rust:         target
+#   Swift/iOS:    Pods, DerivedData, .build, *.xcworkspace
+#   Dart/Flutter: .dart_tool, .pub-cache, .pub
+#   Build:        dist, build, out, bin
+#   IDE/Editors:  .idea, .vscode, .vs, .fleet, .eclipse, .settings, .project, .classpath,
+#                 *.swp, *.swo, *~
+#   Cache/Tmp:    .cache, .tmp, tmp, temp, coverage, .nyc_output
+#   Generated:    generated, *.generated.*, *.min.js, *.min.css, *.bundle.js
+#   Tests:        __mocks__, __fixtures__, testdata
+#   Docs:         site, docs/_build, _site
+#   DevOps:       .terraform, .vagrant
+#   Lock files:   *.lock, package-lock.json, yarn.lock, pnpm-lock.yaml, Cargo.lock,
+#                 go.sum, Gemfile.lock, composer.lock, Podfile.lock, Packages.resolved
+#   Hidden dirs:  Any directory starting with . (except .github, .gitlab) is excluded automatically.
+#
+# To add extra patterns beyond the defaults, list them here:
+#code-indexing-exclude-patterns: "my_custom_dir,*.auto.go"
 
 # Maximum file size to index in bytes (default: 1048576 = 1MB)
 # Files larger than this are skipped

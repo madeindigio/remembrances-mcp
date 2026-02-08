@@ -372,6 +372,11 @@ func (idx *Indexer) ReindexFile(ctx context.Context, projectID, filePath string)
 	return idx.processFile(ctx, projectID, project.RootPath, file)
 }
 
+// GetScanner returns the file scanner used by this indexer.
+func (idx *Indexer) GetScanner() *FileScanner {
+	return idx.config.Scanner
+}
+
 // DeleteProject removes a project and all its data
 func (idx *Indexer) DeleteProject(ctx context.Context, projectID string) error {
 	return idx.storage.DeleteCodeProject(ctx, projectID)

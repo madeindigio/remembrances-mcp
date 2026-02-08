@@ -379,7 +379,7 @@ func Main() {
 		KBChunkSize:       cfg.GetChunkSize(),
 		KBChunkOverlap:    cfg.GetChunkOverlap(),
 		DisableCodeWatch:  cfg.DisableCodeWatch,
-		IndexerConfig:     indexer.DefaultIndexerConfig(),
+		IndexerConfig:     buildIndexerConfig(cfg),
 		JobManagerConfig:  indexer.DefaultJobManagerConfig(),
 		Logger:            slog.Default(),
 	})
@@ -617,4 +617,29 @@ func loadModules(ctx context.Context, modManager *modules.ModuleManager, cfg *co
 	}
 
 	return nil
+}
+
+// buildIndexerConfig creates an IndexerConfig from the application config,
+// applying user-configured values for workers, exclude patterns, max file size, etc.
+func buildIndexerConfig(cfg *config.Config) indexer.IndexerConfig {
+	ic := indexer.DefaultIndexerConfig()
+
+	if w := cfg.GetCodeIndexingWorkers(); w > 0 {
+		ic.Concurrency = w
+	}
+	if ms := cfg.GetCodeIndexingMaxSymbolSize(); ms > 0 {
+		ic.MaxSourceCodeLength = ms
+	}
+
+	// Apply user-configured exclude patterns (merged with defaults)
+	if userPatterns := cfg.GetCodeIndexingExcludePatterns(); len(userPatterns) > 0 {
+		ic.Scanner.MergeExcludePatterns(userPatterns)
+	}
+
+	// Apply max file size
+	if mfs := cfg.GetCodeIndexingMaxFileSize(); mfs > 0 {
+		ic.Scanner.MaxFileSize = mfs
+	}
+
+	return ic
 }

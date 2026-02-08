@@ -70,6 +70,11 @@ type Config struct {
 	// When true, disables all logging output to stdout/stderr.
 	// Logs will only be written to the configured log file (if any).
 	DisableOutputLog bool `mapstructure:"disable-output-log"`
+	// Code indexing configuration
+	CodeIndexingWorkers        int    `mapstructure:"code-indexing-workers"`
+	CodeIndexingMaxSymbolSize  int    `mapstructure:"code-indexing-max-symbol-size"`
+	CodeIndexingExcludePatterns string `mapstructure:"code-indexing-exclude-patterns"`
+	CodeIndexingMaxFileSize    int64  `mapstructure:"code-indexing-max-file-size"`
 	// Code monitoring configuration
 	// When true, disables automatic code file watching for projects
 	DisableCodeWatch bool `mapstructure:"disable-code-watch"`
@@ -136,6 +141,10 @@ func Load() (*Config, error) {
 	pflag.Int("chunk-overlap", 100, "Overlap between chunks in characters (default: 100)")
 	pflag.String("log", "", "Path to the log file (logs will be written to both stdout and file)")
 	pflag.Bool("disable-output-log", false, "Disable logging to stdout/stderr; only write to log file if configured")
+	pflag.Int("code-indexing-workers", 4, "Number of concurrent indexing workers (default: 4)")
+	pflag.Int("code-indexing-max-symbol-size", 1500, "Maximum symbol size before chunking (default: 1500)")
+	pflag.String("code-indexing-exclude-patterns", "", "Comma-separated file patterns to exclude from indexing (e.g., Pods,.venv,*.generated.go)")
+	pflag.Int64("code-indexing-max-file-size", 1048576, "Maximum file size to index in bytes (default: 1MB)")
 	pflag.Bool("disable-code-watch", false, "Disable automatic file watching for code projects")
 	// Version flag is handled here so config package can manage early-exit flags
 	// Also register a version flag with the standard library's flag set so
@@ -342,6 +351,50 @@ func (c *Config) GetSurrealDBDatabase() string {
 		return "test"
 	}
 	return c.SurrealDBDatabase
+}
+
+// GetCodeIndexingWorkers returns the number of concurrent indexing workers.
+func (c *Config) GetCodeIndexingWorkers() int {
+	if c.CodeIndexingWorkers <= 0 {
+		return 4
+	}
+	return c.CodeIndexingWorkers
+}
+
+// GetCodeIndexingMaxSymbolSize returns the maximum symbol size before chunking.
+func (c *Config) GetCodeIndexingMaxSymbolSize() int {
+	if c.CodeIndexingMaxSymbolSize <= 0 {
+		return 1500
+	}
+	return c.CodeIndexingMaxSymbolSize
+}
+
+// GetCodeIndexingExcludePatterns returns the configured exclude patterns as a slice.
+// If not configured, returns nil (caller should use defaults).
+func (c *Config) GetCodeIndexingExcludePatterns() []string {
+	if c.CodeIndexingExcludePatterns == "" {
+		return nil
+	}
+	raw := strings.Split(c.CodeIndexingExcludePatterns, ",")
+	patterns := make([]string, 0, len(raw))
+	for _, p := range raw {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			patterns = append(patterns, p)
+		}
+	}
+	if len(patterns) == 0 {
+		return nil
+	}
+	return patterns
+}
+
+// GetCodeIndexingMaxFileSize returns the maximum file size to index in bytes.
+func (c *Config) GetCodeIndexingMaxFileSize() int64 {
+	if c.CodeIndexingMaxFileSize <= 0 {
+		return 1024 * 1024 // 1MB default
+	}
+	return c.CodeIndexingMaxFileSize
 }
 
 // Getenv reads an environment variable or returns a default value.

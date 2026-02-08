@@ -71,31 +71,83 @@ func DefaultExcludePatterns() []string {
 		".git",
 		".svn",
 		".hg",
+		".bzr",
+		"_darcs",
 
-		// Dependencies
+		// JavaScript / TypeScript / Node
 		"node_modules",
-		"vendor",
 		"bower_components",
 		"jspm_packages",
 		".pnpm",
+		".next",
+		".nuxt",
+		".npm",
+		".yarn",
 
-		// Build outputs
+		// Go
+		"vendor",
+
+		// Python
+		".venv",
+		"venv",
+		".env",
+		"env",
+		"__pycache__",
+		".tox",
+		".mypy_cache",
+		".pytest_cache",
+		".ruff_cache",
+		"eggs",
+		"*.egg-info",
+		".eggs",
+
+		// Ruby
+		".bundle",
+
+		// PHP
+		// vendor already listed under Go
+
+		// Java / Kotlin / Android
+		".gradle",
+		".m2",
+
+		// .NET / C#
+		"obj",
+		"packages",
+		".nuget",
+
+		// Rust
+		"target",
+
+		// Swift / iOS / macOS
+		"Pods",
+		"DerivedData",
+		".build",
+		"*.xcworkspace",
+
+		// Dart / Flutter
+		".dart_tool",
+		".pub-cache",
+		".pub",
+
+		// Build outputs (general)
 		"dist",
 		"build",
 		"out",
-		"target",
 		"bin",
-		"obj",
-		"__pycache__",
-		".next",
-		".nuxt",
 
-		// IDE and editor
+		// IDE and editors
 		".idea",
 		".vscode",
 		".vs",
+		".fleet",
+		".eclipse",
+		".settings",
+		".project",
+		".classpath",
 		"*.swp",
 		"*.swo",
+		"*~",
 
 		// Temporary and cache
 		".cache",
@@ -105,15 +157,12 @@ func DefaultExcludePatterns() []string {
 		"coverage",
 		".nyc_output",
 
-		// Package managers
-		".npm",
-		".yarn",
-
 		// Generated
 		"generated",
 		"*.generated.*",
 		"*.min.js",
 		"*.min.css",
+		"*.bundle.js",
 
 		// Test fixtures and mocks
 		"__mocks__",
@@ -125,6 +174,10 @@ func DefaultExcludePatterns() []string {
 		"docs/_build",
 		"_site",
 
+		// Infrastructure / DevOps
+		".terraform",
+		".vagrant",
+
 		// Lock files (not code)
 		"*.lock",
 		"package-lock.json",
@@ -134,6 +187,8 @@ func DefaultExcludePatterns() []string {
 		"go.sum",
 		"Gemfile.lock",
 		"composer.lock",
+		"Podfile.lock",
+		"Packages.resolved",
 	}
 }
 
@@ -142,6 +197,21 @@ func NewFileScanner() *FileScanner {
 	return &FileScanner{
 		ExcludePatterns: DefaultExcludePatterns(),
 		MaxFileSize:     1024 * 1024, // 1MB default
+	}
+}
+
+// MergeExcludePatterns adds user-configured patterns to the existing exclude list,
+// avoiding duplicates.
+func (s *FileScanner) MergeExcludePatterns(patterns []string) {
+	existing := make(map[string]bool, len(s.ExcludePatterns))
+	for _, p := range s.ExcludePatterns {
+		existing[p] = true
+	}
+	for _, p := range patterns {
+		if !existing[p] {
+			s.ExcludePatterns = append(s.ExcludePatterns, p)
+			existing[p] = true
+		}
 	}
 }
 
@@ -242,6 +312,12 @@ func (s *FileScanner) Scan(rootPath string) (*ScanResult, error) {
 	})
 
 	return result, err
+}
+
+// ShouldExclude checks if a path should be excluded based on patterns.
+// It is exported so that CodeWatcher can reuse the same exclusion logic.
+func (s *FileScanner) ShouldExclude(absPath, relPath string, isDir bool) bool {
+	return s.shouldExclude(absPath, relPath, isDir)
 }
 
 // shouldExclude checks if a path should be excluded based on patterns

@@ -215,27 +215,15 @@ func (w *CodeWatcher) isCodeFile(path string) bool {
 }
 
 // isExcludedDir checks if a directory should be excluded from watching.
+// It delegates to the FileScanner's exclusion logic so that user-configured
+// exclude patterns (e.g., "Pods", ".venv") are respected.
 func (w *CodeWatcher) isExcludedDir(name string) bool {
-	// Common directories to exclude
-	excludedDirs := map[string]bool{
-		".git":          true,
-		".svn":          true,
-		".hg":           true,
-		"node_modules":  true,
-		"vendor":        true,
-		".idea":         true,
-		".vscode":       true,
-		"__pycache__":   true,
-		".tox":          true,
-		".mypy_cache":   true,
-		".pytest_cache": true,
-		"dist":          true,
-		"build":         true,
-		"target":        true, // Rust/Maven
-		"bin":           true,
-		"obj":           true, // .NET
+	scanner := w.indexer.GetScanner()
+	if scanner == nil {
+		return false
 	}
-	return excludedDirs[name]
+	// Use the scanner's full exclusion logic (patterns + hidden-dir rules).
+	return scanner.ShouldExclude(name, name, true)
 }
 
 // relativePath returns the path relative to the project root.
