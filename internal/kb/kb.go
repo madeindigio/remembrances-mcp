@@ -35,6 +35,10 @@ func StartWatcher(parentCtx context.Context, path string, st storage.Storage, em
 	if path == "" {
 		return nil, nil
 	}
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return nil, err
+	}
+
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err

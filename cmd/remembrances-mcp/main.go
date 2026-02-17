@@ -370,6 +370,22 @@ func Main() {
 		slog.Info("Using specialized code embedder for code indexing")
 	}
 
+	// Knowledge base path validation:
+	// - if configured and missing, attempt to create it (mkdir -p)
+	// - if creation fails (or path is not a directory), disable all KB features
+	if cfg.KnowledgeBase != "" {
+		if err := os.MkdirAll(cfg.KnowledgeBase, 0755); err != nil {
+			slog.Warn("knowledge base disabled; failed to create directory", "path", cfg.KnowledgeBase, "error", err)
+			cfg.KnowledgeBase = ""
+		} else if info, err := os.Stat(cfg.KnowledgeBase); err != nil {
+			slog.Warn("knowledge base disabled; failed to stat directory", "path", cfg.KnowledgeBase, "error", err)
+			cfg.KnowledgeBase = ""
+		} else if !info.IsDir() {
+			slog.Warn("knowledge base disabled; path is not a directory", "path", cfg.KnowledgeBase)
+			cfg.KnowledgeBase = ""
+		}
+	}
+
 	// Initialize module manager
 	modManager := modules.NewModuleManager(modules.ModuleConfig{
 		Storage:           storageInstance,
@@ -555,13 +571,15 @@ func loadModules(ctx context.Context, modManager *modules.ModuleManager, cfg *co
 	defaultModules := []modules.ModuleID{
 		"tools.core",
 		"tools.facts",
-		"tools.kb",
 		"tools.remember",
 		"tools.events",
 		"tools.knowledge_graph",
 		"tools.code_indexing",
 		"tools.code_search",
 		"tools.code_manipulation",
+	}
+	if cfg.KnowledgeBase != "" {
+		defaultModules = append(defaultModules, "tools.kb")
 	}
 
 	disabled := make(map[string]struct{})
@@ -593,6 +611,9 @@ func loadModules(ctx context.Context, modManager *modules.ModuleManager, cfg *co
 	for idStr, entry := range cfg.Modules {
 		id := modules.ModuleID(idStr)
 		slog.Info("Processing module from config", "id", idStr, "enabled", entry.Enabled, "has_config", len(entry.Config) > 0)
+		if id == "tools.kb" && cfg.KnowledgeBase == "" {
+			continue
+		}
 		if _, isDisabled := disabled[idStr]; isDisabled {
 			slog.Info("Module is disabled, skipping", "id", idStr)
 			continue
