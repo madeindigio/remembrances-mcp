@@ -5,13 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	embeddedlibs "github.com/madeindigio/remembrances-mcp/internal/embedded"
 	"github.com/madeindigio/remembrances-mcp/internal/surrealembedded"
 	"github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/connection"
+	"github.com/surrealdb/surrealdb.go/pkg/connection/gorillaws"
+	sdkhttp "github.com/surrealdb/surrealdb.go/pkg/connection/http"
 )
 
 // SurrealDBStorage implements the Storage interface using SurrealDB
@@ -105,7 +110,7 @@ func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 	} else if s.config.URL != "" {
 		// Use remote SurrealDB
 		slog.Info("Connecting to remote SurrealDB", "url", s.config.URL)
-		s.db, err = surrealdb.FromEndpointURLString(ctx, s.config.URL)
+		s.db, err = ConnectRemoteSurrealDB(ctx, s.config.URL)
 		if err != nil {
 			return fmt.Errorf("failed to connect to remote SurrealDB: %w", err)
 		}
@@ -158,6 +163,46 @@ func (s *SurrealDBStorage) Close() error {
 	}
 
 	return errors.Join(errs...)
+}
+
+// ConnectRemoteSurrealDB creates a SurrealDB connection that preserves URL path prefixes.
+// The standard SDK (v1.0.0) strips the path from the URL and always connects to {scheme}://{host}/rpc.
+// This breaks reverse proxy setups where SurrealDB is behind a path prefix
+// (e.g., wss://host/surreal/ should connect to wss://host/surreal/rpc).
+func ConnectRemoteSurrealDB(ctx context.Context, connectionURL string) (*surrealdb.DB, error) {
+	u, err := url.ParseRequestURI(connectionURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse URL: %w", err)
+	}
+
+	conf := connection.NewConfig(u)
+
+	// Preserve path prefix for reverse proxy setups.
+	// The SDK sets BaseURL to just scheme://host, discarding any path.
+	// We restore it so that gorillaws.Connect dials {BaseURL}/rpc correctly.
+	if u.Path != "" && u.Path != "/" && u.Path != "/rpc" {
+		path := strings.TrimSuffix(u.Path, "/")
+		path = strings.TrimSuffix(path, "/rpc")
+		if path != "" {
+			conf.BaseURL = fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, path)
+		}
+	}
+
+	if confErr := conf.Validate(); confErr != nil {
+		return nil, fmt.Errorf("invalid connection config: %w", confErr)
+	}
+
+	var con connection.Connection
+	switch u.Scheme {
+	case "http", "https":
+		con = sdkhttp.New(conf)
+	case "ws", "wss":
+		con = gorillaws.New(conf)
+	default:
+		return nil, fmt.Errorf("unsupported URL scheme: %s", u.Scheme)
+	}
+
+	return surrealdb.FromConnection(ctx, con)
 }
 
 // Ping checks if the database connection is alive
