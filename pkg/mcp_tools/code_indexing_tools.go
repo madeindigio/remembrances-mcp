@@ -234,6 +234,7 @@ func (ctm *CodeToolManager) codeListProjectsHandler(ctx context.Context, req *pr
 	if err != nil {
 		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
+	removeInternalRecordIDs(results)
 
 	result := map[string]interface{}{
 		"projects": results,

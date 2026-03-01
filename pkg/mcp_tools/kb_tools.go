@@ -224,12 +224,7 @@ func (tm *ToolManager) searchDocumentsHandler(ctx context.Context, request *prot
 		return nil, fmt.Errorf("failed to search documents: %w", err)
 	}
 
-	// Omit embeddings from the response
-	for _, result := range results {
-		if result.Document != nil {
-			result.Document.Embedding = nil
-		}
-	}
+	sanitizeDocumentSearchResults(results)
 
 	if len(results) == 0 {
 		suggestions := tm.FindDocumentAlternatives(ctx, input.Query)
