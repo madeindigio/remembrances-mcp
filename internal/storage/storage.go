@@ -104,7 +104,7 @@ type GraphResult struct {
 
 // Document represents a knowledge base document
 type Document struct {
-	ID        string                 `json:"id"`
+	ID        string                 `json:"id,omitempty"`
 	UserID    *string                `json:"user_id,omitempty"`
 	FilePath  string                 `json:"file_path"`
 	Content   string                 `json:"content"`
