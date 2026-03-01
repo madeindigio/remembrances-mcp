@@ -429,15 +429,15 @@ choose_release_filename() {
     if [ "$os" = "linux" ] && [ "$arch" = "amd64" ]; then
         if [ "$want_nvidia" = "true" ]; then
             if [ "$want_portable" = "true" ]; then
-                echo "remembrances-mcp-linux-x64-nvidia-embedded-portable.zip"
+                echo "remembrances-mcp-embedded-cuda-portable-linux-x86_64.zip"
             else
-                echo "remembrances-mcp-linux-x64-nvidia-embedded.zip"
+                echo "remembrances-mcp-embedded-cuda-linux-x86_64.zip"
             fi
             return 0
         fi
 
         # CPU build: prefer embedded if present; otherwise fall back to cpu.zip.
-        echo "remembrances-mcp-linux-x64-cpu-embedded.zip"
+        echo "remembrances-mcp-embedded-cpu-linux-x86_64.zip"
         return 0
     fi
 
@@ -996,9 +996,9 @@ main() {
 
     # If CPU embedded isn't available, fall back to non-embedded CPU asset.
     if [ -z "$download_url" ] && [ "${os}" = "linux" ] && [ "${want_nvidia}" != "true" ]; then
-        if [ "$filename" = "remembrances-mcp-linux-x64-cpu-embedded.zip" ]; then
+        if [ "$filename" = "remembrances-mcp-embedded-cpu-linux-x86_64.zip" ]; then
             print_warning "CPU embedded asset not found. Falling back to standard CPU build."
-            filename="remembrances-mcp-linux-x64-cpu.zip"
+            filename="remembrances-mcp-cpu-linux-x86_64.zip"
             download_url=$(release_find_asset_url "$release_json" "$filename")
         fi
     fi
