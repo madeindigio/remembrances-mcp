@@ -174,6 +174,24 @@ func TestFileScanner_ExclusionPatterns_CommaSeparatedConfiguredValues(t *testing
 	}
 }
 
+func TestFileScanner_ExclusionPatterns_PathPatternFolderPHP(t *testing.T) {
+	tempDir := t.TempDir()
+
+	mustWriteFile(t, filepath.Join(tempDir, "folder", "file.php"), "<?php echo 'skip';")
+	mustWriteFile(t, filepath.Join(tempDir, "folder", "file.js"), "function keep() {}")
+
+	scanner := indexer.NewFileScanner()
+	scanner.MergeExcludePatterns([]string{"folder/*.php"})
+
+	scanResult, err := scanner.Scan(tempDir)
+	if err != nil {
+		t.Fatalf("scan failed: %v", err)
+	}
+
+	assertNotIndexed(t, scanResult.Files, filepath.Join("folder", "file.php"), "expected folder/*.php pattern to exclude PHP file")
+	assertIndexed(t, scanResult.Files, filepath.Join("folder", "file.js"), "expected non-matching file in same folder to remain indexed")
+}
+
 func containsString(items []string, value string) bool {
 	for _, item := range items {
 		if item == value {
