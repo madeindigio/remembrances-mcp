@@ -71,10 +71,10 @@ type Config struct {
 	// Logs will only be written to the configured log file (if any).
 	DisableOutputLog bool `mapstructure:"disable-output-log"`
 	// Code indexing configuration
-	CodeIndexingWorkers        int    `mapstructure:"code-indexing-workers"`
-	CodeIndexingMaxSymbolSize  int    `mapstructure:"code-indexing-max-symbol-size"`
+	CodeIndexingWorkers         int    `mapstructure:"code-indexing-workers"`
+	CodeIndexingMaxSymbolSize   int    `mapstructure:"code-indexing-max-symbol-size"`
 	CodeIndexingExcludePatterns string `mapstructure:"code-indexing-exclude-patterns"`
-	CodeIndexingMaxFileSize    int64  `mapstructure:"code-indexing-max-file-size"`
+	CodeIndexingMaxFileSize     int64  `mapstructure:"code-indexing-max-file-size"`
 	// Code monitoring configuration
 	// When true, disables automatic code file watching for projects
 	DisableCodeWatch bool `mapstructure:"disable-code-watch"`
@@ -220,6 +220,10 @@ func Load() (*Config, error) {
 	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	v.AutomaticEnv()
 
+	// Normalize exclusion patterns so both YAML lists and comma-separated strings
+	// are accepted without breaking existing behavior.
+	normalizeCodeIndexingExcludePatterns(v)
+
 	// Unmarshal the configuration
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
@@ -232,6 +236,44 @@ func Load() (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func normalizeCodeIndexingExcludePatterns(v *viper.Viper) {
+	raw := v.Get("code-indexing-exclude-patterns")
+	if raw == nil {
+		return
+	}
+
+	toPatternList := func(values []any) []string {
+		patterns := make([]string, 0, len(values))
+		for _, value := range values {
+			pattern := strings.TrimSpace(fmt.Sprint(value))
+			if pattern != "" {
+				patterns = append(patterns, pattern)
+			}
+		}
+		return patterns
+	}
+
+	switch values := raw.(type) {
+	case []string:
+		if len(values) == 0 {
+			return
+		}
+		items := make([]any, 0, len(values))
+		for _, value := range values {
+			items = append(items, value)
+		}
+		patterns := toPatternList(items)
+		if len(patterns) > 0 {
+			v.Set("code-indexing-exclude-patterns", strings.Join(patterns, ","))
+		}
+	case []any:
+		patterns := toPatternList(values)
+		if len(patterns) > 0 {
+			v.Set("code-indexing-exclude-patterns", strings.Join(patterns, ","))
+		}
+	}
 }
 
 // Validate checks if the configuration is valid.
