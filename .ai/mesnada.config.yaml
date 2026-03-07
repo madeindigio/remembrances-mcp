@@ -2,37 +2,20 @@
 # This file defines model configurations and agent behaviors
 
 # Default model to use when none is specified
-default_model: "claude-sonnet-4.5"
+default_model: "claude-sonnet-4.6"
 
 # List of available models with their descriptions (legacy/shared across all engines)
 # These models are available for all engines when engine-specific models are not defined
 models:
-  - id: "claude-sonnet-4.5"
+  - id: "claude-sonnet-4.6"
     description: "Use this model for coding tasks with a good programming practices"
 
-  - id: "claude-opus-4.5"
+  - id: "claude-opus-4.6"
     description: "Highest capability for complex reasoning and analysis"
 
-  - id: "claude-haiku-4.5"
-    description: "Fast responses for simple tasks and quick iterations"
-
-  - id: "gpt-5.1-codex-max"
-    description: "Advanced coding capabilities with extended context"
-
-  - id: "gpt-5.1-codex"
-    description: "Optimized for code generation and refactoring"
-
-  - id: "gpt-5.2"
+ 
+  - id: "gpt-5.4"
     description: "Use this model for orchestration and complex reasoning tasks, also for good professional coding tasks"
-
-  - id: "gpt-5.1"
-    description: "Stable GPT model for production use"
-
-  - id: "gpt-5"
-    description: "Base GPT-5 model"
-
-  - id: "gpt-5.1-codex-mini"
-    description: "Lightweight coding model for quick tasks"
 
   - id: "gpt-5-mini"
     description: "Fast and efficient for simple queries"
@@ -47,31 +30,23 @@ models:
 # If defined, these override the global models list for each engine
 engines:
   copilot:
-    default_model: "gpt-5.1-codex"
+    default_model: "gpt-5.3-codex"
     models:
-      - id: "gpt-5.1-codex-max"
-        description: "Advanced coding capabilities with extended context"
-      - id: "gpt-5.1-codex"
+      - id: "gpt-5.3-codex"
         description: "Optimized for code generation and refactoring"
-      - id: "gpt-5.2"
+      - id: "gpt-5.4"
         description: "Latest GPT model with improved reasoning"
-      - id: "gpt-5.1"
-        description: "Stable GPT model for production use"
-      - id: "gpt-5"
-        description: "Base GPT-5 model"
-      - id: "gpt-5.1-codex-mini"
-        description: "Lightweight coding model for quick tasks"
       - id: "gpt-5-mini"
         description: "Fast and efficient for simple queries"
       - id: "gpt-4.1"
         description: "Reliable GPT-4 variant"
 
   claude:
-    default_model: "claude-sonnet-4.5"
+    default_model: "claude-sonnet-4.6"
     models:
-      - id: "claude-sonnet-4.5"
+      - id: "claude-sonnet-4.6"
         description: "Balanced performance and speed for general tasks"
-      - id: "claude-opus-4.5"
+      - id: "claude-opus-4.6"
         description: "Highest capability for complex reasoning and analysis"
       - id: "claude-haiku-4.5"
         description: "Fast responses for simple tasks and quick iterations"
@@ -115,8 +90,8 @@ server:
 
 # Orchestrator configuration
 orchestrator:
-  store_path: "../.mesnada/tasks.json"
-  log_dir: "../.mesnada/logs"
+  store_path: ".mesnada/tasks.json"
+  log_dir: ".mesnada/logs"
   max_parallel: 5
 
   # Additional MCP config to pass to Copilot CLI for every spawned task.
@@ -124,4 +99,4 @@ orchestrator:
   # Use @<path> to reference a JSON file relative to the task working directory.
   # Example: @.github/mcp-config.json
   default_mcp_config: "/www/MCP/remembrances-mcp/.github/mcp-config.json"
-  persona_path: "../.mesnada/personas"
+  persona_path: ".mesnada/personas"
