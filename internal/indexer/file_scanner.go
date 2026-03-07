@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -324,8 +325,23 @@ func (s *FileScanner) ShouldExclude(absPath, relPath string, isDir bool) bool {
 func (s *FileScanner) shouldExclude(absPath, relPath string, isDir bool) bool {
 	// Get the base name
 	name := filepath.Base(absPath)
+	relPathUnix := filepath.ToSlash(filepath.Clean(relPath))
 
 	for _, pattern := range s.ExcludePatterns {
+		pattern = strings.TrimSpace(pattern)
+		if pattern == "" {
+			continue
+		}
+
+		patternUnix := filepath.ToSlash(pattern)
+
+		// Path-aware glob match for patterns like "folder/*.php"
+		if strings.Contains(patternUnix, "/") {
+			if matched, err := path.Match(patternUnix, relPathUnix); err == nil && matched {
+				return true
+			}
+		}
+
 		// Check if pattern starts with * (wildcard)
 		if strings.HasPrefix(pattern, "*") {
 			suffix := strings.TrimPrefix(pattern, "*")
