@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -204,7 +205,8 @@ func (w *CodeWatcher) processFile(ctx context.Context, fullPath string) {
 
 // isCodeFile checks if the file is a supported code file based on extension.
 func (w *CodeWatcher) isCodeFile(path string) bool {
-	ext := filepath.Ext(path)
+	// filepath.Ext returns ".go"; GetLanguageByExtension expects "go"
+	ext := strings.TrimPrefix(filepath.Ext(path), ".")
 	if ext == "" {
 		return false
 	}

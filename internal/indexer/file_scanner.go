@@ -325,6 +325,7 @@ func (s *FileScanner) ShouldExclude(absPath, relPath string, isDir bool) bool {
 func (s *FileScanner) shouldExclude(absPath, relPath string, isDir bool) bool {
 	// Get the base name
 	name := filepath.Base(absPath)
+	nameUnix := filepath.ToSlash(name)
 	relPathUnix := filepath.ToSlash(filepath.Clean(relPath))
 
 	for _, pattern := range s.ExcludePatterns {
@@ -335,17 +336,19 @@ func (s *FileScanner) shouldExclude(absPath, relPath string, isDir bool) bool {
 
 		patternUnix := filepath.ToSlash(pattern)
 
-		// Path-aware glob match for patterns like "folder/*.php"
+		// Path-aware glob match for patterns containing "/" (e.g. "folder/*.php", "docs/_build")
+		// Supports ** globstar for recursive matching across path segments.
 		if strings.Contains(patternUnix, "/") {
-			if matched, err := path.Match(patternUnix, relPathUnix); err == nil && matched {
+			if matchGlobstar(patternUnix, relPathUnix) {
 				return true
 			}
+			continue
 		}
 
-		// Check if pattern starts with * (wildcard)
-		if strings.HasPrefix(pattern, "*") {
-			suffix := strings.TrimPrefix(pattern, "*")
-			if strings.HasSuffix(name, suffix) {
+		// Basename-only pattern (no "/"). Use path.Match so that internal wildcards
+		// like "*.generated.*" work correctly (path.Match handles *, ?, [...]).
+		if strings.ContainsAny(patternUnix, "*?[") {
+			if matched, err := path.Match(patternUnix, nameUnix); err == nil && matched {
 				return true
 			}
 			continue
@@ -356,7 +359,7 @@ func (s *FileScanner) shouldExclude(absPath, relPath string, isDir bool) bool {
 			return true
 		}
 
-		// Check if any path component matches
+		// Check if any path component matches the bare pattern
 		parts := strings.Split(relPath, string(filepath.Separator))
 		for _, part := range parts {
 			if part == pattern {
@@ -378,6 +381,49 @@ func (s *FileScanner) shouldExclude(absPath, relPath string, isDir bool) bool {
 	}
 
 	return false
+}
+
+// matchGlobstar matches a unix-style path against a glob pattern that may contain
+// "**" to match zero or more path segments.
+func matchGlobstar(pattern, p string) bool {
+	if !strings.Contains(pattern, "**") {
+		matched, err := path.Match(pattern, p)
+		return err == nil && matched
+	}
+	patParts := strings.Split(pattern, "/")
+	pathParts := strings.Split(p, "/")
+	return globstarMatch(patParts, pathParts)
+}
+
+// globstarMatch recursively matches pattern parts against path parts,
+// treating "**" as matching zero or more path segments.
+func globstarMatch(patParts, pathParts []string) bool {
+	for len(patParts) > 0 {
+		pat := patParts[0]
+		patParts = patParts[1:]
+
+		if pat == "**" {
+			// ** matches zero or more segments — try every possible split point
+			for i := 0; i <= len(pathParts); i++ {
+				if globstarMatch(patParts, pathParts[i:]) {
+					return true
+				}
+			}
+			return false
+		}
+
+		if len(pathParts) == 0 {
+			return false
+		}
+
+		matched, err := path.Match(pat, pathParts[0])
+		if err != nil || !matched {
+			return false
+		}
+		pathParts = pathParts[1:]
+	}
+
+	return len(pathParts) == 0
 }
 
 // containsLanguage checks if a language is in the include list

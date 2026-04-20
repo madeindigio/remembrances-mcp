@@ -348,8 +348,8 @@ func (idx *Indexer) ReindexFile(ctx context.Context, projectID, filePath string)
 		return fmt.Errorf("file not found: %w", err)
 	}
 
-	// Get language from extension
-	ext := filepath.Ext(absPath)
+	// Get language from extension (strip leading dot from filepath.Ext result)
+	ext := strings.TrimPrefix(filepath.Ext(absPath), ".")
 	lang, ok := treesitter.GetLanguageByExtension(ext)
 	if !ok {
 		return fmt.Errorf("unsupported file extension: %s", ext)

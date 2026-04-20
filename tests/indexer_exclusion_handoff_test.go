@@ -83,10 +83,28 @@ type indexerSpyStorage struct {
 
 	getCodeFileCalls []string
 	savedCodeFiles   []string
+	projects         map[string]*storage.CodeProject
 }
 
 func (s *indexerSpyStorage) CreateCodeProject(ctx context.Context, project *treesitter.CodeProject) error {
+	if s.projects == nil {
+		s.projects = make(map[string]*storage.CodeProject)
+	}
+	s.projects[project.ProjectID] = &storage.CodeProject{
+		ProjectID: project.ProjectID,
+		Name:      project.Name,
+		RootPath:  project.RootPath,
+	}
 	return nil
+}
+
+func (s *indexerSpyStorage) GetCodeProject(ctx context.Context, projectID string) (*storage.CodeProject, error) {
+	if s.projects != nil {
+		if p, ok := s.projects[projectID]; ok {
+			return p, nil
+		}
+	}
+	return nil, nil
 }
 
 func (s *indexerSpyStorage) UpdateProjectStatus(ctx context.Context, projectID string, status treesitter.IndexingStatus) error {

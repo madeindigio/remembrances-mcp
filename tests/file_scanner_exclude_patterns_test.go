@@ -1,12 +1,14 @@
 package tests
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/madeindigio/remembrances-mcp/internal/config"
 	"github.com/madeindigio/remembrances-mcp/internal/indexer"
+	"github.com/madeindigio/remembrances-mcp/internal/storage"
 )
 
 func TestFileScanner_ExclusionPatterns_DefaultsAndConfiguredValues(t *testing.T) {
@@ -190,6 +192,95 @@ func TestFileScanner_ExclusionPatterns_PathPatternFolderPHP(t *testing.T) {
 
 	assertNotIndexed(t, scanResult.Files, filepath.Join("folder", "file.php"), "expected folder/*.php pattern to exclude PHP file")
 	assertIndexed(t, scanResult.Files, filepath.Join("folder", "file.js"), "expected non-matching file in same folder to remain indexed")
+}
+
+// TestFileScanner_ExclusionPatterns_InternalWildcard verifies that basename patterns
+// with wildcards in the middle (e.g. "*.generated.*") are correctly matched using
+// path.Match rather than a naive suffix check that would miss internal wildcards.
+func TestFileScanner_ExclusionPatterns_InternalWildcard(t *testing.T) {
+	tempDir := t.TempDir()
+
+	mustWriteFile(t, filepath.Join(tempDir, "main.go"), "package main\nfunc main() {}\n")
+	mustWriteFile(t, filepath.Join(tempDir, "proto.generated.go"), "package main\nfunc Gen() {}\n")
+	mustWriteFile(t, filepath.Join(tempDir, "service.generated.go"), "package main\nfunc Svc() {}\n")
+
+	scanner := indexer.NewFileScanner()
+	scanner.MergeExcludePatterns([]string{"*.generated.*"})
+
+	scanResult, err := scanner.Scan(tempDir)
+	if err != nil {
+		t.Fatalf("scan failed: %v", err)
+	}
+
+	assertNotIndexed(t, scanResult.Files, "proto.generated.go", "*.generated.* pattern must exclude proto.generated.go")
+	assertNotIndexed(t, scanResult.Files, "service.generated.go", "*.generated.* pattern must exclude service.generated.go")
+	assertIndexed(t, scanResult.Files, "main.go", "main.go must remain indexed")
+}
+
+// TestFileScanner_ExclusionPatterns_GlobstarPattern verifies that patterns with **
+// (globstar) are matched correctly across directory boundaries.
+func TestFileScanner_ExclusionPatterns_GlobstarPattern(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Should be indexed
+	mustWriteFile(t, filepath.Join(tempDir, "main.go"), "package main\nfunc main() {}\n")
+	mustWriteFile(t, filepath.Join(tempDir, "internal", "util.go"), "package internal\nfunc Util() {}\n")
+
+	// Should be excluded by **/generated/**
+	mustWriteFile(t, filepath.Join(tempDir, "generated", "types.go"), "package generated\nfunc T() {}\n")
+	mustWriteFile(t, filepath.Join(tempDir, "internal", "generated", "types.go"), "package generated\nfunc T2() {}\n")
+	mustWriteFile(t, filepath.Join(tempDir, "deep", "path", "generated", "code.go"), "package generated\nfunc C() {}\n")
+
+	scanner := indexer.NewFileScanner()
+	scanner.MergeExcludePatterns([]string{"**/generated/**"})
+
+	scanResult, err := scanner.Scan(tempDir)
+	if err != nil {
+		t.Fatalf("scan failed: %v", err)
+	}
+
+	assertNotIndexed(t, scanResult.Files, filepath.Join("generated", "types.go"), "**/generated/** must exclude top-level generated dir")
+	assertNotIndexed(t, scanResult.Files, filepath.Join("internal", "generated", "types.go"), "**/generated/** must exclude nested generated dir")
+	assertNotIndexed(t, scanResult.Files, filepath.Join("deep", "path", "generated", "code.go"), "**/generated/** must exclude deeply nested generated dir")
+	assertIndexed(t, scanResult.Files, "main.go", "main.go must remain indexed")
+	assertIndexed(t, scanResult.Files, filepath.Join("internal", "util.go"), "internal/util.go must remain indexed")
+}
+
+// TestCodeWatcher_IsCodeFile_StripsLeadingDot verifies that isCodeFile correctly
+// identifies supported source files regardless of the leading dot in the extension.
+// This is a regression test for a bug where filepath.Ext returns ".go" (with dot)
+// but GetLanguageByExtension expects "go" (without dot), causing isCodeFile to always
+// return false and the watcher to silently drop all file-change events.
+//
+// The internal-package variant of this test lives in
+// internal/indexer/code_watcher_iscodefile_test.go. This variant tests the same
+// fix through ReindexFile, which suffered from the identical missing-dot-strip bug.
+func TestIndexer_ReindexFile_StripsLeadingDotFromExtension(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Write a valid Go file so ReindexFile can actually parse it.
+	mustWriteFile(t, filepath.Join(tempDir, "util.go"), "package util\nfunc Helper() {}\n")
+
+	scanner := indexer.NewFileScanner()
+	cfg := indexer.DefaultIndexerConfig()
+	cfg.Scanner = scanner
+	cfg.Concurrency = 1
+
+	spyStorage := &indexerSpyStorage{SurrealDBStorage: &storage.SurrealDBStorage{}}
+	idx := indexer.NewIndexer(spyStorage, &stubEmbedder{}, cfg)
+
+	// Create the project first so ReindexFile can look it up.
+	projectID, err := idx.IndexProject(context.Background(), tempDir, "reindex-dot-test")
+	if err != nil {
+		t.Fatalf("IndexProject failed: %v", err)
+	}
+
+	// ReindexFile must not return "unsupported file extension" – that error was
+	// caused by passing ".go" (with dot) to GetLanguageByExtension.
+	err = idx.ReindexFile(context.Background(), projectID, "util.go")
+	if err != nil {
+		t.Fatalf("ReindexFile returned unexpected error (regression: dot not stripped from ext?): %v", err)
+	}
 }
 
 func containsString(items []string, value string) bool {
