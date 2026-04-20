@@ -506,12 +506,12 @@ fi
 make docker-prepare-cpu && make docker-build-cpu && make docker-push-cpu
 ```
 
-Quick automatic packaging:
-
-```bash
-make dist-all
-make dist-embedded-all
-```
+> Quick automatic packaging:
+>
+>```bash
+>make dist-all
+>make dist-embedded-all
+>```
 
 ### dist-core
 
