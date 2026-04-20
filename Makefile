@@ -6,7 +6,7 @@
 	docker-download-model docker-prepare-cuda docker-prepare-cpu docker-login docker-help build-libs-cuda-portable \
 	build-cuda-full build-cuda-system dist-cuda-full dist-cuda-system build-cuda-both dist-cuda-both \
 	build-surrealdb-windows-amd64 \
-	build-commercial build-embedded-commercial dist-embedded-variant dist-embedded-all dist-core dist-commercial \
+	build-commercial build-embedded-commercial dist-variant dist-openvino dist-embedded-variant dist-embedded-openvino dist-embedded-all dist-core dist-commercial \
 	build-libs-openvino
 
 # Default target
@@ -186,8 +186,10 @@ help:
 	@echo ""
 	@echo "Distribution packaging:"
 	@echo "  make dist-variant VARIANT=cuda   - Package single variant with libraries as zip"
+	@echo "  make dist-openvino               - Package single OpenVINO variant as zip"
 	@echo "  make dist-all                    - Package all variants as separate zip files"
 	@echo "  make dist-embedded-variant EMBEDDED_VARIANT=cpu - Package embedded variant"
+	@echo "  make dist-embedded-openvino      - Package embedded OpenVINO variant"
 	@echo "  make dist-embedded-all           - Package all embedded variants"
 	@echo "  make dist-core                   - Package external + embedded (core modules only)"
 	@echo "  make dist-commercial             - Package external + embedded (with commercial modules)"
@@ -992,6 +994,9 @@ dist-variant:
 	@echo "✓ Package created: dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M).zip"
 	@ls -lh dist-variants/$(BINARY_NAME)-$(VARIANT)-$(PLATFORM)-$(UNAME_M).zip
 
+dist-openvino: VARIANT=openvino
+dist-openvino: dist-variant
+
 # Package all variants for distribution
 dist-all:
 	@echo "Packaging all variants for distribution..."
@@ -1050,6 +1055,9 @@ dist-embedded-variant:
 	cd dist-variants && zip -r $$DIST_NAME.zip $$DIST_NAME/ && ls -lh $$DIST_NAME.zip; \
 	rm -rf $$DIST_DIR; \
 	echo "✓ Embedded package created"
+
+dist-embedded-openvino: EMBEDDED_VARIANT=openvino
+dist-embedded-openvino: dist-embedded-variant
 
 # Package all embedded variants for distribution
 dist-embedded-all:

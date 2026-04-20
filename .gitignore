@@ -48,6 +48,7 @@ coverage.*
 .env
 .env.*
 kvagerc
+.ai/.mesnada
 
 tests/clients
 *.pyc

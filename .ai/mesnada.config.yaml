@@ -12,8 +12,6 @@ models:
 
   - id: "claude-opus-4.6"
     description: "Highest capability for complex reasoning and analysis"
-
- 
   - id: "gpt-5.4"
     description: "Use this model for orchestration and complex reasoning tasks, also for good professional coding tasks"
 
@@ -86,7 +84,7 @@ engines:
 # Server configuration
 server:
   host: "127.0.0.1"
-  port: 8767
+  port: 8167
 
 # Orchestrator configuration
 orchestrator:

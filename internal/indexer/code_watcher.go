@@ -72,8 +72,9 @@ func StartCodeWatcher(parentCtx context.Context, project *storage.CodeProject, i
 			return nil // Skip errors
 		}
 		if d.IsDir() && path != project.RootPath {
-			// Skip excluded directories
-			if w.isExcludedDir(d.Name()) {
+			// Skip excluded directories, including path-aware patterns such as
+			// "docs/_build" or "**/generated/**".
+			if w.shouldExcludePath(path, true) {
 				return filepath.SkipDir
 			}
 			if err := fw.Add(path); err != nil {
@@ -133,14 +134,17 @@ func (w *CodeWatcher) run(ctx context.Context) {
 			if evt.Op&fsnotify.Create == fsnotify.Create {
 				info, err := os.Stat(evt.Name)
 				if err == nil && info.IsDir() {
-					dirName := filepath.Base(evt.Name)
-					if !w.isExcludedDir(dirName) {
+					if !w.shouldExcludePath(evt.Name, true) {
 						if err := w.watcher.Add(evt.Name); err != nil {
 							slog.Warn("failed to add new directory to watcher", "dir", evt.Name, "error", err)
 						}
 					}
 					continue
 				}
+			}
+
+			if w.shouldExcludePath(evt.Name, false) {
+				continue
 			}
 
 			// Check if it's a code file
@@ -190,6 +194,10 @@ func (w *CodeWatcher) processFile(ctx context.Context, fullPath string) {
 		slog.Debug("file no longer exists, skipping", "file", rel)
 		return
 	}
+	if w.shouldExcludePath(fullPath, false) {
+		slog.Debug("excluded file change ignored", "file", rel)
+		return
+	}
 
 	startTime := time.Now()
 	slog.Debug("processing code file change", "file", rel)
@@ -216,16 +224,18 @@ func (w *CodeWatcher) isCodeFile(path string) bool {
 	return ok
 }
 
-// isExcludedDir checks if a directory should be excluded from watching.
-// It delegates to the FileScanner's exclusion logic so that user-configured
-// exclude patterns (e.g., "Pods", ".venv") are respected.
-func (w *CodeWatcher) isExcludedDir(name string) bool {
+// shouldExcludePath checks whether a file or directory should be excluded using
+// the scanner's full path-aware exclusion logic.
+func (w *CodeWatcher) shouldExcludePath(fullPath string, isDir bool) bool {
 	scanner := w.indexer.GetScanner()
 	if scanner == nil {
 		return false
 	}
-	// Use the scanner's full exclusion logic (patterns + hidden-dir rules).
-	return scanner.ShouldExclude(name, name, true)
+	rel := w.relativePath(fullPath)
+	if rel == "." || rel == "" {
+		return false
+	}
+	return scanner.ShouldExclude(fullPath, rel, isDir)
 }
 
 // relativePath returns the path relative to the project root.
@@ -271,9 +281,12 @@ func (w *CodeWatcher) ScanOutdatedFiles(ctx context.Context) ([]OutdatedFile, er
 		}
 
 		if d.IsDir() {
-			if w.isExcludedDir(d.Name()) {
+			if w.shouldExcludePath(path, true) {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+		if w.shouldExcludePath(path, false) {
 			return nil
 		}
 

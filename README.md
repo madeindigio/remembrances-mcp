@@ -446,7 +446,7 @@ git push
 
 ### dist
 
-Create distribution packages without overwriting CUDA portable libraries. The key change is to **build libraries first** and then use `build-binary-only` so the Go binary is produced without recompiling (and replacing) the shared libraries.
+Create distribution packages without overwriting CUDA portable libraries. The key change is to **build libraries first** and then package the already-built variant. On Linux, `dist-all` and `dist-embedded-all` now also include the **OpenVINO** variant automatically when an SDK is detected in `OPENVINO_DIR`, `~/intel/openvino_sdk/openvino/cmake`, or `/opt/intel/openvino/runtime/cmake`.
 
 ```bash
 echo "Cleaning previous dist-variants..."
@@ -456,47 +456,28 @@ echo "Building Linux distribution variants with libs..."
 echo "-----------------------------------"
 
 echo "Building CUDA optimized for current CPU"
-make BUILD_TYPE=cuda llama-cpp
-# CUDA optimized for current CPU
-make PORTABLE=0 build-libs-cuda
-make BUILD_TYPE=cuda build
-cd build
-zip -9 remembrances-mcp-linux-x64-nvidia.zip remembrances-mcp *.so
-mv remembrances-mcp-linux-x64-nvidia.zip ../dist-variants/
-cd ..
+make dist-variant VARIANT=cuda
 
 echo "Building CUDA portable (AVX2-compatible for Intel/AMD)"
-# CUDA portable (AVX2-compatible for Intel/AMD)
-make PORTABLE=1 build-libs-cuda-portable
-make BUILD_TYPE=cuda build
-cd build
-zip -9 remembrances-mcp-linux-x64-nvidia-portable.zip remembrances-mcp *.so
-mv remembrances-mcp-linux-x64-nvidia-portable.zip ../dist-variants/
-cd ..
+make dist-variant VARIANT=cuda-portable
 
-echo "building CPU-only"
-# CPU-only
-make build-libs-cpu
-make build-binary-only
-cd build
-zip -9 remembrances-mcp-linux-x64-cpu.zip remembrances-mcp *.so
-mv remembrances-mcp-linux-x64-cpu.zip ../dist-variants/
-cd ..
+echo "Building CPU-only"
+make dist-variant VARIANT=cpu
 
-echo "Building embedded libraries variants only for CUDA"
-echo "Building embedded CUDA libraries..."
-make build-embedded-cuda
-cd build
-zip -9 remembrances-mcp-linux-x64-nvidia-embedded.zip remembrances-mcp
-mv remembrances-mcp-linux-x64-nvidia-embedded.zip ../dist-variants/
-cd ..
+echo "Building OpenVINO (Intel GPU / NPU / CPU)"
+export OPENVINO_DIR="${OPENVINO_DIR:-$HOME/intel/openvino_sdk/openvino/cmake}"
+if [ -f "$OPENVINO_DIR/OpenVINOConfig.cmake" ]; then
+    make dist-openvino
+    make dist-embedded-openvino
+else
+    echo "Skipping OpenVINO dist - OpenVINOConfig.cmake not found in $OPENVINO_DIR"
+fi
+
+echo "Building embedded libraries variants for CUDA"
+make dist-embedded-variant EMBEDDED_VARIANT=cuda
 
 echo "Building embedded CUDA portable libraries..."
-make build-embedded-cuda-portable
-cd build
-zip -9 remembrances-mcp-linux-x64-nvidia-embedded-portable.zip remembrances-mcp
-mv remembrances-mcp-linux-x64-nvidia-embedded-portable.zip ../dist-variants/
-cd ..
+make dist-embedded-variant EMBEDDED_VARIANT=cuda-portable
 
 echo "Building Windows native (no llama.cpp shared libs)"
 # NOTE: Build this on a Windows host to avoid CGO cross-linker issues.
@@ -525,9 +506,16 @@ fi
 make docker-prepare-cpu && make docker-build-cpu && make docker-push-cpu
 ```
 
+Quick automatic packaging:
+
+```bash
+make dist-all
+make dist-embedded-all
+```
+
 ### dist-core
 
-Create **both** external-libs and embedded-libs distributions (core modules only)
+Create **both** external-libs and embedded-libs distributions (core modules only). On Linux this includes OpenVINO automatically when the SDK is detected.
 
 ```bash
 make dist-core
@@ -535,10 +523,18 @@ make dist-core
 
 ### dist-commercial
 
-Create **both** external-libs and embedded-libs distributions (with commercial modules)
+Create **both** external-libs and embedded-libs distributions (with commercial modules). On Linux this includes OpenVINO automatically when the SDK is detected.
 
 ```bash
 make dist-commercial
+```
+
+### dist-openvino
+
+Package the external-libs OpenVINO variant explicitly.
+
+```bash
+make dist-openvino OPENVINO_DIR=~/intel/openvino_sdk/openvino/cmake
 ```
 
 ### dist-embedded-variant
@@ -547,11 +543,20 @@ Package a single embedded (purego) variant
 
 ```bash
 make dist-embedded-variant EMBEDDED_VARIANT=cpu
+make dist-embedded-variant EMBEDDED_VARIANT=openvino OPENVINO_DIR=~/intel/openvino_sdk/openvino/cmake
+```
+
+### dist-embedded-openvino
+
+Package the embedded OpenVINO variant explicitly.
+
+```bash
+make dist-embedded-openvino OPENVINO_DIR=~/intel/openvino_sdk/openvino/cmake
 ```
 
 ### dist-embedded-all
 
-Package all embedded variants for the current platform
+Package all embedded variants for the current platform. On Linux this includes OpenVINO automatically when the SDK is detected.
 
 ```bash
 make dist-embedded-all

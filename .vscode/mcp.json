@@ -21,7 +21,7 @@
     },
     "mesnada": {
       "type": "http",
-      "url": "http://127.0.0.1:8767/mcp"
+      "url": "http://127.0.0.1:8167/mcp"
     }
   },
   "inputs": [
