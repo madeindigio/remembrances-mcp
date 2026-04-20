@@ -16,14 +16,28 @@ NC='\033[0m' # No Color
 if [ -z "$1" ]; then
     echo -e "${RED}Error: Variante no especificada${NC}"
     echo "Uso: $0 <variant>"
-    echo "Variantes disponibles: cpu, cuda, hipblas, metal, openblas"
+    echo "Variantes disponibles: cpu, cuda, hipblas, metal, openblas, openvino"
     exit 1
 fi
 
 VARIANT=$1
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-GO_LLAMA_DIR="${GO_LLAMA_DIR:-$HOME/www/MCP/Remembrances/go-llama.cpp}"
+# GO_LLAMA_DIR: prefer explicit env, then the local checkout inside the project,
+# then the legacy external path at $HOME/www/MCP/Remembrances/go-llama.cpp
+if [ -z "$GO_LLAMA_DIR" ]; then
+    LOCAL_LLAMA="$PROJECT_ROOT/local-go-llama"
+    LEGACY_LLAMA="$HOME/www/MCP/Remembrances/go-llama.cpp"
+    if [ -f "$LOCAL_LLAMA/llama.cpp/CMakeLists.txt" ]; then
+        GO_LLAMA_DIR="$LOCAL_LLAMA"
+    elif [ -f "$LEGACY_LLAMA/llama.cpp/CMakeLists.txt" ]; then
+        GO_LLAMA_DIR="$LEGACY_LLAMA"
+    else
+        echo -e "${RED}Error: llama.cpp submodule not found.${NC}"
+        echo "Set GO_LLAMA_DIR or run: cd \$GO_LLAMA_DIR && git submodule update --init --recursive"
+        exit 1
+    fi
+fi
 BUILD_DIR="$PROJECT_ROOT/build/libs/$VARIANT"
 
 echo -e "${BLUE}=== Compilando llama.cpp - Variante: $VARIANT ===${NC}"
@@ -121,9 +135,69 @@ case "$VARIANT" in
         CMAKE_FLAGS="$CMAKE_FLAGS -DGGML_BLAS=ON -DGGML_BLAS_VENDOR=OpenBLAS"
         ;;
 
+    openvino)
+        echo "Configurando para Intel OpenVINO (iGPU / NPU / CPU)..."
+
+        # Locate OpenVINO SDK cmake directory (contains OpenVINOConfig.cmake)
+        # Priority: OPENVINO_DIR env > user wheel extract > system install paths
+        if [ -z "$OPENVINO_DIR" ]; then
+            WHEEL_SDK="$HOME/intel/openvino_sdk/openvino/cmake"
+            SYSTEM_SDK="/opt/intel/openvino/runtime/cmake"
+            APT_SDK="/usr/share/cmake/openvino"
+            if [ -f "$WHEEL_SDK/OpenVINOConfig.cmake" ]; then
+                OPENVINO_DIR="$WHEEL_SDK"
+                echo "  Usando OpenVINO SDK en: $WHEEL_SDK (wheel extraído)"
+            elif [ -f "$SYSTEM_SDK/OpenVINOConfig.cmake" ]; then
+                OPENVINO_DIR="$SYSTEM_SDK"
+                echo "  Usando OpenVINO SDK en: $SYSTEM_SDK"
+            elif [ -f "$APT_SDK/OpenVINOConfig.cmake" ]; then
+                OPENVINO_DIR="$APT_SDK"
+                echo "  Usando OpenVINO SDK en: $APT_SDK"
+            else
+                echo -e "${RED}Error: OpenVINO SDK no encontrado.${NC}"
+                echo ""
+                echo "Opciones de instalación (requieren sudo):"
+                echo "  # Desde APT Intel (recomendado para producción):"
+                echo "  curl -fsSL https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | sudo gpg --dearmor -o /usr/share/keyrings/intel-sw-products.gpg"
+                echo "  echo 'deb [signed-by=/usr/share/keyrings/intel-sw-products.gpg] https://apt.repos.intel.com/openvino/2025 ubuntu24 main' | sudo tee /etc/apt/sources.list.d/intel-openvino.list"
+                echo "  sudo apt-get update && sudo apt-get install -y openvino openvino-dev"
+                echo ""
+                echo "  # Alternativa: wheel PyPI (sin sudo, para pruebas):"
+                echo "  mkdir -p ~/intel && cd ~/intel"
+                echo "  WHEEL=\$(pip download --no-deps openvino -d . --platform manylinux_2_28_x86_64 --python-version 312 --only-binary :all: 2>&1 | grep -oP '(?<=Saved ).*\\.whl')"
+                echo "  unzip -q \"\$WHEEL\" -d openvino_sdk/"
+                echo "  # Luego: export OPENVINO_DIR=~/intel/openvino_sdk/openvino/cmake"
+                echo ""
+                echo "  # Alternativa directa (ya instalada en este sistema):"
+                echo "  export OPENVINO_DIR=~/intel/openvino_sdk/openvino/cmake"
+                exit 1
+            fi
+        else
+            echo "  Usando OpenVINO SDK desde OPENVINO_DIR=$OPENVINO_DIR"
+        fi
+
+        CMAKE_FLAGS="$CMAKE_FLAGS -DGGML_OPENVINO=ON -DOpenVINO_DIR=$OPENVINO_DIR"
+
+        # Optional: set default device (CPU/GPU/NPU). Can be overridden at runtime.
+        OPENVINO_DEVICE="${OPENVINO_DEVICE:-}"
+        if [ -n "$OPENVINO_DEVICE" ]; then
+            echo "  Dispositivo OpenVINO: $OPENVINO_DEVICE"
+            CMAKE_FLAGS="$CMAKE_FLAGS -DGGML_OPENVINO_DEVICE=$OPENVINO_DEVICE"
+        else
+            echo "  Dispositivo OpenVINO: auto-selección en runtime (CPU/GPU/NPU)"
+        fi
+
+        # Intel GPU compute runtime check (informational only)
+        if ! python3 -c "import ctypes; ctypes.CDLL('libOpenCL.so.1')" 2>/dev/null; then
+            echo -e "${YELLOW}Advertencia: libOpenCL no encontrado. La ejecución en iGPU/NPU requiere:${NC}"
+            echo "  Intel compute runtime: sudo apt-get install intel-opencl-icd intel-level-zero-gpu"
+            echo "  Intel NPU driver (Arrow Lake/Meteor Lake): sudo apt-get install intel-npu-driver"
+        fi
+        ;;
+
     *)
         echo -e "${RED}Error: Variante desconocida: $VARIANT${NC}"
-        echo "Variantes válidas: cpu, cuda, hipblas, metal, openblas"
+        echo "Variantes válidas: cpu, cuda, hipblas, metal, openblas, openvino"
         exit 1
         ;;
 esac
@@ -207,6 +281,12 @@ EOF
 if [ "$VARIANT" = "cuda" ]; then
     echo "CUDA version: $($CUDA_HOME/bin/nvcc --version | grep release)" >> "$BUILD_DIR/BUILD_INFO.txt"
     echo "GPU architectures: $GPU_ARCHES" >> "$BUILD_DIR/BUILD_INFO.txt"
+fi
+
+if [ "$VARIANT" = "openvino" ]; then
+    echo "OpenVINO SDK: $OPENVINO_DIR" >> "$BUILD_DIR/BUILD_INFO.txt"
+    echo "OpenVINO device: ${OPENVINO_DEVICE:-auto}" >> "$BUILD_DIR/BUILD_INFO.txt"
+    echo "Runtime libs: $HOME/intel/openvino_sdk/openvino/libs (if using wheel SDK)" >> "$BUILD_DIR/BUILD_INFO.txt"
 fi
 
 echo ""

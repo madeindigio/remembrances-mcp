@@ -171,6 +171,19 @@ ifeq ($(BUILD_TYPE),clblas)
 	EXTRA_TARGETS+=llama.cpp/ggml-opencl.o
 endif
 
+# OpenVINO backend (Intel GPU / NPU / CPU via Intel OpenVINO toolkit)
+# Requires OpenVINO SDK: set OPENVINO_DIR to the directory containing OpenVINOConfig.cmake
+# Default: auto-detect from OPENVINO_DIR env or common install paths
+ifeq ($(BUILD_TYPE),openvino)
+	EXTRA_LIBS=
+	OPENVINO_SDK_DIR ?= $(if $(OPENVINO_DIR),$(OPENVINO_DIR),$(HOME)/intel/openvino_sdk/openvino/cmake)
+	CMAKE_ARGS+=-DGGML_OPENVINO=ON -DOpenVINO_DIR=$(OPENVINO_SDK_DIR)
+	# Optional: set target device at build time (CPU/GPU/NPU). Can also be set at runtime.
+	ifdef OPENVINO_DEVICE
+		CMAKE_ARGS+=-DGGML_OPENVINO_DEVICE=$(OPENVINO_DEVICE)
+	endif
+endif
+
 ifeq ($(BUILD_TYPE),metal)
 	EXTRA_LIBS=
 	CGO_LDFLAGS+="-framework Accelerate -framework Foundation -framework Metal -framework MetalKit -framework MetalPerformanceShaders"

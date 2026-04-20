@@ -29,6 +29,7 @@ El sistema de compilación multi-variante te permite:
 | `hipblas` | Linux | AMD ROCm (Radeon RX, MI) | `build/libs/hipblas/` |
 | `metal` | macOS | Apple Metal (M1, M2, M3) | `build/libs/metal/` |
 | `openblas` | Todas | OpenBLAS (CPU optimizado) | `build/libs/openblas/` |
+| `openvino` | Linux | Intel GPU / NPU (OpenVINO) | `build/libs/openvino/` |
 
 ## Estructura de Directorios
 
@@ -86,6 +87,11 @@ make build-libs-metal
 
 # Compilar variante OpenBLAS
 make build-libs-openblas
+
+# Compilar variante OpenVINO (Intel GPU/NPU - Linux)
+make build-libs-openvino
+# Con ruta SDK personalizada:
+# OPENVINO_DIR=~/intel/openvino_sdk/openvino/cmake make build-libs-openvino
 ```
 
 ### Método 2: Usando el Script
@@ -105,6 +111,11 @@ make build-libs-openblas
 
 # Compilar OpenBLAS
 ./scripts/build-variant-libs.sh openblas
+
+# Compilar OpenVINO (Intel GPU/NPU)
+./scripts/build-variant-libs.sh openvino
+# OPENVINO_DIR se detecta automáticamente desde ~/intel/openvino_sdk/openvino/cmake
+# Para seleccionar dispositivo: OPENVINO_DEVICE=GPU ./scripts/build-variant-libs.sh openvino
 ```
 
 ### Ejemplo: Compilar CUDA

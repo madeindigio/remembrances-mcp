@@ -1,12 +1,13 @@
-.PHONY: all build build-binary-only build-embedded build-embedded-cpu build-embedded-cuda build-embedded-cuda-portable build-embedded-metal \
-	prepare-embedded-libs prepare-embedded-libs-cpu prepare-embedded-libs-cuda prepare-embedded-libs-cuda-portable prepare-embedded-libs-metal \
+.PHONY: all build build-binary-only build-embedded build-embedded-cpu build-embedded-cuda build-embedded-cuda-portable build-embedded-metal build-embedded-openvino \
+	prepare-embedded-libs prepare-embedded-libs-cpu prepare-embedded-libs-cuda prepare-embedded-libs-cuda-portable prepare-embedded-libs-metal prepare-embedded-libs-openvino \
 	clean test llama-cpp llama-cpp-clean help \
 	docker-build-cuda docker-push-cuda docker-run-cuda docker-stop-cuda \
 	docker-build-cpu docker-push-cpu docker-run-cpu docker-stop-cpu \
 	docker-download-model docker-prepare-cuda docker-prepare-cpu docker-login docker-help build-libs-cuda-portable \
 	build-cuda-full build-cuda-system dist-cuda-full dist-cuda-system build-cuda-both dist-cuda-both \
 	build-surrealdb-windows-amd64 \
-	build-commercial build-embedded-commercial dist-embedded-variant dist-embedded-all dist-core dist-commercial
+	build-commercial build-embedded-commercial dist-embedded-variant dist-embedded-all dist-core dist-commercial \
+	build-libs-openvino
 
 # Default target
 all: build
@@ -162,10 +163,12 @@ help:
 	@echo "  make build-libs-hipblas      - Build llama.cpp with ROCm → build/libs/hipblas/"
 	@echo "  make build-libs-metal        - Build llama.cpp with Metal → build/libs/metal/"
 	@echo "  make build-libs-openblas     - Build llama.cpp with OpenBLAS → build/libs/openblas/"
+	@echo "  make build-libs-openvino     - Build llama.cpp with Intel OpenVINO (iGPU/NPU/CPU) → build/libs/openvino/"
 	@echo "  make build-libs-cpu          - Build llama.cpp CPU-only → build/libs/cpu/"
 	@echo ""
 	@echo "Multi-variant binary builds:"
 	@echo "  make build-variant VARIANT=cuda  - Build single variant binary (remembrances-mcp-cuda)"
+	@echo "  make build-variant VARIANT=openvino - Build Intel OpenVINO variant binary"
 	@echo "  make build-all-variants          - Build all variant binaries (cpu, cuda, hipblas, etc.)"
 	@echo ""
 	@echo "CUDA variant builds:"
@@ -173,6 +176,13 @@ help:
 	@echo "  make build BUILD_TYPE=cuda BUNDLE_CUDA=0  - Build without CUDA libs (~300MB)"
 	@echo "  make dist-cuda-full                       - Package CUDA with bundled libraries"
 	@echo "  make dist-cuda-system                     - Package CUDA for system libraries"
+	@echo ""
+	@echo "OpenVINO variant builds (Intel GPU/NPU on Arrow Lake / Meteor Lake / Arc):"
+	@echo "  make build-libs-openvino                      - Build OpenVINO libs"
+	@echo "  make build-libs-openvino OPENVINO_DIR=<path>  - Use custom OpenVINO SDK path"
+	@echo "  make build-embedded-openvino                  - Build embedded binary (Intel GPU)"
+	@echo "  make dist-variant VARIANT=openvino            - Package for distribution"
+	@echo "  See docs/OPENVINO_BUILD.md for prerequisites and detailed instructions."
 	@echo ""
 	@echo "Distribution packaging:"
 	@echo "  make dist-variant VARIANT=cuda   - Package single variant with libraries as zip"
@@ -194,11 +204,16 @@ help:
 	@echo "  BUILD_TYPE=cublas   - Build with CUDA support (Linux, deprecated, use cuda)"
 	@echo "  BUILD_TYPE=hipblas  - Build with ROCm support (Linux)"
 	@echo "  BUILD_TYPE=openblas - Build with OpenBLAS support"
+	@echo "  BUILD_TYPE=openvino - Build with Intel OpenVINO (iGPU/NPU/CPU)"
 	@echo "  MODULE_TAGS=commercial - Include commercial modules in the build"
 	@echo ""
 	@echo "Environment variables:"
 	@echo "  GO_LLAMA_DIR          - Path to go-llama.cpp (default: \$$HOME/www/MCP/Remembrances/go-llama.cpp)"
 	@echo "  SURREALDB_EMBEDDED_DIR - Path to surrealdb-embedded (default: \$$HOME/www/MCP/Remembrances/surrealdb-embedded)"
+	@echo "  OPENVINO_DIR          - Path to OpenVINO cmake config dir (contains OpenVINOConfig.cmake)"
+	@echo "                          Auto-detected from: ~/intel/openvino_sdk/openvino/cmake"
+	@echo "                          or /opt/intel/openvino/runtime/cmake (system install)"
+	@echo "  OPENVINO_DEVICE       - Target device for OpenVINO: CPU, GPU, NPU (default: auto)"
 	@echo ""
 	@echo "Docker (GitHub Container Registry):"
 	@echo "  make docker-help            - Show detailed Docker usage"
@@ -252,6 +267,11 @@ llama-cpp:
 			elif [ "$(BUILD_TYPE)" = "metal" ]; then \
 				echo "Building with Metal support (macOS)..."; \
 				cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DGGML_METAL=ON -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
+			elif [ "$(BUILD_TYPE)" = "openvino" ]; then \
+				echo "Building with Intel OpenVINO support..."; \
+				OPENVINO_SDK="$${OPENVINO_DIR:-$(HOME)/intel/openvino_sdk/openvino/cmake}"; \
+				echo "  OpenVINO SDK dir: $$OPENVINO_SDK"; \
+				cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DGGML_OPENVINO=ON -DOpenVINO_DIR="$$OPENVINO_SDK" -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
 			else \
 				echo "Building with CPU only..."; \
 				cd "$(GO_LLAMA_DIR)" && cmake -B build llama.cpp -DLLAMA_STATIC=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release -j; \
@@ -456,6 +476,7 @@ prepare-embedded-libs: surrealdb-embedded
 	@case "$(EMBEDDED_VARIANT)" in \
 		cuda|cuda-portable) libs="libggml-base.$(LIB_EXT) libggml.$(LIB_EXT) libggml-cpu.$(LIB_EXT) libggml-cuda.$(LIB_EXT) libllama.$(LIB_EXT) libllama_shim.$(LIB_EXT) libmtmd.$(LIB_EXT)" ;; \
 		metal) libs="libggml-base.$(LIB_EXT) libggml.$(LIB_EXT) libggml-metal.$(LIB_EXT) libllama.$(LIB_EXT) libllama_shim.$(LIB_EXT) libmtmd.$(LIB_EXT)" ;; \
+		openvino) libs="libggml-base.$(LIB_EXT) libggml.$(LIB_EXT) libggml-cpu.$(LIB_EXT) libggml-openvino.$(LIB_EXT) libllama.$(LIB_EXT) libllama_shim.$(LIB_EXT) libmtmd.$(LIB_EXT)" ;; \
 		*) libs="libggml-base.$(LIB_EXT) libggml.$(LIB_EXT) libggml-cpu.$(LIB_EXT) libllama.$(LIB_EXT) libllama_shim.$(LIB_EXT) libmtmd.$(LIB_EXT)" ;; \
 	esac; \
 	libs="$$libs libsurrealdb_embedded_rs.$(LIB_EXT)"; \
@@ -484,6 +505,9 @@ prepare-embedded-libs-cuda-portable: prepare-embedded-libs
 prepare-embedded-libs-metal: EMBEDDED_VARIANT=metal
 prepare-embedded-libs-metal: prepare-embedded-libs
 
+prepare-embedded-libs-openvino: EMBEDDED_VARIANT=openvino
+prepare-embedded-libs-openvino: prepare-embedded-libs
+
 # Build an embedded binary that ships the shared libraries via go:embed/purego.
 build-embedded: prepare-embedded-libs
 	@echo "Building $(BINARY_NAME) with embedded shared libraries (variant=$(EMBEDDED_VARIANT))..."
@@ -510,6 +534,9 @@ build-embedded-cuda-portable: build-embedded
 
 build-embedded-metal: EMBEDDED_VARIANT=metal
 build-embedded-metal: build-embedded
+
+build-embedded-openvino: EMBEDDED_VARIANT=openvino
+build-embedded-openvino: build-embedded
 
 build-commercial: MODULE_TAGS=commercial
 build-commercial: build
@@ -769,6 +796,15 @@ build-libs-openblas:
 	@echo "Building OpenBLAS variant..."
 	@$(MAKE) build-libs-variant VARIANT=openblas
 
+# Build OpenVINO variant (Intel iGPU / NPU / CPU)
+# Requires: OPENVINO_DIR pointing to OpenVINO cmake config directory, or auto-detected
+# Hardware: Intel Arrow Lake, Meteor Lake, Arc GPU, or any Intel GPU/NPU
+# See docs/OPENVINO_BUILD.md for installation prerequisites
+build-libs-openvino:
+	@echo "Building Intel OpenVINO variant..."
+	@echo "  OPENVINO_DIR: $${OPENVINO_DIR:-auto-detect}"
+	@$(MAKE) build-libs-variant VARIANT=openvino
+
 # Build CPU-only variant
 build-libs-cpu:
 	@echo "Building CPU-only variant..."
@@ -815,6 +851,16 @@ else ifeq ($(PLATFORM),linux)
 		echo ""; \
 	else \
 		echo "⚠ Skipping OpenBLAS (not found)"; \
+	fi
+	@# OpenVINO: check for SDK in standard locations
+	@if [ -f "$${OPENVINO_DIR}/OpenVINOConfig.cmake" ] 2>/dev/null || \
+	   [ -f "$(HOME)/intel/openvino_sdk/openvino/cmake/OpenVINOConfig.cmake" ] 2>/dev/null || \
+	   [ -f "/opt/intel/openvino/runtime/cmake/OpenVINOConfig.cmake" ] 2>/dev/null; then \
+		echo "=== Building OpenVINO variant ==="; \
+		$(MAKE) build-libs-openvino; \
+		echo ""; \
+	else \
+		echo "⚠ Skipping OpenVINO (SDK not found; see docs/OPENVINO_BUILD.md)"; \
 	fi
 	@echo "✓ All Linux variants built successfully!"
 endif
@@ -887,6 +933,16 @@ else ifeq ($(PLATFORM),linux)
 	else \
 		echo "⚠ Skipping OpenBLAS (not found)"; \
 	fi
+	@# OpenVINO: check for SDK in standard locations
+	@if [ -f "$${OPENVINO_DIR}/OpenVINOConfig.cmake" ] 2>/dev/null || \
+	   [ -f "$(HOME)/intel/openvino_sdk/openvino/cmake/OpenVINOConfig.cmake" ] 2>/dev/null || \
+	   [ -f "/opt/intel/openvino/runtime/cmake/OpenVINOConfig.cmake" ] 2>/dev/null; then \
+		echo "=== Building OpenVINO variant binary ==="; \
+		$(MAKE) build-variant VARIANT=openvino; \
+		echo ""; \
+	else \
+		echo "⚠ Skipping OpenVINO (SDK not found; see docs/OPENVINO_BUILD.md)"; \
+	fi
 	@echo "✓ All Linux variant binaries built successfully!"
 endif
 	@echo ""
@@ -957,6 +1013,11 @@ else ifeq ($(PLATFORM),linux)
 	@if pkg-config --exists openblas 2>/dev/null || [ -f "/usr/include/openblas/cblas.h" ]; then \
 		$(MAKE) dist-variant VARIANT=openblas; \
 	fi
+	@if [ -f "$${OPENVINO_DIR}/OpenVINOConfig.cmake" ] 2>/dev/null || \
+	   [ -f "$(HOME)/intel/openvino_sdk/openvino/cmake/OpenVINOConfig.cmake" ] 2>/dev/null || \
+	   [ -f "/opt/intel/openvino/runtime/cmake/OpenVINOConfig.cmake" ] 2>/dev/null; then \
+		$(MAKE) dist-variant VARIANT=openvino; \
+	fi
 endif
 	@echo ""
 	@echo "✓ All variant packages created in dist-variants/:"
@@ -1002,6 +1063,11 @@ else ifeq ($(PLATFORM),linux)
 	@if command -v nvcc >/dev/null 2>&1; then \
 		$(MAKE) dist-embedded-variant EMBEDDED_VARIANT=cuda; \
 		$(MAKE) dist-embedded-variant EMBEDDED_VARIANT=cuda-portable; \
+	fi
+	@if [ -f "$${OPENVINO_DIR}/OpenVINOConfig.cmake" ] 2>/dev/null || \
+	   [ -f "$(HOME)/intel/openvino_sdk/openvino/cmake/OpenVINOConfig.cmake" ] 2>/dev/null || \
+	   [ -f "/opt/intel/openvino/runtime/cmake/OpenVINOConfig.cmake" ] 2>/dev/null; then \
+		$(MAKE) dist-embedded-variant EMBEDDED_VARIANT=openvino; \
 	fi
 endif
 	@echo "✓ All embedded variant packages created in dist-variants/:"
