@@ -479,17 +479,19 @@ make dist-embedded-variant EMBEDDED_VARIANT=cuda
 echo "Building embedded CUDA portable libraries..."
 make dist-embedded-variant EMBEDDED_VARIANT=cuda-portable
 
-echo "Building Windows native (no llama.cpp shared libs)"
-# NOTE: Build this on a Windows host to avoid CGO cross-linker issues.
-# If you must cross-compile, ensure MinGW is installed and set CC=x86_64-w64-mingw32-gcc.
-# This build does NOT include GGUF; use Ollama/OpenAI only (no --gguf-model-path).
-rm -rf dist-variants/remembrances-mcp-windows-amd64
-mkdir -p dist-variants/remembrances-mcp-windows-amd64
-GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -mod=mod -o dist-variants/remembrances-mcp-windows-amd64/remembrances-mcp.exe ./cmd/remembrances-mcp
-cp README.md LICENSE.txt config.sample.yaml dist-variants/remembrances-mcp-windows-amd64/ 2>/dev/null || true
-cd dist-variants
-zip -9 remembrances-mcp-windows-amd64.zip remembrances-mcp-windows-amd64/*
-cd ..
+echo "Skipping ad-hoc Windows build in this script"
+# NOTE: The direct `GOOS=windows ... go build` shortcut is currently not a
+# supported packaging path here.
+#
+# Why it fails today:
+#   - the code indexing stack pulls in Tree-sitter packages that require a
+#     proper CGO-enabled Windows toolchain
+#   - the embedded/purego loaders in the current source tree still use
+#     dlopen-style symbols that are not wired for this Windows shortcut
+#
+# For Windows artifacts, use a native Windows runner / host with the dedicated
+# release flow (`.goreleaser.yml`, `./scripts/release-cross.sh`) instead of this
+# inline command block.
 
 echo "-----------------------------------"
 echo "Checking if memote osx is available..."
