@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
@@ -30,6 +31,11 @@ type HTTPTransport struct {
 	addr   string
 	server *http.Server
 	mux    *http.ServeMux
+
+	// moduleRoutes maps a full mux path to the module routes registered on
+	// it, one per HTTP method. The mux gets a single dispatcher per path.
+	moduleRoutes   map[string][]moduleRouteEntry
+	moduleRoutesMu sync.RWMutex
 }
 
 // NewHTTPTransport creates a new HTTP transport for MCP server
@@ -164,8 +170,35 @@ func CreateHTTPServerTransport(addr string, mcpServer *mcpserver.Server) (*HTTPT
 	return transport, nil
 }
 
-// RegisterModuleRoutes registers HTTP routes from module providers
-func (h *HTTPTransport) RegisterModuleRoutes(providers []modules.HTTPEndpointProvider) {
+// moduleRouteEntry is one registered module route: the HTTP method it answers
+// and the fully wrapped handler (authentication layer plus the route
+// middlewares around the module handler).
+type moduleRouteEntry struct {
+	// method is the upper case HTTP method, or "" when the route declares no
+	// method and therefore answers every method, as it did before RM-4.
+	method  string
+	handler http.Handler
+}
+
+// RegisterModuleRoutes registers HTTP routes from module providers.
+//
+// Every route is wrapped, from outermost to innermost, as:
+//
+//  1. method dispatch, which answers 405 with an Allow header when the
+//     request method does not match any route registered on the path;
+//  2. the authentication layer built from authProviders, which populates the
+//     AuthInfo in the request context and fails closed (see
+//     modules.AuthMiddleware). With no auth providers this layer is the
+//     identity;
+//  3. route.Middlewares in declared order, index 0 outermost;
+//  4. route.Handler.
+//
+// authProviders is variadic so existing callers that pass only the endpoint
+// providers keep compiling and keep their previous, unauthenticated
+// behaviour.
+func (h *HTTPTransport) RegisterModuleRoutes(providers []modules.HTTPEndpointProvider, authProviders ...modules.HTTPAuthProvider) {
+	auth := modules.AuthMiddleware(authProviders, slog.Default())
+
 	for _, provider := range providers {
 		basePath := provider.BasePath()
 		routes := provider.Routes()
@@ -173,18 +206,92 @@ func (h *HTTPTransport) RegisterModuleRoutes(providers []modules.HTTPEndpointPro
 		slog.Info("Registering module HTTP routes", "base_path", basePath, "routes", len(routes))
 
 		for _, route := range routes {
-			fullPath := basePath + route.Path
-
-			// Handle wildcard paths for static files
-			if strings.HasSuffix(route.Path, "/*") {
-				// Strip the /* from the path
-				baseStaticPath := strings.TrimSuffix(fullPath, "/*")
-				h.mux.HandleFunc(baseStaticPath+"/", route.Handler)
-				slog.Debug("Registered wildcard route", "method", route.Method, "path", baseStaticPath+"/")
-			} else {
-				h.mux.HandleFunc(fullPath, route.Handler)
-				slog.Debug("Registered route", "method", route.Method, "path", fullPath)
+			if route.Handler == nil {
+				slog.Warn("Skipping module route with nil handler", "base_path", basePath, "path", route.Path)
+				continue
 			}
+
+			fullPath := basePath + route.Path
+			// Handle wildcard paths for static files: the mux subtree pattern
+			// keeps its trailing slash.
+			if strings.HasSuffix(route.Path, "/*") {
+				fullPath = strings.TrimSuffix(fullPath, "/*") + "/"
+			}
+
+			handler := modules.ChainHTTPMiddlewares(http.Handler(route.Handler), route.Middlewares)
+			handler = auth(handler)
+
+			h.addModuleRoute(fullPath, strings.ToUpper(strings.TrimSpace(route.Method)), handler)
+			slog.Debug("Registered module route", "method", route.Method, "path", fullPath)
 		}
 	}
+}
+
+// addModuleRoute stores one entry in the module route table and, the first
+// time a path is used, installs the method dispatcher for it on the mux.
+// Registering the dispatcher once per path is what allows several methods to
+// share a path without the mux rejecting the duplicate pattern.
+func (h *HTTPTransport) addModuleRoute(path, method string, handler http.Handler) {
+	h.moduleRoutesMu.Lock()
+	defer h.moduleRoutesMu.Unlock()
+
+	if h.moduleRoutes == nil {
+		h.moduleRoutes = make(map[string][]moduleRouteEntry)
+	}
+
+	for _, existing := range h.moduleRoutes[path] {
+		if existing.method == method {
+			slog.Warn("Duplicate module route ignored", "method", method, "path", path)
+			return
+		}
+	}
+
+	_, known := h.moduleRoutes[path]
+	h.moduleRoutes[path] = append(h.moduleRoutes[path], moduleRouteEntry{method: method, handler: handler})
+	if !known {
+		h.mux.Handle(path, h.moduleRouteDispatcher(path))
+	}
+}
+
+// moduleRouteDispatcher returns the handler registered on the mux for a path.
+// It selects the entry matching the request method, falls back to an entry
+// that declares no method, and otherwise answers 405 with an Allow header.
+func (h *HTTPTransport) moduleRouteDispatcher(path string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h.moduleRoutesMu.RLock()
+		entries := h.moduleRoutes[path]
+		h.moduleRoutesMu.RUnlock()
+
+		var fallback http.Handler
+		allowed := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			if entry.method == "" {
+				if fallback == nil {
+					fallback = entry.handler
+				}
+				continue
+			}
+			allowed = append(allowed, entry.method)
+			if entry.method == strings.ToUpper(r.Method) {
+				entry.handler.ServeHTTP(w, r)
+				return
+			}
+		}
+
+		if fallback != nil {
+			fallback.ServeHTTP(w, r)
+			return
+		}
+
+		if len(allowed) > 0 {
+			w.Header().Set("Allow", strings.Join(allowed, ", "))
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+}
+
+// Handler exposes the transport mux so tests and embedders can drive the
+// registered routes without binding a socket.
+func (h *HTTPTransport) Handler() http.Handler {
+	return h.mux
 }
