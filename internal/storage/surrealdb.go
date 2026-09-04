@@ -98,11 +98,14 @@ func (s *SurrealDBStorage) Connect(ctx context.Context) error {
 		slog.Info("Connecting to embedded SurrealDB", "url", s.config.DBPath)
 		s.embeddedDB, err = surrealembedded.NewFromURL(ctx, s.config.DBPath)
 		if err != nil {
-			return fmt.Errorf("failed to connect to embedded SurrealDB: %w", err)
+			// A 2.x datastore is refused by the 3.x engine with an opaque
+			// storage-version code. Turn it into the message that names the
+			// migration command, so an operator is not left guessing.
+			return fmt.Errorf("failed to connect to embedded SurrealDB: %w", wrapOutdatedStorageError(err))
 		}
 
 		if err = s.embeddedDB.Use(s.config.Namespace, s.config.Database); err != nil {
-			return fmt.Errorf("failed to use namespace/database: %w", err)
+			return fmt.Errorf("failed to use namespace/database: %w", wrapOutdatedStorageError(err))
 		}
 
 		s.useEmbedded = true

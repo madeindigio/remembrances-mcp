@@ -1,0 +1,94 @@
+name: storage matrix
+
+# RM-7 requires the integration suite to run against both SurrealDB 3.x paths:
+# the embedded engine linked through the Digio FFI wrapper, and a remote
+# surrealdb/surrealdb:v3.2 server. The point of the one-dialect rule is that the
+# two jobs execute identical SurrealQL, so a divergence is a build failure rather
+# than a runtime surprise.
+
+on:
+  push:
+    paths:
+      - 'internal/storage/**'
+      - 'cmd/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/storage-matrix.yml'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: unit (hermetic)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.4'
+          cache: true
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l ./internal/storage ./cmd)"
+          if [ -n "$unformatted" ]; then
+            echo "unformatted files:"; echo "$unformatted"; exit 1
+          fi
+      - run: go build ./...
+      - run: go vet ./internal/storage/...
+      - run: go vet -tags surrealprobe ./cmd/surrealql-probe
+      - run: go test -race ./internal/storage/...
+
+  embedded:
+    name: integration (embedded 3.x)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.4'
+          cache: true
+      - name: Check the prebuilt embedded library is present
+        # internal/surrealembedded loads the library with purego and dlopen, so
+        # `go build` needs nothing, but the tests need the 3.x shared object at
+        # runtime. It ships under internal/embedded/libs/<os>/<arch>/cpu/.
+        # If it ever becomes a release artefact rather than a checked-in file
+        # (a 285 MB staticlib cannot live in git), fetch it here instead.
+        run: |
+          lib=internal/embedded/libs/linux/amd64/cpu/libsurrealdb_embedded_rs.so
+          test -f "$lib" || { echo "missing $lib"; exit 1; }
+          echo "found $lib"
+      - name: SurrealQL dialect probe
+        # Executes every statement the migrations emit against the real 3.x
+        # parser and executor before the suite runs, so a dialect regression is
+        # reported as itself rather than as a failing test somewhere downstream.
+        run: go run -tags surrealprobe ./cmd/surrealql-probe
+      - run: go test -tags integration ./internal/storage/...
+
+  remote:
+    name: integration (remote surrealdb v3.2)
+    runs-on: ubuntu-latest
+    services:
+      surrealdb:
+        image: surrealdb/surrealdb:v3.2
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "/surreal is-ready"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.4'
+          cache: true
+      - name: Run the same suite against the remote path
+        env:
+          SURREALDB_URL: ws://localhost:8000
+          SURREALDB_USER: root
+          SURREALDB_PASS: root
+        run: go test -tags integration ./internal/storage/...

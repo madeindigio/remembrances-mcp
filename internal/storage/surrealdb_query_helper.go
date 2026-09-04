@@ -41,12 +41,25 @@ func (s *SurrealDBStorage) Query(ctx context.Context, query string, params map[s
 	return allResults, nil
 }
 
-// query executes a query on either embedded or remote backend
+// query executes a query on either embedded or remote backend.
+//
+// Every statement goes through RetryOnWriteConflict. SurrealDB 3.x reports the
+// optimistic transaction conflicts that 2.x swallowed, and a conflicted
+// transaction has committed nothing, so replaying the whole statement is safe
+// for reads and writes alike. This is the single choke point, so every write
+// path in the storage layer inherits the retry without carrying its own loop.
 func (s *SurrealDBStorage) query(ctx context.Context, query string, params map[string]interface{}) (*[]QueryResult, error) {
-	if s.useEmbedded {
-		return s.queryEmbedded(ctx, query, params)
-	}
-	return s.queryRemote(ctx, query, params)
+	var result *[]QueryResult
+	err := RetryOnWriteConflict(ctx, func() error {
+		var innerErr error
+		if s.useEmbedded {
+			result, innerErr = s.queryEmbedded(ctx, query, params)
+		} else {
+			result, innerErr = s.queryRemote(ctx, query, params)
+		}
+		return innerErr
+	})
+	return result, err
 }
 
 // queryEmbedded executes a query on the embedded backend

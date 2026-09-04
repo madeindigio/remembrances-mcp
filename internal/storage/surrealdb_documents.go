@@ -12,18 +12,7 @@ func (s *SurrealDBStorage) SaveDocument(ctx context.Context, filePath, content s
 		metadata = map[string]interface{}{}
 	}
 
-	if embedding == nil {
-		embedding = make([]float32, defaultMtreeDim)
-	} else if len(embedding) != defaultMtreeDim {
-		norm := make([]float32, defaultMtreeDim)
-		copy(norm, embedding)
-		embedding = norm
-	}
-
-	emb64 := make([]float64, len(embedding))
-	for i, v := range embedding {
-		emb64[i] = float64(v)
-	}
+	emb64 := normalizeEmbedding(embedding)
 
 	existsQuery := "SELECT id FROM knowledge_base WHERE file_path = $file_path"
 	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{
@@ -251,18 +240,7 @@ func (s *SurrealDBStorage) SaveDocumentChunks(ctx context.Context, filePath stri
 	for i, chunk := range chunks {
 		embedding := embeddings[i]
 
-		// Normalize embedding to defaultMtreeDim
-		if len(embedding) != defaultMtreeDim {
-			norm := make([]float32, defaultMtreeDim)
-			copy(norm, embedding)
-			embedding = norm
-		}
-
-		// Convert to float64 for SurrealDB
-		emb64 := make([]float64, len(embedding))
-		for j, v := range embedding {
-			emb64[j] = float64(v)
-		}
+		emb64 := normalizeEmbedding(embedding)
 
 		// Create unique file_path for each chunk
 		chunkFilePath := fmt.Sprintf("%s#chunk%d", filePath, i)

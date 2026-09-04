@@ -31,7 +31,8 @@ func (s *SurrealDBStorage) SaveFact(ctx context.Context, userID, key string, val
 		CREATE kv_memories CONTENT {
 			user_id: $user_id,
 			key: $key,
-			value: $value
+			value: $value,
+			content_hash: crypto::sha256(string::trim(<string> $value))
 		}
 	`
 	params := map[string]interface{}{
@@ -105,7 +106,8 @@ func (s *SurrealDBStorage) UpdateFact(ctx context.Context, userID, key string, v
 		CREATE kv_memories CONTENT {
 			user_id: $user_id,
 			key: $key,
-			value: $value
+			value: $value,
+			content_hash: crypto::sha256(string::trim(<string> $value))
 		}
 	`
 	params = map[string]interface{}{

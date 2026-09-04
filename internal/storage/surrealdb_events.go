@@ -44,20 +44,9 @@ func (s *SurrealDBStorage) SaveEvent(ctx context.Context, userID, subject, conte
 		metadata = map[string]interface{}{}
 	}
 
-	// Normalize embedding length to the MTREE dimension
-	if embedding == nil {
-		embedding = make([]float32, defaultMtreeDim)
-	} else if len(embedding) != defaultMtreeDim {
-		norm := make([]float32, defaultMtreeDim)
-		copy(norm, embedding)
-		embedding = norm
-	}
-
-	// Convert embedding to []float64 for SurrealDB JSON consistency
-	emb64 := make([]float64, len(embedding))
-	for i, v := range embedding {
-		emb64[i] = float64(v)
-	}
+	// Pad or truncate to the configured vector width: SurrealDB 3.x reads
+	// array<float, N> as exactly N elements.
+	emb64 := normalizeEmbedding(embedding)
 
 	query := `
 		INSERT INTO events {

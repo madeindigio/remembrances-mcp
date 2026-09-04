@@ -131,6 +131,13 @@ func main() {
 
 // Main is the entry point for embedding in custom builds.
 func Main() {
+	// Migration subcommands run before configuration is loaded: they take their
+	// own flag sets and must be able to address a datastore the server itself
+	// would refuse to open.
+	if handled, code := runSubcommand(context.Background()); handled {
+		os.Exit(code)
+	}
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {

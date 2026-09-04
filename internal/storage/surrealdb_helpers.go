@@ -334,18 +334,9 @@ func getTime(m map[string]interface{}, key string) time.Time {
 	return time.Time{}
 }
 
+// convertEmbeddingToFloat64 normalises an embedding to the configured vector
+// width and converts it for SurrealDB. It delegates to normalizeEmbedding so
+// there is one dimension authority rather than a copy of the rule per file.
 func convertEmbeddingToFloat64(embedding []float32) []float64 {
-	if embedding == nil {
-		embedding = make([]float32, defaultMtreeDim)
-	} else if len(embedding) != defaultMtreeDim {
-		norm := make([]float32, defaultMtreeDim)
-		copy(norm, embedding)
-		embedding = norm
-	}
-
-	emb64 := make([]float64, len(embedding))
-	for i, v := range embedding {
-		emb64[i] = float64(v)
-	}
-	return emb64
+	return normalizeEmbedding(embedding)
 }

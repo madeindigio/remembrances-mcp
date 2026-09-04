@@ -144,7 +144,10 @@ func (s *SurrealDBStorage) TraverseGraph(ctx context.Context, startEntity, relat
 		return nil, fmt.Errorf("failed to resolve start entity '%s': %w", startEntity, err)
 	}
 
-	query := "SELECT id, name, type, properties FROM entities"
+	// entity_type is the canonical column: it is what the write path
+	// sends. The remote schema used to declare a `type` column that no write
+	// ever populated, so every read of it returned an empty string.
+	query := "SELECT id, name, entity_type, properties FROM entities"
 
 	params := map[string]interface{}{
 		"start_entity": startEntityID,
@@ -183,7 +186,7 @@ func (s *SurrealDBStorage) GetEntity(ctx context.Context, entityID string) (*Ent
 	resultMap := queryResult.Result[0]
 	entity := &Entity{
 		ID:         getString(resultMap, "id"),
-		Type:       getString(resultMap, "type"),
+		Type:       getString(resultMap, "entity_type"),
 		Name:       getString(resultMap, "name"),
 		Properties: getMap(resultMap, "properties"),
 		CreatedAt:  getTime(resultMap, "created_at"),
@@ -219,7 +222,7 @@ func (s *SurrealDBStorage) parseGraphResults(result *[]QueryResult) ([]GraphResu
 			for _, itemMap := range resultSlice {
 				entity := &Entity{
 					ID:         getString(itemMap, "id"),
-					Type:       getString(itemMap, "type"),
+					Type:       getString(itemMap, "entity_type"),
 					Name:       getString(itemMap, "name"),
 					Properties: getMap(itemMap, "properties"),
 					CreatedAt:  getTime(itemMap, "created_at"),

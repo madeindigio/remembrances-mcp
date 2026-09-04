@@ -33,24 +33,6 @@ func NewMigrationBase(db *surrealdb.DB) *MigrationBase {
 	return &MigrationBase{db: db}
 }
 
-// checkSchemaElementExists checks if a schema element (table, field, index) already exists
-func (m *MigrationBase) checkSchemaElementExists(ctx context.Context, element SchemaElement) (bool, error) {
-	switch element.Type {
-	case "table":
-		return m.CheckTableExists(ctx, m.extractTableName(element.Statement))
-	case "field":
-		tableName := element.OnTable
-		fieldName := m.extractFieldName(element.Statement)
-		return m.checkFieldExists(ctx, tableName, fieldName)
-	case "index":
-		tableName := element.OnTable
-		indexName := m.extractIndexName(element.Statement)
-		return m.checkIndexExists(ctx, tableName, indexName)
-	default:
-		return false, fmt.Errorf("unknown schema element type: %s", element.Type)
-	}
-}
-
 // CheckTableExists checks if a table exists
 func (m *MigrationBase) CheckTableExists(ctx context.Context, tableName string) (bool, error) {
 	// The INFO FOR DB; command returns a QueryResult array. Use array-based unmarshalling.
@@ -95,84 +77,6 @@ func (m *MigrationBase) CheckTableExists(ctx context.Context, tableName string) 
 	return exists, nil
 }
 
-// checkFieldExists checks if a field exists on a table
-func (m *MigrationBase) checkFieldExists(ctx context.Context, tableName, fieldName string) (bool, error) {
-	query := fmt.Sprintf("INFO FOR TABLE %s;", tableName)
-	result, err := surrealdb.Query[[]map[string]interface{}](ctx, m.db, query, nil)
-	if err != nil {
-		return false, err
-	}
-
-	if result == nil || len(*result) == 0 {
-		return false, nil
-	}
-
-	qr := (*result)[0]
-	if qr.Status != "OK" {
-		return false, nil
-	}
-
-	resMap := qr.Result
-	if len(resMap) == 0 {
-		return false, nil
-	}
-
-	// Extract the result data from the first element
-	resultData := resMap[0]
-
-	fieldsRaw, ok := resultData["fields"]
-	if !ok || fieldsRaw == nil {
-		return false, nil
-	}
-
-	fields, ok := fieldsRaw.(map[string]interface{})
-	if !ok {
-		return false, nil
-	}
-
-	_, exists := fields[fieldName]
-	return exists, nil
-}
-
-// checkIndexExists checks if an index exists on a table
-func (m *MigrationBase) checkIndexExists(ctx context.Context, tableName, indexName string) (bool, error) {
-	query := fmt.Sprintf("INFO FOR TABLE %s;", tableName)
-	result, err := surrealdb.Query[[]map[string]interface{}](ctx, m.db, query, nil)
-	if err != nil {
-		return false, err
-	}
-
-	if result == nil || len(*result) == 0 {
-		return false, nil
-	}
-
-	qr := (*result)[0]
-	if qr.Status != "OK" {
-		return false, nil
-	}
-
-	resMap := qr.Result
-	if len(resMap) == 0 {
-		return false, nil
-	}
-
-	// Extract the result data from the first element
-	resultData := resMap[0]
-
-	indexesRaw, ok := resultData["indexes"]
-	if !ok || indexesRaw == nil {
-		return false, nil
-	}
-
-	indexes, ok := indexesRaw.(map[string]interface{})
-	if !ok {
-		return false, nil
-	}
-
-	_, exists := indexes[indexName]
-	return exists, nil
-}
-
 // IsAlreadyExistsError checks if an error is due to an element already existing
 func (m *MigrationBase) IsAlreadyExistsError(err error) bool {
 	if err == nil {
@@ -185,60 +89,24 @@ func (m *MigrationBase) IsAlreadyExistsError(err error) bool {
 		strings.Contains(errStr, "duplicate")
 }
 
-// extractTableName extracts table name from DEFINE TABLE statement
-func (m *MigrationBase) extractTableName(statement string) string {
-	// Example: "DEFINE TABLE kv_memories SCHEMAFULL;"
-	parts := strings.Fields(statement)
-	if len(parts) >= 3 && parts[0] == "DEFINE" && parts[1] == "TABLE" {
-		return parts[2]
-	}
-	return ""
-}
-
-// extractFieldName extracts field name from DEFINE FIELD statement
-func (m *MigrationBase) extractFieldName(statement string) string {
-	// Example: "DEFINE FIELD user_id ON kv_memories TYPE string;"
-	parts := strings.Fields(statement)
-	if len(parts) >= 3 && parts[0] == "DEFINE" && parts[1] == "FIELD" {
-		return parts[2]
-	}
-	return ""
-}
-
-// extractIndexName extracts index name from DEFINE INDEX statement
-func (m *MigrationBase) extractIndexName(statement string) string {
-	// Example: "DEFINE INDEX idx_kv_user_key ON kv_memories FIELDS user_id, key UNIQUE;"
-	parts := strings.Fields(statement)
-	if len(parts) >= 3 && parts[0] == "DEFINE" && parts[1] == "INDEX" {
-		return parts[2]
-	}
-	return ""
-}
-
-// ApplyElements applies a list of schema elements with error handling
+// ApplyElements executes a list of schema elements in order.
+//
+// SurrealDB 3.x makes the old INFO FOR DB existence probe redundant: every
+// statement this package emits carries IF NOT EXISTS or OVERWRITE, so applying
+// it twice is a no-op rather than an error. Dropping the probe also removes the
+// class of bug where a mis-classified element (the v11 analyzer registered as an
+// index) made the probe look for something that could never be found.
 func (m *MigrationBase) ApplyElements(ctx context.Context, elements []SchemaElement) error {
-	// Apply each schema element with error handling
 	for i, element := range elements {
-		exists, err := m.checkSchemaElementExists(ctx, element)
+		slog.Debug("Applying schema element", "type", element.Type, "statement", element.Statement)
+		_, err := surrealdb.Query[[]map[string]interface{}](ctx, m.db, element.Statement, nil)
 		if err != nil {
-			slog.Warn("Could not check existence of element, attempting to create anyway", "type", element.Type, "error", err)
-		}
-
-		if !exists {
-			slog.Debug("Creating schema element", "type", element.Type, "statement", element.Statement)
-			_, err := surrealdb.Query[[]map[string]interface{}](ctx, m.db, element.Statement, nil)
-			if err != nil {
-				// Log warning but don't fail for "already exists" type errors
-				if m.IsAlreadyExistsError(err) {
-					slog.Debug("Schema element already exists, continuing", "type", element.Type)
-				} else {
-					return fmt.Errorf("failed to execute migration statement %d '%s': %w", i+1, element.Statement, err)
-				}
+			if m.IsAlreadyExistsError(err) {
+				slog.Debug("Schema element already exists, continuing", "type", element.Type)
+				continue
 			}
-		} else {
-			slog.Debug("Skipping existing schema element", "type", element.Type)
+			return fmt.Errorf("failed to execute migration statement %d '%s': %w", i+1, element.Statement, err)
 		}
 	}
-
 	return nil
 }

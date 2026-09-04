@@ -7,49 +7,28 @@ import (
 	"github.com/surrealdb/surrealdb.go"
 )
 
+// V7FlexibleMetadataFix applies schema version 7.
+// Its statements live in statements.go, the single SurrealQL source shared by
+// the remote and the embedded execution paths.
 type V7FlexibleMetadataFix struct {
-	db *surrealdb.DB
+	*MigrationBase
 }
 
-func NewV7FlexibleMetadataFix(db *surrealdb.DB) *V7FlexibleMetadataFix {
-	return &V7FlexibleMetadataFix{db: db}
+// NewV7FlexibleMetadataFix creates the v7 migration.
+func NewV7FlexibleMetadataFix(db *surrealdb.DB) Migration {
+	return &V7FlexibleMetadataFix{MigrationBase: NewMigrationBase(db)}
 }
 
+// Version returns the migration version.
 func (m *V7FlexibleMetadataFix) Version() int { return 7 }
 
+// Description returns the migration description.
 func (m *V7FlexibleMetadataFix) Description() string {
-	return "Fix metadata/properties fields to use FLEXIBLE TYPE object for dynamic nested fields"
+	return "Fix metadata and properties fields to be flexible objects"
 }
 
+// Apply executes the migration.
 func (m *V7FlexibleMetadataFix) Apply(ctx context.Context, db *surrealdb.DB) error {
-	slog.Info("Applying migration v7: fixing metadata/properties fields to be FLEXIBLE")
-
-	// Note: We need to REMOVE the old field definitions first, then redefine them
-	// This ensures the FLEXIBLE keyword is properly applied
-
-	// Remove old field definitions
-	removeStatements := []string{
-		`REMOVE FIELD metadata ON vector_memories;`,
-		`REMOVE FIELD metadata ON knowledge_base;`,
-		`REMOVE FIELD properties ON entities;`,
-	}
-
-	for _, stmt := range removeStatements {
-		slog.Debug("Removing old field definition", "stmt", stmt)
-		_, err := surrealdb.Query[[]map[string]interface{}](ctx, db, stmt, nil)
-		if err != nil {
-			// Log warning but continue - field might not exist
-			slog.Debug("Could not remove field (may not exist)", "error", err)
-		}
-	}
-
-	// Redefine with FLEXIBLE keyword
-	elements := []SchemaElement{
-		{Type: "field", Statement: `DEFINE FIELD metadata ON vector_memories FLEXIBLE TYPE object DEFAULT {};`, OnTable: "vector_memories"},
-		{Type: "field", Statement: `DEFINE FIELD metadata ON knowledge_base FLEXIBLE TYPE object DEFAULT {};`, OnTable: "knowledge_base"},
-		{Type: "field", Statement: `DEFINE FIELD properties ON entities FLEXIBLE TYPE object DEFAULT {};`, OnTable: "entities"},
-	}
-
-	slog.Info("Redefining fields with FLEXIBLE keyword")
-	return NewMigrationBase(db).ApplyElements(ctx, elements)
+	slog.Info("Applying migration", "version", 7, "description", m.Description())
+	return m.ApplyElements(ctx, Statements(7, EmbeddingDimension()))
 }

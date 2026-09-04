@@ -13,20 +13,9 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 		metadata = map[string]interface{}{}
 	}
 
-	// Normalize embedding length to the MTREE dimension (pad with zeros or truncate)
-	if embedding == nil {
-		embedding = make([]float32, defaultMtreeDim)
-	} else if len(embedding) != defaultMtreeDim {
-		norm := make([]float32, defaultMtreeDim)
-		copy(norm, embedding)
-		embedding = norm
-	}
-
-	// Convert embedding to []float64 as other methods do (SurrealDB JSON numeric consistency)
-	emb64 := make([]float64, len(embedding))
-	for i, v := range embedding {
-		emb64[i] = float64(v)
-	}
+	// Pad or truncate to the configured vector width: SurrealDB 3.x reads
+	// array<float, N> as exactly N elements.
+	emb64 := normalizeEmbedding(embedding)
 
 	// Si userID es vacío, no incluir el campo en el insert
 	query := `
@@ -34,6 +23,7 @@ func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content stri
 		       content: $content,
 		       embedding: $embedding,
 		       metadata: $metadata,
+		       content_hash: crypto::sha256(string::trim($content)),
 		       created_at: time::now(),
 		       updated_at: time::now()` + func() string {
 		if userID != "" {
@@ -101,18 +91,7 @@ func (s *SurrealDBStorage) UpdateVector(ctx context.Context, id, userID, content
 		metadata = map[string]interface{}{}
 	}
 
-	if embedding == nil {
-		embedding = make([]float32, defaultMtreeDim)
-	} else if len(embedding) != defaultMtreeDim {
-		norm := make([]float32, defaultMtreeDim)
-		copy(norm, embedding)
-		embedding = norm
-	}
-
-	emb64 := make([]float64, len(embedding))
-	for i, v := range embedding {
-		emb64[i] = float64(v)
-	}
+	emb64 := normalizeEmbedding(embedding)
 
 	// Use DELETE FROM WHERE + CREATE to avoid deserialization issues with newlines
 	// First delete the existing record

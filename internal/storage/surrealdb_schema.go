@@ -13,8 +13,10 @@ import (
 	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
 )
 
-// Default MTREE embedding dimension used in schema. Keep in sync with schema statements.
-const defaultMtreeDim = 768
+// TargetSchemaVersion is the schema version a current binary migrates to.
+// v13 adds the tenant, scope, principal and validity model and is one-way:
+// there is no v13 to v12 path and none will be written.
+const TargetSchemaVersion = migrations.TargetVersion
 
 // InitializeSchema creates all required tables and indexes
 func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
@@ -33,7 +35,7 @@ func (s *SurrealDBStorage) InitializeSchema(ctx context.Context) error {
 	}
 
 	// Run migrations if needed
-	targetVersion := 12 // v12: watcher_enabled field for code_projects
+	targetVersion := TargetSchemaVersion
 	if currentVersion < targetVersion {
 		slog.Info("Running schema migrations", "from", currentVersion, "to", targetVersion)
 		err = s.runMigrations(ctx, currentVersion, targetVersion)
@@ -140,7 +142,7 @@ func (s *SurrealDBStorage) runMigrations(ctx context.Context, currentVersion, ta
 		nextVersion := version + 1
 		slog.Info("Applying migration", "version", nextVersion)
 
-		err := s.applyMigration(ctx, nextVersion)
+		err := s.applyMigrationWithData(ctx, nextVersion, migrations.V13Options{})
 		if err != nil {
 			return fmt.Errorf("failed to apply migration to version %d: %w", nextVersion, err)
 		}
@@ -189,11 +191,42 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewV11Events(s.db)
 	case 12:
 		migration = migrations.NewV12CodeProjectsWatcher(s.db)
+	case 13:
+		migration = migrations.NewV13TenantScopePrincipal(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}
 
 	return migration.Apply(ctx, s.db)
+}
+
+// applyMigration applies the DDL for a version and, for v13, the data half.
+// The data half is executed identically by both paths through the Executor
+// interface, which is what keeps one SurrealQL dialect in the code base.
+func (s *SurrealDBStorage) applyMigrationWithData(ctx context.Context, version int, opts migrations.V13Options) error {
+	if err := s.applyMigration(ctx, version); err != nil {
+		return err
+	}
+	if version != 13 {
+		return nil
+	}
+
+	report, err := migrations.ApplyV13Data(ctx, s, opts)
+	if err != nil {
+		return err
+	}
+	slog.Info("Migration v13 data phase complete",
+		"legacy_principals", len(report.LegacyUsers),
+		"tables", len(report.RowsPerTable),
+		"deduplicated_tables", len(report.DuplicateClusters))
+	return nil
+}
+
+// V13DryRun reports what the v13 data phase would do without writing anything:
+// the legacy principals it would create, the per-table row counts it would
+// touch and any slug collision that would abort the run.
+func (s *SurrealDBStorage) V13DryRun(ctx context.Context) (*migrations.V13Report, error) {
+	return migrations.ApplyV13Data(ctx, s, migrations.V13Options{DryRun: true})
 }
 
 // checkTableExists checks if a table exists

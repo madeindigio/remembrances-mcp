@@ -2,76 +2,33 @@ package migrations
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/surrealdb/surrealdb.go"
 )
 
-// MigrationV3 implements the user_stats field fixes migration
+// MigrationV3 applies schema version 3.
+// Its statements live in statements.go, the single SurrealQL source shared by
+// the remote and the embedded execution paths.
 type MigrationV3 struct {
 	*MigrationBase
 }
 
-// NewMigrationV3 creates a new V3 migration
+// NewMigrationV3 creates the v3 migration.
 func NewMigrationV3(db *surrealdb.DB) Migration {
-	return &MigrationV3{
-		MigrationBase: NewMigrationBase(db),
-	}
+	return &MigrationV3{MigrationBase: NewMigrationBase(db)}
 }
 
-// Version returns the migration version
-func (m *MigrationV3) Version() int {
-	return 3
-}
+// Version returns the migration version.
+func (m *MigrationV3) Version() int { return 3 }
 
-// Description returns the migration description
+// Description returns the migration description.
 func (m *MigrationV3) Description() string {
 	return "Fixing user_stats field definitions"
 }
 
-// Apply executes the migration
+// Apply executes the migration.
 func (m *MigrationV3) Apply(ctx context.Context, db *surrealdb.DB) error {
-	slog.Info("Applying migration v3: Fixing user_stats field definitions")
-
-	// Remove the problematic fields that have VALUE constraints
-	dropStatements := []string{
-		"REMOVE FIELD key_value_count ON user_stats;",
-		"REMOVE FIELD vector_count ON user_stats;",
-		"REMOVE FIELD entity_count ON user_stats;",
-		"REMOVE FIELD relationship_count ON user_stats;",
-		"REMOVE FIELD document_count ON user_stats;",
-	}
-
-	// Execute drop statements
-	for _, stmt := range dropStatements {
-		slog.Debug("Executing drop statement", "stmt", stmt)
-		_, err := surrealdb.Query[[]map[string]interface{}](ctx, db, stmt, nil)
-		if err != nil {
-			// Log warning but continue - field might not exist
-			slog.Debug("Failed to drop field (may not exist)", "error", err)
-		}
-	}
-
-	// Define the corrected fields without VALUE constraints
-	elements := []SchemaElement{
-		{Type: "field", Statement: `DEFINE FIELD key_value_count ON user_stats TYPE int;`, OnTable: "user_stats"},
-		{Type: "field", Statement: `DEFINE FIELD vector_count ON user_stats TYPE int;`, OnTable: "user_stats"},
-		{Type: "field", Statement: `DEFINE FIELD entity_count ON user_stats TYPE int;`, OnTable: "user_stats"},
-		{Type: "field", Statement: `DEFINE FIELD relationship_count ON user_stats TYPE int;`, OnTable: "user_stats"},
-		{Type: "field", Statement: `DEFINE FIELD document_count ON user_stats TYPE int;`, OnTable: "user_stats"},
-	}
-
-	// Apply the corrected field definitions
-	for i, element := range elements {
-		slog.Debug("Creating corrected field", "stmt", element.Statement)
-		_, err := surrealdb.Query[[]map[string]interface{}](ctx, db, element.Statement, nil)
-		if err != nil {
-			// This should succeed since we removed the old definitions
-			return fmt.Errorf("failed to execute migration v3 statement %d '%s': %w", i+1, element.Statement, err)
-		}
-	}
-
-	slog.Info("Migration v3 completed successfully")
-	return nil
+	slog.Info("Applying migration", "version", 3, "description", m.Description())
+	return m.ApplyElements(ctx, Statements(3, EmbeddingDimension()))
 }

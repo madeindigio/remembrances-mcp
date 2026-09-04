@@ -7,45 +7,28 @@ import (
 	"github.com/surrealdb/surrealdb.go"
 )
 
+// V8FlexibleKVValue applies schema version 8.
+// Its statements live in statements.go, the single SurrealQL source shared by
+// the remote and the embedded execution paths.
 type V8FlexibleKVValue struct {
-	db *surrealdb.DB
+	*MigrationBase
 }
 
-func NewV8FlexibleKVValue(db *surrealdb.DB) *V8FlexibleKVValue {
-	return &V8FlexibleKVValue{db: db}
+// NewV8FlexibleKVValue creates the v8 migration.
+func NewV8FlexibleKVValue(db *surrealdb.DB) Migration {
+	return &V8FlexibleKVValue{MigrationBase: NewMigrationBase(db)}
 }
 
+// Version returns the migration version.
 func (m *V8FlexibleKVValue) Version() int { return 8 }
 
+// Description returns the migration description.
 func (m *V8FlexibleKVValue) Description() string {
-	return "Fix kv_memories value field to use FLEXIBLE TYPE to handle strings with newlines"
+	return "Fix kv_memories value field to accept every scalar and container shape"
 }
 
+// Apply executes the migration.
 func (m *V8FlexibleKVValue) Apply(ctx context.Context, db *surrealdb.DB) error {
-	slog.Info("Applying migration v8: fixing kv_memories value field to be FLEXIBLE")
-
-	// Remove old field definition
-	removeStatement := `REMOVE FIELD value ON kv_memories;`
-	slog.Debug("Removing old field definition", "stmt", removeStatement)
-	_, err := surrealdb.Query[[]map[string]interface{}](ctx, db, removeStatement, nil)
-	if err != nil {
-		// Log warning but continue - field might not exist
-		slog.Debug("Could not remove field (may not exist)", "error", err)
-	}
-
-	// Redefine with FLEXIBLE keyword to allow strings with newlines
-	element := SchemaElement{
-		Type:      "field",
-		Statement: `DEFINE FIELD value ON kv_memories FLEXIBLE TYPE option<string | int | float | bool | object | array>;`,
-		OnTable:   "kv_memories",
-	}
-
-	slog.Debug("Creating field", "stmt", element.Statement)
-	_, err = surrealdb.Query[[]map[string]interface{}](ctx, db, element.Statement, nil)
-	if err != nil {
-		return err
-	}
-
-	slog.Info("Migration v8 completed successfully")
-	return nil
+	slog.Info("Applying migration", "version", 8, "description", m.Description())
+	return m.ApplyElements(ctx, Statements(8, EmbeddingDimension()))
 }
