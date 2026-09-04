@@ -14,25 +14,31 @@ import (
 
 // CreateIndexingJob creates a new indexing job
 func (s *SurrealDBStorage) CreateIndexingJob(ctx context.Context, job *treesitter.IndexingJob) (string, error) {
-	query := `
-		CREATE code_indexing_jobs SET
-			project_id = $project_id,
-			project_path = $project_path,
-			status = $status,
-			progress = $progress,
-			files_total = $files_total,
-			files_indexed = $files_indexed,
-			started_at = time::now();
-	`
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return "", err
+	}
 
-	params := map[string]interface{}{
+	query := fmt.Sprintf(`
+		CREATE code_indexing_jobs CONTENT {
+			%sproject_id: $project_id,
+			project_path: $project_path,
+			status: $status,
+			progress: $progress,
+			files_total: $files_total,
+			files_indexed: $files_indexed,
+			started_at: time::now()
+		};
+	`, t.contentFields())
+
+	params := t.params(map[string]interface{}{
 		"project_id":    job.ProjectID,
 		"project_path":  job.ProjectPath,
 		"status":        string(job.Status),
 		"progress":      job.Progress,
 		"files_total":   job.FilesTotal,
 		"files_indexed": job.FilesIndexed,
-	}
+	})
 
 	result, err := s.query(ctx, query, params)
 	if err != nil {
@@ -49,27 +55,35 @@ func (s *SurrealDBStorage) CreateIndexingJob(ctx context.Context, job *treesitte
 
 // UpdateIndexingJob updates an indexing job's progress
 func (s *SurrealDBStorage) UpdateIndexingJob(ctx context.Context, jobID string, status treesitter.IndexingStatus, progress float64, filesIndexed int, err *string) error {
-	query := `
-		UPDATE $job_id SET
-			status = $status,
+	t, scopeErr := s.scope(ctx, "")
+	if scopeErr != nil {
+		return scopeErr
+	}
+
+	// The job id is cast rather than interpolated: a bare string parameter in
+	// the FROM or UPDATE position is not a record link and matches nothing.
+	assignments := `status = $status,
 			progress = $progress,
 			files_indexed = $files_indexed,
-			error = $error
-	`
+			error = $error`
+	if status == treesitter.IndexingStatusCompleted || status == treesitter.IndexingStatusFailed {
+		assignments += `,
+			completed_at = time::now()`
+	}
 
-	params := map[string]interface{}{
+	query := fmt.Sprintf(`
+		UPDATE code_indexing_jobs SET
+			%s%s
+		%s;
+	`, t.updateSet(), assignments, t.where("id = type::record($job_id)"))
+
+	params := t.params(map[string]interface{}{
 		"job_id":        jobID,
 		"status":        string(status),
 		"progress":      progress,
 		"files_indexed": filesIndexed,
 		"error":         err,
-	}
-
-	if status == treesitter.IndexingStatusCompleted || status == treesitter.IndexingStatusFailed {
-		query += `, completed_at = time::now()`
-	}
-
-	query += ";"
+	})
 
 	_, queryErr := s.query(ctx, query, params)
 	return queryErr
@@ -77,8 +91,14 @@ func (s *SurrealDBStorage) UpdateIndexingJob(ctx context.Context, jobID string, 
 
 // GetIndexingJob retrieves an indexing job by ID
 func (s *SurrealDBStorage) GetIndexingJob(ctx context.Context, jobID string) (*CodeIndexingJob, error) {
-	query := `SELECT * FROM $job_id;`
-	params := map[string]interface{}{"job_id": jobID}
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("SELECT * FROM code_indexing_jobs %s LIMIT 1;",
+		t.where("id = type::record($job_id)"))
+	params := t.params(map[string]interface{}{"job_id": jobID})
 
 	result, err := s.query(ctx, query, params)
 	if err != nil {
@@ -99,9 +119,15 @@ func (s *SurrealDBStorage) GetIndexingJob(ctx context.Context, jobID string) (*C
 
 // ListActiveIndexingJobs lists all active indexing jobs
 func (s *SurrealDBStorage) ListActiveIndexingJobs(ctx context.Context) ([]CodeIndexingJob, error) {
-	query := `SELECT * FROM code_indexing_jobs WHERE status IN ['pending', 'in_progress'] ORDER BY started_at DESC;`
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
 
-	result, err := s.query(ctx, query, nil)
+	query := fmt.Sprintf("SELECT * FROM code_indexing_jobs %s ORDER BY started_at DESC;",
+		t.where("status IN ['pending', 'in_progress']"))
+
+	result, err := s.query(ctx, query, t.params(nil))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list jobs: %w", err)
 	}
@@ -111,11 +137,18 @@ func (s *SurrealDBStorage) ListActiveIndexingJobs(ctx context.Context) ([]CodeIn
 
 // GetCodeProjectStats returns statistics for a code project
 func (s *SurrealDBStorage) GetCodeProjectStats(ctx context.Context, projectID string) (map[string]interface{}, error) {
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
 	stats := make(map[string]interface{})
+	params := t.params(map[string]interface{}{"project_id": projectID})
+	where := t.where("project_id = $project_id")
 
 	// Get file count
-	fileQuery := `SELECT count() AS count FROM code_files WHERE project_id = $project_id GROUP ALL;`
-	result, err := s.query(ctx, fileQuery, map[string]interface{}{"project_id": projectID})
+	fileQuery := fmt.Sprintf("SELECT count() AS count FROM code_files %s GROUP ALL;", where)
+	result, err := s.query(ctx, fileQuery, params)
 	if err == nil {
 		if counts, _ := decodeResult[map[string]interface{}](result); len(counts) > 0 {
 			stats["files_count"] = counts[0]["count"]
@@ -123,8 +156,8 @@ func (s *SurrealDBStorage) GetCodeProjectStats(ctx context.Context, projectID st
 	}
 
 	// Get symbol count
-	symbolQuery := `SELECT count() AS count FROM code_symbols WHERE project_id = $project_id GROUP ALL;`
-	result, err = s.query(ctx, symbolQuery, map[string]interface{}{"project_id": projectID})
+	symbolQuery := fmt.Sprintf("SELECT count() AS count FROM code_symbols %s GROUP ALL;", where)
+	result, err = s.query(ctx, symbolQuery, params)
 	if err == nil {
 		if counts, _ := decodeResult[map[string]interface{}](result); len(counts) > 0 {
 			stats["symbols_count"] = counts[0]["count"]
@@ -132,8 +165,8 @@ func (s *SurrealDBStorage) GetCodeProjectStats(ctx context.Context, projectID st
 	}
 
 	// Get symbols by type
-	typeQuery := `SELECT symbol_type, count() AS count FROM code_symbols WHERE project_id = $project_id GROUP BY symbol_type;`
-	result, err = s.query(ctx, typeQuery, map[string]interface{}{"project_id": projectID})
+	typeQuery := fmt.Sprintf("SELECT symbol_type, count() AS count FROM code_symbols %s GROUP BY symbol_type;", where)
+	result, err = s.query(ctx, typeQuery, params)
 	if err == nil {
 		if typeCounts, _ := decodeResult[map[string]interface{}](result); len(typeCounts) > 0 {
 			stats["symbols_by_type"] = typeCounts
@@ -141,8 +174,8 @@ func (s *SurrealDBStorage) GetCodeProjectStats(ctx context.Context, projectID st
 	}
 
 	// Get languages
-	langQuery := `SELECT language, count() AS count FROM code_files WHERE project_id = $project_id GROUP BY language;`
-	result, err = s.query(ctx, langQuery, map[string]interface{}{"project_id": projectID})
+	langQuery := fmt.Sprintf("SELECT language, count() AS count FROM code_files %s GROUP BY language;", where)
+	result, err = s.query(ctx, langQuery, params)
 	if err == nil {
 		if langCounts, _ := decodeResult[map[string]interface{}](result); len(langCounts) > 0 {
 			stats["files_by_language"] = langCounts

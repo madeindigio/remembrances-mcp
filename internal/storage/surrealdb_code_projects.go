@@ -15,6 +15,10 @@ import (
 // CreateCodeProject creates or updates a code project
 // Uses INSERT ON DUPLICATE KEY UPDATE for atomic upsert operation
 func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *treesitter.CodeProject) error {
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return err
+	}
 	slog.Debug("CreateCodeProject called", "project_id", project.ProjectID, "status", project.IndexingStatus)
 
 	// Convert language_stats map to a plain map[string]interface{} for SurrealDB
@@ -36,27 +40,26 @@ func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *trees
 	// We must omit the field entirely when it's nil
 	slog.Debug("INSERT ON DUPLICATE KEY UPDATE", "project_id", project.ProjectID, "status", project.IndexingStatus)
 
-	insertFields := `project_id: $project_id,
+	insertFields := t.contentFields() + `project_id: $project_id,
 			name: $name,
 			root_path: $root_path,
 			language_stats: $language_stats,
 			indexing_status: $indexing_status,
 			watcher_enabled: $watcher_enabled`
 
-	updateFields := `name = $input.name,
+	updateFields := t.updateSet() + `name = $input.name,
 			root_path = $input.root_path,
 			language_stats = $input.language_stats,
-			indexing_status = $input.indexing_status,
-			updated_at = time::now()`
+			indexing_status = $input.indexing_status`
 
-	params := map[string]interface{}{
+	params := t.params(map[string]interface{}{
 		"project_id":      project.ProjectID,
 		"name":            project.Name,
 		"root_path":       project.RootPath,
 		"language_stats":  langStats,
 		"indexing_status": string(project.IndexingStatus),
 		"watcher_enabled": watcherEnabled,
-	}
+	})
 
 	// Only add last_indexed_at if it's not nil
 	if project.LastIndexedAt != nil {
@@ -92,8 +95,13 @@ func (s *SurrealDBStorage) CreateCodeProject(ctx context.Context, project *trees
 
 // GetCodeProject retrieves a code project by ID
 func (s *SurrealDBStorage) GetCodeProject(ctx context.Context, projectID string) (*CodeProject, error) {
-	query := `SELECT * FROM code_projects WHERE project_id = $project_id LIMIT 1;`
-	params := map[string]interface{}{"project_id": projectID}
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("SELECT * FROM code_projects %s LIMIT 1;", t.where("project_id = $project_id"))
+	params := t.params(map[string]interface{}{"project_id": projectID})
 
 	result, err := s.query(ctx, query, params)
 	if err != nil {
@@ -114,9 +122,14 @@ func (s *SurrealDBStorage) GetCodeProject(ctx context.Context, projectID string)
 
 // ListCodeProjects lists all code projects
 func (s *SurrealDBStorage) ListCodeProjects(ctx context.Context) ([]CodeProject, error) {
-	query := `SELECT * FROM code_projects ORDER BY name ASC;`
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
 
-	result, err := s.query(ctx, query, nil)
+	query := fmt.Sprintf("SELECT * FROM code_projects %s ORDER BY name ASC;", t.where())
+
+	result, err := s.query(ctx, query, t.params(nil))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list projects: %w", err)
 	}
@@ -126,48 +139,69 @@ func (s *SurrealDBStorage) ListCodeProjects(ctx context.Context) ([]CodeProject,
 
 // UpdateProjectStatus updates the indexing status of a project
 func (s *SurrealDBStorage) UpdateProjectStatus(ctx context.Context, projectID string, status treesitter.IndexingStatus) error {
-	query := `
-		UPDATE code_projects SET
-			indexing_status = $status,
-			updated_at = time::now()
-		WHERE project_id = $project_id;
-	`
-	params := map[string]interface{}{
-		"project_id": projectID,
-		"status":     string(status),
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return err
 	}
 
-	_, err := s.query(ctx, query, params)
+	query := fmt.Sprintf(`
+		UPDATE code_projects SET
+			%sindexing_status = $status
+		%s;
+	`, t.updateSet(), t.where("project_id = $project_id"))
+	params := t.params(map[string]interface{}{
+		"project_id": projectID,
+		"status":     string(status),
+	})
+
+	_, err = s.query(ctx, query, params)
 	return err
 }
 
 // UpdateProjectWatcher updates the watcher_enabled field of a project
 func (s *SurrealDBStorage) UpdateProjectWatcher(ctx context.Context, projectID string, enabled bool) error {
-	query := `
-		UPDATE code_projects SET
-			watcher_enabled = $enabled,
-			updated_at = time::now()
-		WHERE project_id = $project_id;
-	`
-	params := map[string]interface{}{
-		"project_id": projectID,
-		"enabled":    enabled,
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return err
 	}
 
-	_, err := s.query(ctx, query, params)
+	query := fmt.Sprintf(`
+		UPDATE code_projects SET
+			%swatcher_enabled = $enabled
+		%s;
+	`, t.updateSet(), t.where("project_id = $project_id"))
+	params := t.params(map[string]interface{}{
+		"project_id": projectID,
+		"enabled":    enabled,
+	})
+
+	_, err = s.query(ctx, query, params)
 	return err
 }
 
 // DeleteCodeProject deletes a project and all its files and symbols
+// DeleteCodeProject removes a project and everything indexed under it.
+//
+// This is the one place the storage layer still deletes rather than
+// invalidates: a code index is a derived artefact, rebuilt from the working
+// tree on demand, so there is nothing for a sync consumer to mirror and
+// keeping every stale symbol for ever would dwarf the memory tables. The
+// tenant predicate still applies, so a caller can only delete its own index.
 func (s *SurrealDBStorage) DeleteCodeProject(ctx context.Context, projectID string) error {
-	// Delete in order: symbols, files, project
-	queries := []string{
-		`DELETE FROM code_symbols WHERE project_id = $project_id;`,
-		`DELETE FROM code_files WHERE project_id = $project_id;`,
-		`DELETE FROM code_indexing_jobs WHERE project_id = $project_id;`,
-		`DELETE FROM code_projects WHERE project_id = $project_id;`,
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return err
 	}
-	params := map[string]interface{}{"project_id": projectID}
+
+	// Delete in order: chunks, symbols, files, jobs, project
+	queries := []string{
+		fmt.Sprintf("DELETE FROM code_chunks %s;", t.whereAny("project_id = $project_id")),
+		fmt.Sprintf("DELETE FROM code_symbols %s;", t.whereAny("project_id = $project_id")),
+		fmt.Sprintf("DELETE FROM code_files %s;", t.whereAny("project_id = $project_id")),
+		fmt.Sprintf("DELETE FROM code_indexing_jobs %s;", t.whereAny("project_id = $project_id")),
+		fmt.Sprintf("DELETE FROM code_projects %s;", t.whereAny("project_id = $project_id")),
+	}
+	params := t.params(map[string]interface{}{"project_id": projectID})
 
 	for _, query := range queries {
 		if _, err := s.query(ctx, query, params); err != nil {

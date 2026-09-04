@@ -3,7 +3,7 @@ package migrations
 import "fmt"
 
 // TargetVersion is the schema version a current binary migrates to.
-const TargetVersion = 13
+const TargetVersion = 14
 
 // MemoryTables lists every table that carries the v13 tenant, scope, principal
 // and validity columns. The code_* family is included for uniformity: a table
@@ -132,6 +132,8 @@ func Statements(version, dim int) []SchemaElement {
 		return v12Statements()
 	case 13:
 		return v13Statements(dim)
+	case 14:
+		return v14Statements()
 	default:
 		return nil
 	}

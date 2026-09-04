@@ -13,18 +13,28 @@ import (
 
 // SaveCodeFile saves or updates a code file
 func (s *SurrealDBStorage) SaveCodeFile(ctx context.Context, file *treesitter.CodeFile) error {
-	// Check if file exists (same pattern as SaveDocument)
-	existsQuery := "SELECT id FROM code_files WHERE project_id = $project_id AND file_path = $file_path"
-	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{
-		"project_id": file.ProjectID,
-		"file_path":  file.FilePath,
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return err
+	}
+
+	params := t.params(map[string]interface{}{
+		"project_id":    file.ProjectID,
+		"file_path":     file.FilePath,
+		"language":      string(file.Language),
+		"file_hash":     file.FileHash,
+		"symbols_count": file.SymbolsCount,
 	})
 
-	isNewFile := true
+	// Check if the file is already indexed in one of the caller's scopes.
+	existsQuery := fmt.Sprintf("SELECT id FROM code_files %s",
+		t.where("project_id = $project_id", "file_path = $file_path"))
+	existsResult, err := s.query(ctx, existsQuery, params)
 	if err != nil {
 		return fmt.Errorf("failed to check existing file: %w", err)
 	}
 
+	isNewFile := true
 	if existsResult != nil && len(*existsResult) > 0 {
 		queryResult := (*existsResult)[0]
 		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
@@ -32,37 +42,29 @@ func (s *SurrealDBStorage) SaveCodeFile(ctx context.Context, file *treesitter.Co
 		}
 	}
 
-	params := map[string]interface{}{
-		"project_id":    file.ProjectID,
-		"file_path":     file.FilePath,
-		"language":      string(file.Language),
-		"file_hash":     file.FileHash,
-		"symbols_count": file.SymbolsCount,
-	}
-
 	if isNewFile {
-		query := `
+		query := fmt.Sprintf(`
 			CREATE code_files CONTENT {
-				project_id: $project_id,
+				%sproject_id: $project_id,
 				file_path: $file_path,
 				language: $language,
 				file_hash: $file_hash,
 				symbols_count: $symbols_count,
 				indexed_at: time::now()
 			}
-		`
+		`, t.contentFields())
 		if _, err := s.query(ctx, query, params); err != nil {
 			return fmt.Errorf("failed to create file: %w", err)
 		}
 	} else {
-		query := `
+		query := fmt.Sprintf(`
 			UPDATE code_files SET
-				language = $language,
+				%slanguage = $language,
 				file_hash = $file_hash,
 				symbols_count = $symbols_count,
 				indexed_at = time::now()
-			WHERE project_id = $project_id AND file_path = $file_path
-		`
+			%s
+		`, t.updateSet(), t.where("project_id = $project_id", "file_path = $file_path"))
 		if _, err := s.query(ctx, query, params); err != nil {
 			return fmt.Errorf("failed to update file: %w", err)
 		}
@@ -73,11 +75,17 @@ func (s *SurrealDBStorage) SaveCodeFile(ctx context.Context, file *treesitter.Co
 
 // GetCodeFile retrieves a code file by project and path
 func (s *SurrealDBStorage) GetCodeFile(ctx context.Context, projectID, filePath string) (*CodeFile, error) {
-	query := `SELECT * FROM code_files WHERE project_id = $project_id AND file_path = $file_path LIMIT 1;`
-	params := map[string]interface{}{
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("SELECT * FROM code_files %s LIMIT 1;",
+		t.where("project_id = $project_id", "file_path = $file_path"))
+	params := t.params(map[string]interface{}{
 		"project_id": projectID,
 		"file_path":  filePath,
-	}
+	})
 
 	result, err := s.query(ctx, query, params)
 	if err != nil {
@@ -98,8 +106,14 @@ func (s *SurrealDBStorage) GetCodeFile(ctx context.Context, projectID, filePath 
 
 // ListCodeFiles lists all files in a project
 func (s *SurrealDBStorage) ListCodeFiles(ctx context.Context, projectID string) ([]CodeFile, error) {
-	query := `SELECT * FROM code_files WHERE project_id = $project_id ORDER BY file_path ASC;`
-	params := map[string]interface{}{"project_id": projectID}
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("SELECT * FROM code_files %s ORDER BY file_path ASC;",
+		t.where("project_id = $project_id"))
+	params := t.params(map[string]interface{}{"project_id": projectID})
 
 	result, err := s.query(ctx, query, params)
 	if err != nil {
@@ -111,15 +125,22 @@ func (s *SurrealDBStorage) ListCodeFiles(ctx context.Context, projectID string) 
 
 // DeleteCodeFile deletes a file and all its symbols
 func (s *SurrealDBStorage) DeleteCodeFile(ctx context.Context, projectID, filePath string) error {
-	// Delete symbols first, then file
-	queries := []string{
-		`DELETE FROM code_symbols WHERE project_id = $project_id AND file_path = $file_path;`,
-		`DELETE FROM code_files WHERE project_id = $project_id AND file_path = $file_path;`,
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return err
 	}
-	params := map[string]interface{}{
+
+	// Delete chunks and symbols first, then the file. See DeleteCodeProject
+	// for why the code index deletes rather than invalidates.
+	queries := []string{
+		fmt.Sprintf("DELETE FROM code_chunks %s;", t.whereAny("project_id = $project_id", "file_path = $file_path")),
+		fmt.Sprintf("DELETE FROM code_symbols %s;", t.whereAny("project_id = $project_id", "file_path = $file_path")),
+		fmt.Sprintf("DELETE FROM code_files %s;", t.whereAny("project_id = $project_id", "file_path = $file_path")),
+	}
+	params := t.params(map[string]interface{}{
 		"project_id": projectID,
 		"file_path":  filePath,
-	}
+	})
 
 	for _, query := range queries {
 		if _, err := s.query(ctx, query, params); err != nil {

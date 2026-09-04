@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+
+	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
 )
 
 // Event represents a temporal event with semantic search support
@@ -38,33 +40,38 @@ type EventSearchResult struct {
 	Relevance float64 `json:"relevance"`
 }
 
-// SaveEvent stores a new event with embedding for semantic search
+// SaveEvent stores a new event with embedding for semantic search, in the
+// caller's write scope.
 func (s *SurrealDBStorage) SaveEvent(ctx context.Context, userID, subject, content string, embedding []float32, metadata map[string]interface{}) (string, time.Time, error) {
+	t, err := s.scope(ctx, userID)
+	if err != nil {
+		return "", time.Time{}, err
+	}
 	if metadata == nil {
 		metadata = map[string]interface{}{}
 	}
 
-	// Pad or truncate to the configured vector width: SurrealDB 3.x reads
-	// array<float, N> as exactly N elements.
-	emb64 := normalizeEmbedding(embedding)
-
-	query := `
-		INSERT INTO events {
-			user_id: $user_id,
+	query := fmt.Sprintf(`
+		CREATE events CONTENT {
+			%suser_id: $user_id,
 			subject: $subject,
 			content: $content,
 			embedding: $embedding,
 			metadata: $metadata,
-			created_at: time::now()
+			created_at: time::now(),
+			content_hash: %s
 		} RETURN id, created_at
-	`
-	params := map[string]interface{}{
-		"user_id":   userID,
-		"subject":   subject,
-		"content":   content,
-		"embedding": emb64,
+	`, t.contentFields(), migrations.ContentHashSurrealExpr("$content"))
+
+	params := t.params(map[string]interface{}{
+		"subject": subject,
+		"content": content,
+		// Pad or truncate to the configured vector width: SurrealDB 3.x reads
+		// array<float, N> as exactly N elements.
+		"embedding": normalizeEmbedding(embedding),
 		"metadata":  metadata,
-	}
+		"user_id":   t.Principal().LegacyUserID,
+	})
 
 	result, err := s.query(ctx, query, params)
 	if err != nil {
@@ -76,22 +83,13 @@ func (s *SurrealDBStorage) SaveEvent(ctx context.Context, userID, subject, conte
 		queryResult := (*result)[0]
 		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
 			rec := queryResult.Result[0]
-			var eventID string
-			var createdAt time.Time
-
-			if id, ok := rec["id"]; ok {
-				eventID = fmt.Sprintf("%v", id)
-			}
-			if cat, ok := rec["created_at"]; ok {
-				if catStr, ok := cat.(string); ok {
-					createdAt, _ = time.Parse(time.RFC3339Nano, catStr)
-				}
-			}
+			eventID := extractRecordID(rec["id"])
+			createdAt := getTime(rec, "created_at")
 			if createdAt.IsZero() {
 				createdAt = time.Now()
 			}
 
-			slog.Debug("Event saved", "id", eventID, "subject", subject, "user_id", userID)
+			slog.Debug("Event saved", "id", eventID, "subject", subject, "principal", t.Principal().String())
 			return eventID, createdAt, nil
 		}
 	}
@@ -99,10 +97,15 @@ func (s *SurrealDBStorage) SaveEvent(ctx context.Context, userID, subject, conte
 	return "", time.Time{}, fmt.Errorf("failed to save event: no result returned")
 }
 
-// SearchEvents performs hybrid search on events with temporal filtering
+// SearchEvents performs hybrid search on events with temporal filtering,
+// restricted to the caller's visible scopes.
+//
+// params.UserID is the legacy ownership label: it selects the legacy principal
+// when the context carries none, and is ignored outright when it does.
 func (s *SurrealDBStorage) SearchEvents(ctx context.Context, params EventSearchParams) ([]EventSearchResult, error) {
-	if params.UserID == "" {
-		return nil, fmt.Errorf("user_id is required")
+	t, err := s.scope(ctx, params.UserID)
+	if err != nil {
+		return nil, err
 	}
 
 	if params.Limit <= 0 {
@@ -138,12 +141,11 @@ func (s *SurrealDBStorage) SearchEvents(ctx context.Context, params EventSearchP
 
 	var query string
 	queryParams := map[string]interface{}{
-		"user_id": params.UserID,
-		"limit":   params.Limit,
+		"limit": params.Limit,
 	}
 
-	// Build WHERE conditions
-	conditions := []string{"user_id = $user_id"}
+	// Conditions beyond the tenant clauses, which tenancy.where prepends.
+	var conditions []string
 
 	if params.Subject != "" {
 		conditions = append(conditions, "subject = $subject")
@@ -162,22 +164,11 @@ func (s *SurrealDBStorage) SearchEvents(ctx context.Context, params EventSearchP
 		queryParams["to_date"] = toDate.UTC().Truncate(time.Second).Format(time.RFC3339)
 	}
 
-	whereClause := ""
-	for i, cond := range conditions {
-		if i == 0 {
-			whereClause = "WHERE " + cond
-		} else {
-			whereClause += " AND " + cond
-		}
-	}
+	whereClause := t.where(conditions...)
 
 	if hasQuery {
 		// Hybrid search: combine BM25 text score and vector similarity
-		emb64 := make([]float64, len(params.Embedding))
-		for i, v := range params.Embedding {
-			emb64[i] = float64(v)
-		}
-		queryParams["query_embedding"] = emb64
+		queryParams["query_embedding"] = normalizeEmbedding(params.Embedding)
 		queryParams["text_query"] = params.Query
 
 		query = fmt.Sprintf(`
@@ -206,11 +197,7 @@ func (s *SurrealDBStorage) SearchEvents(ctx context.Context, params EventSearchP
 		`, whereClause)
 	} else if hasVectorOnly {
 		// Vector-only search
-		emb64 := make([]float64, len(params.Embedding))
-		for i, v := range params.Embedding {
-			emb64[i] = float64(v)
-		}
-		queryParams["query_embedding"] = emb64
+		queryParams["query_embedding"] = normalizeEmbedding(params.Embedding)
 
 		query = fmt.Sprintf(`
 			SELECT 
@@ -234,7 +221,7 @@ func (s *SurrealDBStorage) SearchEvents(ctx context.Context, params EventSearchP
 		`, whereClause)
 	}
 
-	result, err := s.query(ctx, query, queryParams)
+	result, err := s.query(ctx, query, t.params(queryParams))
 	if err != nil {
 		return nil, fmt.Errorf("failed to search events: %w", err)
 	}
@@ -290,16 +277,18 @@ func (s *SurrealDBStorage) parseEventResults(result *[]QueryResult) ([]EventSear
 	return results, nil
 }
 
-// DeleteEvent deletes an event by ID
+// DeleteEvent invalidates an event the caller can see. Events are append-only
+// temporal records, so the row is never removed: the tombstone is what the
+// RM-9 feed shows a consumer.
 func (s *SurrealDBStorage) DeleteEvent(ctx context.Context, eventID, userID string) error {
-	query := `DELETE FROM events WHERE id = $id AND user_id = $user_id`
-	params := map[string]interface{}{
-		"id":      eventID,
-		"user_id": userID,
+	t, err := s.scope(ctx, userID)
+	if err != nil {
+		return err
 	}
 
-	_, err := s.query(ctx, query, params)
-	if err != nil {
+	query := fmt.Sprintf("UPDATE events SET %s %s", t.invalidateSet(),
+		t.where("id = type::record($id)"))
+	if _, err := s.query(ctx, query, t.params(map[string]interface{}{"id": eventID})); err != nil {
 		return fmt.Errorf("failed to delete event: %w", err)
 	}
 
@@ -312,18 +301,22 @@ func (s *SurrealDBStorage) GetEventsBySubject(ctx context.Context, userID, subje
 		limit = 100
 	}
 
-	query := `
+	t, err := s.scope(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf(`
 		SELECT id, user_id, subject, content, metadata, created_at
 		FROM events
-		WHERE user_id = $user_id AND subject = $subject
+		%s
 		ORDER BY created_at ASC
 		LIMIT $limit
-	`
-	params := map[string]interface{}{
-		"user_id": userID,
+	`, t.where("subject = $subject"))
+	params := t.params(map[string]interface{}{
 		"subject": subject,
 		"limit":   limit,
-	}
+	})
 
 	result, err := s.query(ctx, query, params)
 	if err != nil {

@@ -15,7 +15,8 @@ import (
 
 // TargetSchemaVersion is the schema version a current binary migrates to.
 // v13 adds the tenant, scope, principal and validity model and is one-way:
-// there is no v13 to v12 path and none will be written.
+// there is no v13 to v12 path and none will be written. v14 adds the change
+// feed sequence RM-9 orders the feed by.
 const TargetSchemaVersion = migrations.TargetVersion
 
 // InitializeSchema creates all required tables and indexes
@@ -193,6 +194,8 @@ func (s *SurrealDBStorage) applyMigration(ctx context.Context, version int) erro
 		migration = migrations.NewV12CodeProjectsWatcher(s.db)
 	case 13:
 		migration = migrations.NewV13TenantScopePrincipal(s.db)
+	case 14:
+		migration = migrations.NewV14ChangeFeed(s.db)
 	default:
 		return fmt.Errorf("unknown migration version: %d", version)
 	}

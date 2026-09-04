@@ -20,26 +20,12 @@ func (s *SurrealDBStorage) SaveCodeChunk(ctx context.Context, chunk *CodeChunk) 
 
 // saveCodeChunkAttempt performs a single attempt to save a code chunk
 func (s *SurrealDBStorage) saveCodeChunkAttempt(ctx context.Context, chunk *CodeChunk) error {
-	// Check if chunk exists (same pattern as SaveDocument)
-	existsQuery := "SELECT id FROM code_chunks WHERE symbol_id = $symbol_id AND chunk_index = $chunk_index"
-	existsResult, err := s.query(ctx, existsQuery, map[string]interface{}{
-		"symbol_id":   chunk.SymbolID,
-		"chunk_index": chunk.ChunkIndex,
-	})
-
-	isNewChunk := true
+	t, err := s.scope(ctx, "")
 	if err != nil {
-		return fmt.Errorf("failed to check existing chunk: %w", err)
+		return err
 	}
 
-	if existsResult != nil && len(*existsResult) > 0 {
-		queryResult := (*existsResult)[0]
-		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
-			isNewChunk = false
-		}
-	}
-
-	params := map[string]interface{}{
+	params := t.params(map[string]interface{}{
 		"symbol_id":    chunk.SymbolID,
 		"project_id":   chunk.ProjectID,
 		"file_path":    chunk.FilePath,
@@ -48,16 +34,32 @@ func (s *SurrealDBStorage) saveCodeChunkAttempt(ctx context.Context, chunk *Code
 		"content":      chunk.Content,
 		"start_offset": chunk.StartOffset,
 		"end_offset":   chunk.EndOffset,
-		"embedding":    chunk.Embedding,
+		"embedding":    normalizeEmbedding(chunk.Embedding),
 		"symbol_name":  chunk.SymbolName,
 		"symbol_type":  chunk.SymbolType,
 		"language":     chunk.Language,
+	})
+
+	// Check if the chunk is already stored in one of the caller's scopes.
+	existsQuery := fmt.Sprintf("SELECT id FROM code_chunks %s",
+		t.where("symbol_id = $symbol_id", "chunk_index = $chunk_index"))
+	existsResult, err := s.query(ctx, existsQuery, params)
+	if err != nil {
+		return fmt.Errorf("failed to check existing chunk: %w", err)
+	}
+
+	isNewChunk := true
+	if existsResult != nil && len(*existsResult) > 0 {
+		queryResult := (*existsResult)[0]
+		if queryResult.Status == "OK" && len(queryResult.Result) > 0 {
+			isNewChunk = false
+		}
 	}
 
 	if isNewChunk {
-		query := `
+		query := fmt.Sprintf(`
 			CREATE code_chunks CONTENT {
-				symbol_id: $symbol_id,
+				%ssymbol_id: $symbol_id,
 				project_id: $project_id,
 				file_path: $file_path,
 				chunk_index: $chunk_index,
@@ -70,14 +72,14 @@ func (s *SurrealDBStorage) saveCodeChunkAttempt(ctx context.Context, chunk *Code
 				symbol_type: $symbol_type,
 				language: $language
 			}
-		`
+		`, t.contentFields())
 		if _, err := s.query(ctx, query, params); err != nil {
 			return fmt.Errorf("failed to create chunk: %w", err)
 		}
 	} else {
-		query := `
+		query := fmt.Sprintf(`
 			UPDATE code_chunks SET
-				project_id = $project_id,
+				%sproject_id = $project_id,
 				file_path = $file_path,
 				chunk_count = $chunk_count,
 				content = $content,
@@ -87,8 +89,8 @@ func (s *SurrealDBStorage) saveCodeChunkAttempt(ctx context.Context, chunk *Code
 				symbol_name = $symbol_name,
 				symbol_type = $symbol_type,
 				language = $language
-			WHERE symbol_id = $symbol_id AND chunk_index = $chunk_index
-		`
+			%s
+		`, t.updateSet(), t.where("symbol_id = $symbol_id", "chunk_index = $chunk_index"))
 		if _, err := s.query(ctx, query, params); err != nil {
 			return fmt.Errorf("failed to update chunk: %w", err)
 		}
@@ -99,6 +101,10 @@ func (s *SurrealDBStorage) saveCodeChunkAttempt(ctx context.Context, chunk *Code
 
 // SaveCodeChunks saves multiple code chunks in a batch
 func (s *SurrealDBStorage) SaveCodeChunks(ctx context.Context, chunks []*CodeChunk) error {
+	// Resolved up front so an empty batch with no principal still fails closed.
+	if _, err := s.scope(ctx, ""); err != nil {
+		return err
+	}
 	for _, chunk := range chunks {
 		if err := s.SaveCodeChunk(ctx, chunk); err != nil {
 			return fmt.Errorf("failed to save chunk: %w", err)
@@ -109,20 +115,32 @@ func (s *SurrealDBStorage) SaveCodeChunks(ctx context.Context, chunks []*CodeChu
 
 // DeleteChunksBySymbol deletes all chunks for a symbol
 func (s *SurrealDBStorage) DeleteChunksBySymbol(ctx context.Context, symbolID string) error {
-	query := `DELETE FROM code_chunks WHERE symbol_id = $symbol_id;`
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return err
+	}
+
+	query := fmt.Sprintf("DELETE FROM code_chunks %s;", t.whereAny("symbol_id = $symbol_id"))
+	params := t.params(map[string]interface{}{"symbol_id": symbolID})
 	return s.withTxnRetry(ctx, func(ctx context.Context) error {
-		_, err := s.query(ctx, query, map[string]interface{}{"symbol_id": symbolID})
+		_, err := s.query(ctx, query, params)
 		return err
 	})
 }
 
 // DeleteChunksByFile deletes all chunks for a file
 func (s *SurrealDBStorage) DeleteChunksByFile(ctx context.Context, projectID, filePath string) error {
-	query := `DELETE FROM code_chunks WHERE project_id = $project_id AND file_path = $file_path;`
-	params := map[string]interface{}{
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return err
+	}
+
+	query := fmt.Sprintf("DELETE FROM code_chunks %s;",
+		t.whereAny("project_id = $project_id", "file_path = $file_path"))
+	params := t.params(map[string]interface{}{
 		"project_id": projectID,
 		"file_path":  filePath,
-	}
+	})
 
 	return s.withTxnRetry(ctx, func(ctx context.Context) error {
 		_, err := s.query(ctx, query, params)
@@ -152,8 +170,14 @@ func (s *SurrealDBStorage) withTxnRetry(ctx context.Context, fn func(context.Con
 
 // GetChunksBySymbol retrieves all chunks for a symbol
 func (s *SurrealDBStorage) GetChunksBySymbol(ctx context.Context, symbolID string) ([]CodeChunk, error) {
-	query := `SELECT * FROM code_chunks WHERE symbol_id = $symbol_id ORDER BY chunk_index ASC;`
-	result, err := s.query(ctx, query, map[string]interface{}{"symbol_id": symbolID})
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("SELECT * FROM code_chunks %s ORDER BY chunk_index ASC;",
+		t.where("symbol_id = $symbol_id"))
+	result, err := s.query(ctx, query, t.params(map[string]interface{}{"symbol_id": symbolID}))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get chunks: %w", err)
 	}
@@ -162,20 +186,24 @@ func (s *SurrealDBStorage) GetChunksBySymbol(ctx context.Context, symbolID strin
 
 // SearchChunksBySimilarity performs semantic search on code chunks
 func (s *SurrealDBStorage) SearchChunksBySimilarity(ctx context.Context, projectID string, queryEmbedding []float32, limit int) ([]CodeChunkSearchResult, error) {
-	query := `
-		SELECT *, vector::similarity::cosine(embedding, $embedding) AS similarity 
-		FROM code_chunks 
-		WHERE project_id = $project_id 
-		AND embedding != NONE
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf(`
+		SELECT *, vector::similarity::cosine(embedding, $embedding) AS similarity
+		FROM code_chunks
+		%s
 		ORDER BY similarity DESC
 		LIMIT $limit;
-	`
+	`, t.where("project_id = $project_id", "embedding != NONE"))
 
-	params := map[string]interface{}{
+	params := t.params(map[string]interface{}{
 		"project_id": projectID,
-		"embedding":  queryEmbedding,
+		"embedding":  normalizeEmbedding(queryEmbedding),
 		"limit":      limit,
-	}
+	})
 
 	result, err := s.query(ctx, query, params)
 	if err != nil {

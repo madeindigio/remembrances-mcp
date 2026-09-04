@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	embeddedlibs "github.com/madeindigio/remembrances-mcp/internal/embedded"
@@ -28,6 +29,11 @@ type SurrealDBStorage struct {
 
 	embeddedLoader *embeddedlibs.Loader
 	embeddedLibs   *embeddedlibs.ExtractResult
+
+	// legacyPrincipals remembers which derived legacy principals have already
+	// been materialised, so the fallback path writes their records once per
+	// process rather than on every call. See ensureLegacyPrincipal.
+	legacyPrincipals sync.Map
 }
 
 // NewSurrealDBStorage creates a new SurrealDB storage instance

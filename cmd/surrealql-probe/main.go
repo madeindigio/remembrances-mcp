@@ -50,23 +50,37 @@ func run() error {
 		return fmt.Errorf("failed to select namespace and database: %w", err)
 	}
 
-	fmt.Println("== dialect clauses ==")
-	failed := 0
-	for _, c := range dialectStatements() {
-		got := probe(db, []string{c.Statement})
-		if (got > 0) != c.WantErr {
-			failed++
-			fmt.Printf("     ^^ UNEXPECTED: wanted error=%v\n", c.WantErr)
-		}
+	// "rm239" restricts the run to the tenancy probes, which is the fast loop
+	// while the RM-2, RM-3 and RM-9 query shapes are being settled.
+	only := ""
+	if len(os.Args) > 1 {
+		only = os.Args[1]
 	}
 
-	fmt.Println()
-	fmt.Println("== the migration statements this tree emits ==")
-	for version := 1; version <= migrations.TargetVersion; version++ {
-		stmts := migrations.StatementStrings(version, migrations.EmbeddingDimension())
-		fmt.Printf("-- v%d (%d statements)\n", version, len(stmts))
-		failed += probe(db, stmts)
+	failed := 0
+	if only == "" {
+		fmt.Println("== dialect clauses ==")
+		for _, c := range dialectStatements() {
+			got := probe(db, []string{c.Statement})
+			if (got > 0) != c.WantErr {
+				failed++
+				fmt.Printf("     ^^ UNEXPECTED: wanted error=%v\n", c.WantErr)
+			}
+		}
+
+		fmt.Println()
+		fmt.Println("== the migration statements this tree emits ==")
+		for version := 1; version <= migrations.TargetVersion; version++ {
+			stmts := migrations.StatementStrings(version, migrations.EmbeddingDimension())
+			fmt.Printf("-- v%d (%d statements)\n", version, len(stmts))
+			failed += probe(db, stmts)
+		}
+		fmt.Println()
 	}
+
+	fmt.Println("== RM-2, RM-3 and RM-9 runtime query shapes ==")
+	failed += probe(db, rm239Fixture())
+	failed += probeParams(db, rm239Cases())
 
 	fmt.Printf("\n%d statements were rejected by the engine.\n", failed)
 	if failed > 0 {

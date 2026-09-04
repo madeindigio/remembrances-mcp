@@ -415,6 +415,17 @@ func Main() {
 	// Allow modules to wrap storage (e.g., db-sync-server wraps with MergedStorage)
 	storageInstance = modManager.WrapStorage(storageInstance)
 
+	// Start the module lifecycles. RM-4 added Start and Stop to the module
+	// contract; until they are called here a module's background work (Mem's
+	// refinement worker, its JWKS refresher) never runs, so the lifecycle is
+	// inert no matter what a module implements. A module that fails to start
+	// stops the process rather than leaving a half configured server serving
+	// requests it cannot honour.
+	if err := modManager.StartModules(ctx); err != nil {
+		slog.Error("failed to start modules", "error", err)
+		os.Exit(1)
+	}
+
 	// Register tools from modules
 	if err := registerModuleTools(modManager, srv); err != nil {
 		slog.Error("failed to register module tools", "error", err)
@@ -449,8 +460,14 @@ func Main() {
 		// Register HTTP routes from modules
 		httpProviders := modManager.GetHTTPEndpointProviders()
 		if len(httpProviders) > 0 {
-			httpTransport.RegisterModuleRoutes(httpProviders)
-			slog.Info("Registered HTTP endpoint providers", "count", len(httpProviders))
+			// The auth providers must be passed in: RegisterModuleRoutes wraps
+			// every module route in the authentication layer built from them,
+			// and calling it without them registers the same routes with no
+			// authentication at all.
+			authProviders := modManager.GetHTTPAuthProviders()
+			httpTransport.RegisterModuleRoutes(httpProviders, authProviders...)
+			slog.Info("Registered HTTP endpoint providers",
+				"count", len(httpProviders), "auth_providers", len(authProviders))
 		}
 	}
 
@@ -471,6 +488,14 @@ func Main() {
 		// Stop knowledge base watcher
 		if kbWatcher != nil {
 			kbWatcher.Stop()
+		}
+
+		// Stop the module lifecycles before releasing their resources: Stop
+		// unwinds what StartModules started, Cleanup releases what Provision
+		// allocated, and doing them in that order is what lets a module drain
+		// in flight work instead of losing it.
+		if err := modManager.StopModules(shutdownCtx); err != nil {
+			slog.Warn("failed to stop one or more modules", "error", err)
 		}
 
 		// Stop module-managed resources

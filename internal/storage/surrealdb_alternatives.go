@@ -4,17 +4,29 @@ import (
 	"context"
 	"fmt"
 	"sort"
+
+	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
 )
 
-// ListUserIDs returns distinct user_ids for the given table.
+// ListUserIDs returns the distinct legacy user_id labels visible to the caller
+// in the given table.
+//
+// It is a legacy listing: user_id is the pre-v13 ownership label, and the
+// answer is now bounded by the caller's org and scopes, so it can no longer be
+// used to enumerate the tenants of a shared datastore.
 func (s *SurrealDBStorage) ListUserIDs(ctx context.Context, table string) ([]string, error) {
 	values := []string{}
-	if table == "" {
-		return values, fmt.Errorf("table name is required")
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return values, err
+	}
+	if !isMemoryTable(table) {
+		return values, fmt.Errorf("unknown memory table %q", table)
 	}
 
-	query := fmt.Sprintf("SELECT array::distinct(user_id) AS user_ids FROM %s WHERE user_id IS NOT NULL", table)
-	result, err := s.query(ctx, query, nil)
+	query := fmt.Sprintf("SELECT array::distinct(user_id) AS user_ids FROM %s %s",
+		table, t.where("user_id != NONE"))
+	result, err := s.query(ctx, query, t.params(nil))
 	if err != nil {
 		return values, fmt.Errorf("failed to list user ids for %s: %w", table, err)
 	}
@@ -24,10 +36,16 @@ func (s *SurrealDBStorage) ListUserIDs(ctx context.Context, table string) ([]str
 	return values, nil
 }
 
-// ListFactKeys returns distinct fact keys for a user.
+// ListFactKeys returns the distinct keys of the live facts visible to the
+// caller.
 func (s *SurrealDBStorage) ListFactKeys(ctx context.Context, userID string) ([]string, error) {
-	query := "SELECT array::distinct(key) AS keys FROM kv_memories WHERE user_id = $user_id"
-	result, err := s.query(ctx, query, map[string]interface{}{"user_id": userID})
+	t, err := s.scope(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("SELECT array::distinct(key) AS keys FROM kv_memories %s", t.where())
+	result, err := s.query(ctx, query, t.params(nil))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list fact keys: %w", err)
 	}
@@ -37,9 +55,15 @@ func (s *SurrealDBStorage) ListFactKeys(ctx context.Context, userID string) ([]s
 	return keys, nil
 }
 
-// ListEntityIDs returns distinct entity IDs.
+// ListEntityIDs returns the ids of the live entities visible to the caller.
 func (s *SurrealDBStorage) ListEntityIDs(ctx context.Context) ([]string, error) {
-	result, err := s.query(ctx, "SELECT array::distinct(id) AS ids FROM entities", nil)
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := s.query(ctx,
+		fmt.Sprintf("SELECT array::distinct(id) AS ids FROM entities %s", t.where()), t.params(nil))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list entity ids: %w", err)
 	}
@@ -49,9 +73,16 @@ func (s *SurrealDBStorage) ListEntityIDs(ctx context.Context) ([]string, error) 
 	return ids, nil
 }
 
-// ListDocumentPaths returns distinct document file paths.
+// ListDocumentPaths returns the paths of the live documents visible to the
+// caller.
 func (s *SurrealDBStorage) ListDocumentPaths(ctx context.Context) ([]string, error) {
-	result, err := s.query(ctx, "SELECT array::distinct(file_path) AS paths FROM knowledge_base", nil)
+	t, err := s.scope(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := s.query(ctx,
+		fmt.Sprintf("SELECT array::distinct(file_path) AS paths FROM knowledge_base %s", t.where()), t.params(nil))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list document paths: %w", err)
 	}
@@ -92,4 +123,16 @@ func extractStringArray(results *[]QueryResult, field string) []string {
 	}
 
 	return values
+}
+
+// isMemoryTable reports whether the name is one of the tables that carry the
+// v13 tenant columns. Table names reach SurrealQL by interpolation, so the
+// allowed set is a list rather than an escape.
+func isMemoryTable(table string) bool {
+	for _, t := range migrations.MemoryTables {
+		if t == table {
+			return true
+		}
+	}
+	return false
 }

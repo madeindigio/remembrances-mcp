@@ -4,80 +4,90 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+
+	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
 )
 
-// IndexVector stores a vector embedding with content and metadata
+// The vector memory surface, scoped per RM-2.
+//
+// Before this change these methods wrote vector_memories and read
+// semantic_memories, a table no migration has ever defined, so an update or a
+// delete was a no-op against an empty table. Everything here now addresses
+// vector_memories, which is the table the schema, the HNSW index and the v13
+// backfill know about.
+
+// vectorContentHash fills content_hash on vector_memories. It must agree with
+// migrations.ContentHash: the v14 uniqueness index depends on the two sides
+// computing the same value.
+var vectorContentHash = migrations.ContentHashSurrealExpr("$content")
+
+// IndexVector stores a vector embedding with content and metadata in the
+// caller's write scope.
 func (s *SurrealDBStorage) IndexVector(ctx context.Context, userID, content string, embedding []float32, metadata map[string]interface{}) error {
+	t, err := s.scope(ctx, userID)
+	if err != nil {
+		return err
+	}
+
 	// SurrealDB schema defines `metadata` as an object. Ensure we never send NULL.
 	if metadata == nil {
 		metadata = map[string]interface{}{}
 	}
 
-	// Pad or truncate to the configured vector width: SurrealDB 3.x reads
-	// array<float, N> as exactly N elements.
-	emb64 := normalizeEmbedding(embedding)
-
-	// Si userID es vacío, no incluir el campo en el insert
-	query := `
-	       INSERT INTO vector_memories {
-		       content: $content,
-		       embedding: $embedding,
-		       metadata: $metadata,
-		       content_hash: crypto::sha256(string::trim($content)),
-		       created_at: time::now(),
-		       updated_at: time::now()` + func() string {
-		if userID != "" {
-			return ",\n\t\tuser_id: $user_id"
-		}
-		return ""
-	}() + `
-	       } RETURN id
-       `
-	params := map[string]interface{}{
-		"content":   content,
-		"embedding": emb64,
+	params := t.params(map[string]interface{}{
+		"content": content,
+		// Pad or truncate to the configured vector width: SurrealDB 3.x reads
+		// array<float, N> as exactly N elements.
+		"embedding": normalizeEmbedding(embedding),
 		"metadata":  metadata,
-	}
-	if userID != "" {
-		params["user_id"] = userID
-	}
+		"user_id":   t.Principal().LegacyUserID,
+	})
 
-	result, err := s.query(ctx, query, params)
-	if err != nil {
+	query := fmt.Sprintf(`
+		CREATE vector_memories CONTENT {
+			%suser_id: $user_id,
+			content: $content,
+			embedding: $embedding,
+			metadata: $metadata,
+			content_hash: %s
+		}
+	`, t.contentFields(), vectorContentHash)
+
+	if _, err := s.query(ctx, query, params); err != nil {
 		return fmt.Errorf("failed to index vector: %w", err)
 	}
 
-	// Check if insert was successful
-	if result != nil && len(*result) > 0 {
-		queryResult := (*result)[0]
-		if queryResult.Status == "OK" {
-			// Update user statistics on successful insert
-			if err := s.updateUserStat(ctx, userID, "vector_count", 0); err != nil {
-				// Log the error but don't fail the operation
-				slog.Warn("failed to update vector_count stat", "user_id", userID, "error", err)
-			}
-			return nil
-		}
+	if err := s.updateUserStat(ctx, t.Principal().LegacyUserID, "vector_count", 0); err != nil {
+		// Log the error but don't fail the operation
+		slog.Warn("failed to update vector_count stat", "user_id", userID, "error", err)
 	}
-
-	return fmt.Errorf("failed to index vector")
+	return nil
 }
 
-// SearchSimilar performs vector similarity search
+// SearchSimilar performs vector similarity search over the caller's visible
+// scopes. The scope predicate is applied in SurrealQL, alongside the KNN
+// operator, so a row outside the caller's scopes is never a candidate.
 func (s *SurrealDBStorage) SearchSimilar(ctx context.Context, userID string, queryEmbedding []float32, limit int) ([]VectorResult, error) {
-	query := fmt.Sprintf(`
-		SELECT id, content, vector::similarity::cosine(embedding, $query_embedding) AS similarity, metadata, created_at, updated_at
-		FROM vector_memories
-		WHERE user_id = $user_id AND embedding <|%d|> $query_embedding
-		ORDER BY similarity DESC
-	`, limit)
-
-	params := map[string]interface{}{
-		"user_id":         userID,
-		"query_embedding": queryEmbedding,
+	t, err := s.scope(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		limit = 10
 	}
 
-	result, err := s.query(ctx, query, params)
+	query := fmt.Sprintf(`
+		SELECT id, user_id, content, vector::similarity::cosine(embedding, $query_embedding) AS similarity,
+		       metadata, created_at, updated_at
+		FROM vector_memories
+		%s
+		ORDER BY similarity DESC
+		LIMIT %d
+	`, t.where(fmt.Sprintf("embedding <|%d,%d|> $query_embedding", limit, knnEF)), limit)
+
+	result, err := s.query(ctx, query, t.params(map[string]interface{}{
+		"query_embedding": normalizeEmbedding(queryEmbedding),
+	}))
 	if err != nil {
 		return nil, fmt.Errorf("failed to search similar vectors: %w", err)
 	}
@@ -85,59 +95,62 @@ func (s *SurrealDBStorage) SearchSimilar(ctx context.Context, userID string, que
 	return s.parseVectorResults(result)
 }
 
-// UpdateVector updates an existing vector memory
+// UpdateVector replaces a vector memory. As everywhere else the previous row
+// is invalidated rather than removed, so the change feed carries both halves
+// of the edit.
 func (s *SurrealDBStorage) UpdateVector(ctx context.Context, id, userID, content string, embedding []float32, metadata map[string]interface{}) error {
+	t, err := s.scope(ctx, userID)
+	if err != nil {
+		return err
+	}
 	if metadata == nil {
 		metadata = map[string]interface{}{}
 	}
 
-	emb64 := normalizeEmbedding(embedding)
+	params := t.params(map[string]interface{}{
+		"id":        id,
+		"content":   content,
+		"embedding": normalizeEmbedding(embedding),
+		"metadata":  metadata,
+		"user_id":   t.Principal().LegacyUserID,
+	})
 
-	// Use DELETE FROM WHERE + CREATE to avoid deserialization issues with newlines
-	// First delete the existing record
-	deleteQuery := `DELETE FROM semantic_memories WHERE id = $id`
-	deleteParams := map[string]interface{}{"id": id}
-	if _, err := s.query(ctx, deleteQuery, deleteParams); err != nil {
-		return fmt.Errorf("failed to delete existing vector: %w", err)
+	invalidate := fmt.Sprintf("UPDATE vector_memories SET %s %s",
+		t.invalidateSet(), t.where("id = type::record($id)"))
+	if _, err := s.query(ctx, invalidate, params); err != nil {
+		return fmt.Errorf("failed to invalidate the existing vector: %w", err)
 	}
 
-	// Recreate with updated values
-	createQuery := `
-		CREATE semantic_memories CONTENT {
-			id: $id,
-			user_id: $user_id,
+	create := fmt.Sprintf(`
+		CREATE vector_memories CONTENT {
+			%suser_id: $user_id,
 			content: $content,
 			embedding: $embedding,
-			metadata: $metadata
+			metadata: $metadata,
+			content_hash: %s
 		}
-	`
-	params := map[string]interface{}{
-		"id":        id,
-		"user_id":   userID,
-		"content":   content,
-		"embedding": emb64,
-		"metadata":  metadata,
-	}
-
-	if _, err := s.query(ctx, createQuery, params); err != nil {
+	`, t.contentFields(), vectorContentHash)
+	if _, err := s.query(ctx, create, params); err != nil {
 		return fmt.Errorf("failed to recreate vector: %w", err)
 	}
 
 	return nil
 }
 
-// DeleteVector deletes a vector memory
+// DeleteVector invalidates a vector memory in the caller's scopes.
 func (s *SurrealDBStorage) DeleteVector(ctx context.Context, id, userID string) error {
-	// Use DELETE FROM WHERE to avoid deserialization issues with newlines
-	deleteQuery := `DELETE FROM semantic_memories WHERE id = $id`
-	params := map[string]interface{}{"id": id}
-	_, err := s.query(ctx, deleteQuery, params)
+	t, err := s.scope(ctx, userID)
 	if err != nil {
+		return err
+	}
+
+	query := fmt.Sprintf("UPDATE vector_memories SET %s %s",
+		t.invalidateSet(), t.where("id = type::record($id)"))
+	if _, err := s.query(ctx, query, t.params(map[string]interface{}{"id": id})); err != nil {
 		return fmt.Errorf("failed to delete vector: %w", err)
 	}
 
-	// Update user statistics
-	if err := s.updateUserStat(ctx, userID, "vector_count", 0); err != nil {
+	if err := s.updateUserStat(ctx, t.Principal().LegacyUserID, "vector_count", 0); err != nil {
 		// Log the error but don't fail the operation
 		slog.Warn("failed to update vector_count stat", "user_id", userID, "error", err)
 	}
@@ -160,6 +173,9 @@ func (s *SurrealDBStorage) parseVectorResults(result *[]QueryResult) ([]VectorRe
 					Metadata:   getMap(itemMap, "metadata"),
 					CreatedAt:  getTime(itemMap, "created_at"),
 					UpdatedAt:  getTime(itemMap, "updated_at"),
+				}
+				if uid := getString(itemMap, "user_id"); uid != "" {
+					vectorResult.UserID = &uid
 				}
 				results = append(results, vectorResult)
 			}
