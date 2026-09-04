@@ -52,7 +52,13 @@ func StartWatcher(parentCtx context.Context, path string, st storage.Storage, em
 		return nil, err
 	}
 
-	ctx, cancel := context.WithCancel(parentCtx)
+	// The watcher has no user: it is the process synchronising a directory it
+	// owns. It does have a tenant and a scope, so it runs under the explicit
+	// service principal derived once here and passed down to every goroutine
+	// below, instead of reaching storage with no identity and relying on the
+	// legacy fallback (RM-2, RM-10). Cancellation still comes from parentCtx,
+	// because the watcher must stop when the process does.
+	ctx, cancel := context.WithCancel(storage.ServiceContext(parentCtx))
 	w := &Watcher{
 		path:         path,
 		storage:      st,

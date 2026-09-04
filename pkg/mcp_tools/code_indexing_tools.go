@@ -156,7 +156,9 @@ func (ctm *CodeToolManager) codeIndexProjectHandler(ctx context.Context, req *pr
 
 	// TODO: Handle languages filter when implemented in JobManager
 
-	job, err := ctm.jobManager.SubmitJob(input.ProjectPath, input.ProjectName)
+	// The tool call's context carries the caller's principal; the job keeps it
+	// and runs as the caller rather than as nobody.
+	job, err := ctm.jobManager.SubmitJob(ctx, input.ProjectPath, input.ProjectName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start indexing: %w", err)
 	}
@@ -183,7 +185,7 @@ func (ctm *CodeToolManager) codeIndexStatusHandler(ctx context.Context, req *pro
 
 	if input.JobID != "" {
 		// Get specific job status
-		job, err := ctm.jobManager.GetJobStatus(input.JobID)
+		job, err := ctm.jobManager.GetJobStatus(ctx, input.JobID)
 		if err != nil {
 			return nil, err
 		}

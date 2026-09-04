@@ -160,7 +160,12 @@ func TestRegisterModuleRoutesAuthProviderAllowsAndDenies(t *testing.T) {
 		tr := NewHTTPTransport(":0")
 		tr.RegisterModuleRoutes(
 			[]modules.HTTPEndpointProvider{&endpointProvider{id: "test.http.auth.ok", basePath: "/api/mod", routes: routes}},
-			&authProvider{id: "test.http.auth.provider.ok", info: &modules.AuthInfo{UserID: "alice"}},
+			// Tenancy claims, so the fixture describes an identity the
+			// principal layer accepts whether require_principal is on or off.
+			&authProvider{id: "test.http.auth.provider.ok", info: &modules.AuthInfo{
+				UserID:   "alice",
+				Metadata: map[string]any{"org": "org:acme", "user": "app_user:alice", "write_scope": "mem_scope:alice"},
+			}},
 		)
 		if rec := do(t, tr, http.MethodGet, "/api/mod/secret"); rec.Code != http.StatusOK {
 			t.Fatalf("status: got %d want 200", rec.Code)
@@ -222,8 +227,13 @@ func TestRegisterModuleRoutesAuthRunsBeforeRouteMiddlewares(t *testing.T) {
 			}},
 		}},
 		&authProvider{
-			id:   "test.http.authorder.provider",
-			info: &modules.AuthInfo{UserID: "u"},
+			id: "test.http.authorder.provider",
+			// Tenancy claims, so the layer order is asserted in both
+			// require_principal states.
+			info: &modules.AuthInfo{
+				UserID:   "u",
+				Metadata: map[string]any{"org": "org:acme", "user": "app_user:u", "write_scope": "mem_scope:u"},
+			},
 			mw: func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					order = append(order, "auth-mw")

@@ -170,10 +170,17 @@ func (wm *WatcherManager) ActivateProject(ctx context.Context, projectID string)
 		return 0, previousProject, nil
 	}
 
-	// Process outdated files in background
+	// Process outdated files in background.
+	//
+	// This used to pass context.Background(), which kept the work alive and
+	// threw the caller's identity away: every storage call the catch-up made
+	// ran with no principal. BackgroundContext is the same detachment without
+	// the loss, and it is derived here rather than inside the goroutine so the
+	// identity is captured while the caller's context is still the caller's.
 	if len(outdatedFiles) > 0 {
+		catchUpCtx := storage.BackgroundContext(ctx)
 		go func() {
-			if err := watcher.ProcessOutdatedFiles(context.Background(), outdatedFiles); err != nil {
+			if err := watcher.ProcessOutdatedFiles(catchUpCtx, outdatedFiles); err != nil {
 				slog.Warn("failed to process outdated files", "project_id", projectID, "error", err)
 			}
 		}()
@@ -264,6 +271,12 @@ func (wm *WatcherManager) Stop() error {
 // AutoActivateOnStartup looks for any project with WatcherEnabled=true
 // and activates monitoring for it. Should be called at application startup.
 func (wm *WatcherManager) AutoActivateOnStartup(ctx context.Context) error {
+	// Boot-time work: nobody asked for it, so it runs as the service
+	// principal. Without this the very first storage call fails closed once
+	// require_principal is on, and a server with a watched project would
+	// refuse to start.
+	ctx = storage.ServiceContext(ctx)
+
 	projects, err := wm.storage.ListCodeProjects(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list projects: %w", err)

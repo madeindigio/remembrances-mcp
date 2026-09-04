@@ -22,7 +22,11 @@ func main() {
 	kbPath := os.Args[1]
 	modelPath := os.Args[2]
 
-	ctx := context.Background()
+	// A maintenance command has no user, so it runs as the service principal:
+	// with require_principal on, a context with no identity is refused by
+	// every storage call, and the documents this command writes must land in
+	// the same scope the knowledge-base watcher writes to.
+	ctx := storage.ServiceContext(context.Background())
 
 	// Create storage
 	cfg := &storage.ConnectionConfig{

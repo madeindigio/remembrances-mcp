@@ -10,6 +10,7 @@ import (
 
 	"github.com/madeindigio/remembrances-mcp/internal/storage"
 	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/pkg/principal"
 	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
 )
 
@@ -47,6 +48,13 @@ type Job struct {
 	CompletedAt  *time.Time
 	Error        *string
 	CreatedAt    time.Time
+
+	// owner is the principal the job runs as: the identity of whoever
+	// submitted it, captured at submission because the submitting request is
+	// long gone by the time a worker picks the job up. It is unexported so a
+	// caller cannot set an identity the submission did not carry, and it is
+	// never nil (SubmitJob falls back to the service principal).
+	owner *principal.Principal
 }
 
 // JobManagerConfig holds configuration for the job manager
@@ -86,10 +94,18 @@ func NewJobManager(storage storage.FullStorage, embedder embedder.Embedder, inde
 	return jm
 }
 
-// SubmitJob submits a new indexing job
-func (jm *JobManager) SubmitJob(projectPath, projectName string) (*Job, error) {
+// SubmitJob submits a new indexing job.
+//
+// ctx is the submitting caller's context and is used for its identity only:
+// the job runs on a worker goroutine long after this call returns, so the
+// principal is captured here and reinstalled on the job's own context. A
+// submission with no principal runs as the service principal rather than as
+// nobody.
+func (jm *JobManager) SubmitJob(ctx context.Context, projectPath, projectName string) (*Job, error) {
 	// Generate job ID
 	jobID := fmt.Sprintf("job_%d", time.Now().UnixNano())
+
+	owner, _ := principal.FromContext(storage.ServiceContext(ctx))
 
 	job := &Job{
 		ID:          jobID,
@@ -97,6 +113,7 @@ func (jm *JobManager) SubmitJob(projectPath, projectName string) (*Job, error) {
 		ProjectName: projectName,
 		Status:      treesitter.IndexingStatusPending,
 		CreatedAt:   time.Now(),
+		owner:       owner,
 	}
 
 	jm.mu.Lock()
@@ -130,9 +147,14 @@ func (jm *JobManager) worker() {
 	}
 }
 
-// processJob executes an indexing job
+// processJob executes an indexing job.
+//
+// The job's context is fresh (a queued job must not inherit the deadline of
+// the request that queued it) but never anonymous: it carries the principal
+// SubmitJob captured, so every storage call the indexer makes is scoped to
+// whoever asked for the indexing.
 func (jm *JobManager) processJob(job *Job) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(jm.jobContext(job))
 
 	jm.mu.Lock()
 	jm.running[job.ID] = cancel
@@ -208,15 +230,20 @@ func (jm *JobManager) GetJob(jobID string) *Job {
 	return nil
 }
 
-// GetJobStatus returns the current status of a job
-func (jm *JobManager) GetJobStatus(jobID string) (*Job, error) {
+// GetJobStatus returns the current status of a job.
+//
+// ctx is the caller's, because a job that is no longer in the in-memory map is
+// read back from storage and that read is scoped like any other: asking for
+// someone else's job is a lookup that must find nothing, not a lookup that
+// runs unscoped.
+func (jm *JobManager) GetJobStatus(ctx context.Context, jobID string) (*Job, error) {
 	jm.mu.RLock()
 	job, exists := jm.jobs[jobID]
 	jm.mu.RUnlock()
 
 	if !exists {
 		// Try to find in database
-		dbJob, err := jm.storage.GetIndexingJob(context.Background(), jobID)
+		dbJob, err := jm.storage.GetIndexingJob(ctx, jobID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get job: %w", err)
 		}
@@ -362,5 +389,19 @@ func (jm *JobManager) ReindexProject(ctx context.Context, projectID string) (*Jo
 	}
 
 	// Submit new job
-	return jm.SubmitJob(project.RootPath, project.Name)
+	return jm.SubmitJob(ctx, project.RootPath, project.Name)
+}
+
+// jobContext builds the context a queued job runs on: detached from every
+// deadline and cancellation of the submission, carrying the principal the
+// submission had.
+//
+// A job whose owner is missing (only possible for a Job value built outside
+// SubmitJob, which the tests do) runs as the service principal, so there is no
+// path through this function that produces an unscoped context.
+func (jm *JobManager) jobContext(job *Job) context.Context {
+	if job == nil || job.owner == nil {
+		return storage.ServiceContext(context.Background())
+	}
+	return principal.NewContext(context.Background(), job.owner)
 }

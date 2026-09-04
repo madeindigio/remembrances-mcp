@@ -11,7 +11,9 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	// A development CLI has no user: it runs as the service principal so its
+	// storage calls are scoped rather than refused (RM-2, RM-10).
+	ctx := storage.ServiceContext(context.Background())
 
 	// Read config from file or use defaults
 	dbPath := "~/www/MCP/remembrances-mcp/remembrances.db"

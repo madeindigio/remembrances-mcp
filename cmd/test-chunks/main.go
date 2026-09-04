@@ -27,7 +27,9 @@ func main() {
 		log.Fatalf("Failed to create storage: %v", err)
 	}
 
-	ctx := context.Background()
+	// A development CLI has no user: it runs as the service principal so its
+	// storage calls are scoped rather than refused (RM-2, RM-10).
+	ctx := storage.ServiceContext(context.Background())
 	if err := st.Connect(ctx); err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}

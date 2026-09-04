@@ -46,7 +46,10 @@ func normalizeBindAddr(addr string, defaultAddr string) string {
 }
 
 func generateInstructions(storageInstance storage.FullStorage) string {
-	ctx := context.Background()
+	// Startup work with no request behind it: it lists the indexed projects to
+	// put them in the server instructions, and with require_principal on that
+	// read needs an identity like any other.
+	ctx := storage.ServiceContext(context.Background())
 	projects, err := storageInstance.ListCodeProjects(ctx)
 	projectList := "None currently indexed."
 	if err == nil && len(projects) > 0 {
@@ -174,7 +177,7 @@ func Main() {
 	// HTTP JSON API (--http) can run alongside any MCP transport
 	var t mcptransport.ServerTransport
 	var httpTransport *transport.HTTPTransport
-	var mcpHTTPTransport mcptransport.ServerTransport
+	var mcpHTTPServer *transport.MCPHTTPServer
 
 	// Setup MCP Streamable HTTP transport if enabled
 	if cfg.MCPStreamableHTTP || cfg.SSE {
@@ -209,13 +212,18 @@ func Main() {
 
 		addr = normalizeBindAddr(addr, "3000")
 		slog.Info("MCP Streamable HTTP transport enabled", "address", addr, "endpoint", endpoint)
-		mcpHTTPTransport = mcptransport.NewStreamableHTTPServerTransport(
-			addr,
-			mcptransport.WithStreamableHTTPServerTransportOptionLogger(streamableHTTPLogger()),
-			mcptransport.WithStreamableHTTPServerTransportOptionEndpoint(endpoint),
-			mcptransport.WithStreamableHTTPServerTransportOptionStateMode(mcptransport.Stateful),
-		)
-		t = mcpHTTPTransport
+		// The endpoint is served by transport.MCPHTTPServer rather than by
+		// go-mcp's own http.Server, so the authentication layer, the principal
+		// layer and the request metadata run in front of the transport and
+		// reach the tool handlers. Without that a tool call over this
+		// transport has no identity at all and cannot work with
+		// require_principal on.
+		mcpHTTPServer, err = transport.NewMCPHTTPServer(addr, endpoint, mcptransport.Stateful, streamableHTTPLogger())
+		if err != nil {
+			slog.Error("failed to create MCP Streamable HTTP server", "error", err)
+			os.Exit(1)
+		}
+		t = mcpHTTPServer.Transport()
 	} else {
 		slog.Info("Starting MCP over stdio (default)")
 		t = mcptransport.NewStdioServerTransport()
@@ -471,6 +479,18 @@ func Main() {
 		}
 	}
 
+	// The MCP Streamable HTTP endpoint authenticates with the same providers
+	// the module HTTP routes use. They are only known now, once the modules
+	// have loaded, which is why the server takes them here rather than at
+	// construction. With no providers the layer is the identity and the
+	// endpoint behaves exactly as before.
+	if mcpHTTPServer != nil {
+		mcpAuthProviders := modManager.GetHTTPAuthProviders()
+		mcpHTTPServer.SetAuthProviders(mcpAuthProviders)
+		slog.Info("MCP Streamable HTTP authentication configured",
+			"auth_providers", len(mcpAuthProviders))
+	}
+
 	// If HTTP transport is enabled, set it up now that the server is configured
 	if cfg.HTTP {
 		addr := cfg.HTTPAddr
@@ -511,6 +531,12 @@ func Main() {
 		// Shutdown HTTP transport if running
 		if httpTransport != nil {
 			_ = httpTransport.Shutdown(shutdownCtx)
+		}
+
+		// The MCP Streamable HTTP endpoint runs on a server this process owns,
+		// so it is stopped here; srv.Shutdown below unwinds the transport.
+		if mcpHTTPServer != nil {
+			_ = mcpHTTPServer.Shutdown(shutdownCtx)
 		}
 
 		// Stop knowledge base watcher
@@ -571,7 +597,19 @@ func Main() {
 
 	// Determine which transports to run
 	hasHTTP := cfg.HTTP && httpTransport != nil
-	hasMCPHTTP := mcpHTTPTransport != nil
+	hasMCPHTTP := mcpHTTPServer != nil
+
+	// The MCP Streamable HTTP endpoint is served by this process, not by
+	// go-mcp, so its listener is started here; srv.Run() below still drives
+	// the transport itself.
+	if hasMCPHTTP {
+		go func() {
+			if err := mcpHTTPServer.Serve(); err != nil && err != http.ErrServerClosed {
+				slog.Error("MCP Streamable HTTP listener error", "error", err)
+				os.Exit(1)
+			}
+		}()
+	}
 
 	if hasHTTP && hasMCPHTTP {
 		// Both HTTP JSON API and MCP Streamable HTTP are enabled

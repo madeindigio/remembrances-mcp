@@ -149,4 +149,27 @@ var (
 
 	// EmbeddingDimension reports the vector dimension in force.
 	EmbeddingDimension = storage.EmbeddingDimension
+
+	// SetServicePrincipalProvider installs the principal the core's own
+	// background work (the knowledge-base watcher, the code indexing jobs,
+	// the code file watcher) runs as. A module that turns
+	// SetRequirePrincipal on is expected to install one, or that work keeps
+	// running as the legacy org's service identity.
+	SetServicePrincipalProvider = storage.SetServicePrincipalProvider
+
+	// ServicePrincipal returns the principal background work runs as.
+	ServicePrincipal = storage.ServicePrincipal
+
+	// ServiceContext installs the service principal in a context that has
+	// none, and leaves a context that already carries one untouched.
+	ServiceContext = storage.ServiceContext
+
+	// BackgroundContext derives the context of work that outlives the call
+	// that started it: cancellation dropped, principal kept.
+	BackgroundContext = storage.BackgroundContext
 )
+
+// ServicePrincipalProvider returns the principal the core's background work
+// runs as. A commercial module implements it to mint a real service principal
+// of the org that owns the process.
+type ServicePrincipalProvider = storage.ServicePrincipalProvider

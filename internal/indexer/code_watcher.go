@@ -49,7 +49,13 @@ func StartCodeWatcher(parentCtx context.Context, project *storage.CodeProject, i
 		return nil, err
 	}
 
-	ctx, cancel := context.WithCancel(parentCtx)
+	// The watcher outlives the call that activated it, which is normally an
+	// MCP tool call whose context is cancelled the moment the tool returns.
+	// BackgroundContext drops that cancellation and keeps the activating
+	// principal, so the watcher indexes as whoever asked for it; when nothing
+	// asked (the boot-time auto-activation) it becomes the service principal
+	// rather than running with no identity at all. Stop() is what ends it.
+	ctx, cancel := context.WithCancel(storage.BackgroundContext(parentCtx))
 	w := &CodeWatcher{
 		projectID: project.ProjectID,
 		rootPath:  project.RootPath,
