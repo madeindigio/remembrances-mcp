@@ -78,6 +78,12 @@ type Config struct {
 	// Code monitoring configuration
 	// When true, disables automatic code file watching for projects
 	DisableCodeWatch bool `mapstructure:"disable-code-watch"`
+	// RequirePrincipal closes the legacy no-principal storage path (RM-10).
+	// With it on, a storage call whose context carries no principal is an
+	// error instead of a call running as the synthetic local identity. It is
+	// off by default while the pre-principal API is still supported; see the
+	// end-of-support notice in the README.
+	RequirePrincipal bool `mapstructure:"require-principal"`
 	// Module configuration
 	Modules        map[string]ModuleEntry `mapstructure:"modules"`
 	DisableModules []string               `mapstructure:"disable"`
@@ -112,6 +118,7 @@ func Load() (*Config, error) {
 	pflag.String("mcp-http-addr", "3000", "Port or address to bind MCP Streamable HTTP transport (e.g. 3000 or 127.0.0.1:3000); can also be set via GOMEM_MCP_HTTP_ADDR")
 	pflag.String("mcp-http-endpoint", "/mcp", "HTTP path for the MCP Streamable HTTP endpoint, can also be set via GOMEM_MCP_HTTP_ENDPOINT")
 
+	pflag.Bool("require-principal", false, "Refuse storage calls that carry no principal instead of falling back to the legacy user_id identity (RM-10; default true from v1)")
 	pflag.Bool("http", false, "Enable HTTP JSON API transport")
 	pflag.String("http-addr", ":8080", "Address to bind HTTP transport (host:port), can also be set via GOMEM_HTTP_ADDR")
 	pflag.Bool("rest-api-serve", false, "Enable REST API server")

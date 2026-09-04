@@ -34,7 +34,11 @@ type HTTPTransport struct {
 
 	// moduleRoutes maps a full mux path to the module routes registered on
 	// it, one per HTTP method. The mux gets a single dispatcher per path.
-	moduleRoutes   map[string][]moduleRouteEntry
+	moduleRoutes map[string][]moduleRouteEntry
+	// routes is the documented view of everything registered above: one entry
+	// per operation the transport serves. It is written by the registration
+	// itself, which is what keeps the OpenAPI document from drifting (RM-5).
+	routes         []APIRoute
 	moduleRoutesMu sync.RWMutex
 }
 
@@ -55,18 +59,107 @@ func NewHTTPTransport(addr string) *HTTPTransport {
 	return transport
 }
 
-// SetupMCPRoutes configures the HTTP routes for MCP protocol
+// coreEndpoint binds one mux pattern to the handler that serves it and to the
+// operations that handler answers. Registering and documenting from the same
+// value is what keeps the two in step: a handler added without an operation,
+// or an operation without a handler, does not compile into this table.
+type coreEndpoint struct {
+	path       string
+	handler    func(h *HTTPTransport, mcpServer *mcpserver.Server) http.HandlerFunc
+	operations []APIRoute
+}
+
+// coreEndpoints is the HTTP JSON API the core transport serves itself. It is
+// the single source for both the mux registration and the API document.
+func coreEndpoints() []coreEndpoint {
+	return []coreEndpoint{
+		{
+			path: "/health",
+			handler: func(h *HTTPTransport, _ *mcpserver.Server) http.HandlerFunc {
+				return h.handleHealth
+			},
+			operations: []APIRoute{{
+				Method:         http.MethodGet,
+				Path:           "/health",
+				MuxPath:        "/health",
+				OperationID:    "getHealth",
+				Summary:        "Liveness probe",
+				Description:    "Returns 200 with {\"status\":\"ok\"} while the process is serving. It does not check the datastore, so it is a liveness probe and not a readiness one.",
+				Tag:            "core",
+				Source:         SourceCore,
+				ResponseSchema: "HealthResponse",
+			}},
+		},
+		{
+			path:    "/mcp/tools",
+			handler: (*HTTPTransport).handleListTools,
+			operations: []APIRoute{{
+				Method:         http.MethodGet,
+				Path:           "/mcp/tools",
+				MuxPath:        "/mcp/tools",
+				OperationID:    "listTools",
+				Summary:        "List the tools of the HTTP JSON API",
+				Description:    "Lists the tools this JSON API exposes. It is not the MCP tool list: the MCP surface is served by the Streamable HTTP transport, and this endpoint answers with the placeholder set the JSON API implements today.",
+				Tag:            "core",
+				Source:         SourceCore,
+				ResponseSchema: "ToolList",
+			}},
+		},
+		{
+			path:    "/mcp/tools/call",
+			handler: (*HTTPTransport).handleCallTool,
+			operations: []APIRoute{{
+				Method:         http.MethodPost,
+				Path:           "/mcp/tools/call",
+				MuxPath:        "/mcp/tools/call",
+				OperationID:    "callTool",
+				Summary:        "Call a tool over the HTTP JSON API",
+				Description:    "Accepts an MCP CallToolRequest body. The JSON API does not yet reach the MCP tool registry, so the reply is a placeholder result; use the MCP Streamable HTTP endpoint for real tool calls.",
+				Tag:            "core",
+				Source:         SourceCore,
+				RequestSchema:  "CallToolRequest",
+				ResponseSchema: "CallToolResult",
+			}, {
+				// The handler answers the CORS preflight itself, so the
+				// document says so; an operation the server serves and the
+				// document omits is exactly the drift this table prevents.
+				Method:      http.MethodOptions,
+				Path:        "/mcp/tools/call",
+				MuxPath:     "/mcp/tools/call",
+				OperationID: "callToolPreflight",
+				Summary:     "CORS preflight for the tool call endpoint",
+				Description: "Answers the browser preflight with the Access-Control-Allow-* headers the handler sets. The JSON API allows every origin.",
+				Tag:         "core",
+				Source:      SourceCore,
+			}},
+		},
+	}
+}
+
+// SetupMCPRoutes configures the HTTP routes for MCP protocol. It walks
+// coreEndpoints, so the mux and the API document are built from one table.
 func (h *HTTPTransport) SetupMCPRoutes(mcpServer *mcpserver.Server) error {
-	h.mux.HandleFunc("/health", h.handleHealth)
-	h.mux.HandleFunc("/mcp/tools", h.handleListTools(mcpServer))
-	h.mux.HandleFunc("/mcp/tools/call", h.handleCallTool(mcpServer))
+	for _, endpoint := range coreEndpoints() {
+		h.mux.HandleFunc(endpoint.path, endpoint.handler(h, mcpServer))
+		h.recordRoutes(endpoint.operations...)
+	}
 	return nil
 }
 
 func (h *HTTPTransport) handleHealth(w http.ResponseWriter, r *http.Request) {
+	// The document says this path answers GET, so the handler answers GET.
+	// It used to reply 200 to any method, including POST and DELETE, which the
+	// route parity test found the moment the document was generated.
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
+		slog.Error("failed to encode health response", "error", err)
+	}
 }
 
 func (h *HTTPTransport) handleListTools(mcpServer *mcpserver.Server) http.HandlerFunc {
@@ -190,14 +283,20 @@ type moduleRouteEntry struct {
 //     AuthInfo in the request context and fails closed (see
 //     modules.AuthMiddleware). With no auth providers this layer is the
 //     identity;
-//  3. route.Middlewares in declared order, index 0 outermost;
-//  4. route.Handler.
+//  3. the principal layer, which turns that AuthInfo into the storage
+//     principal the tenancy predicates read (see PrincipalMiddleware). It runs
+//     inside the authentication layer because it consumes its result, and
+//     outside the route middlewares because a route middleware that touches
+//     storage must already run as the caller;
+//  4. route.Middlewares in declared order, index 0 outermost;
+//  5. route.Handler.
 //
 // authProviders is variadic so existing callers that pass only the endpoint
 // providers keep compiling and keep their previous, unauthenticated
 // behaviour.
 func (h *HTTPTransport) RegisterModuleRoutes(providers []modules.HTTPEndpointProvider, authProviders ...modules.HTTPAuthProvider) {
 	auth := modules.AuthMiddleware(authProviders, slog.Default())
+	installPrincipal := PrincipalMiddleware(slog.Default())
 
 	for _, provider := range providers {
 		basePath := provider.BasePath()
@@ -219,9 +318,15 @@ func (h *HTTPTransport) RegisterModuleRoutes(providers []modules.HTTPEndpointPro
 			}
 
 			handler := modules.ChainHTTPMiddlewares(http.Handler(route.Handler), route.Middlewares)
+			handler = installPrincipal(handler)
 			handler = auth(handler)
 
-			h.addModuleRoute(fullPath, strings.ToUpper(strings.TrimSpace(route.Method)), handler)
+			// The documentation is written by the registration, so a module
+			// route cannot exist undocumented (RM-5).
+			doc := moduleRouteDoc(string(provider.ModuleInfo().ID), basePath, route.Path,
+				route.Method, route.Description, len(authProviders) > 0)
+
+			h.addModuleRoute(fullPath, strings.ToUpper(strings.TrimSpace(route.Method)), handler, doc)
 			slog.Debug("Registered module route", "method", route.Method, "path", fullPath)
 		}
 	}
@@ -231,7 +336,7 @@ func (h *HTTPTransport) RegisterModuleRoutes(providers []modules.HTTPEndpointPro
 // time a path is used, installs the method dispatcher for it on the mux.
 // Registering the dispatcher once per path is what allows several methods to
 // share a path without the mux rejecting the duplicate pattern.
-func (h *HTTPTransport) addModuleRoute(path, method string, handler http.Handler) {
+func (h *HTTPTransport) addModuleRoute(path, method string, handler http.Handler, doc APIRoute) {
 	h.moduleRoutesMu.Lock()
 	defer h.moduleRoutesMu.Unlock()
 
@@ -248,6 +353,7 @@ func (h *HTTPTransport) addModuleRoute(path, method string, handler http.Handler
 
 	_, known := h.moduleRoutes[path]
 	h.moduleRoutes[path] = append(h.moduleRoutes[path], moduleRouteEntry{method: method, handler: handler})
+	h.routes = append(h.routes, doc)
 	if !known {
 		h.mux.Handle(path, h.moduleRouteDispatcher(path))
 	}

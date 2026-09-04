@@ -1,5 +1,47 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+* **api:** Generated OpenAPI 3.1 document and Postman collection (RM-5)
+  - `docs/api/remembrances.openapi.json` and
+    `docs/api/remembrances.postman_collection.json`, plus the
+    `-tags commercial` pair, are generated from the route registrations by
+    `cmd/openapi-gen` (`go generate ./internal/transport/...`)
+  - a drift test regenerates them and compares byte for byte, so a route added,
+    removed or renamed without regenerating fails the build
+  - the transport route table is the registration: `SetupMCPRoutes` walks it and
+    module routes document themselves as they are registered
+* **transport:** The authenticated principal now reaches storage (RM-10)
+  - `PrincipalMiddleware` turns the module authentication layer's `AuthInfo`
+    tenancy claims into the `pkg/principal` principal the RM-2 and RM-3
+    predicates read; a principal installed by a module is never overridden
+  - `mcp_tools.SetDefaultPrincipalResolver` installs the identity of MCP tool
+    calls; stdio mode installs the local principal, so `--require-principal` is
+    usable there today
+  - new `--require-principal` flag (`GOMEM_REQUIRE_PRINCIPAL`), off by default
+    in this release and the default from v1
+* **storage:** New public `pkg/storage` alias package (ADR 004)
+  - `FullStorage`, `Storage`, `StatsProvider`, `CodeStorage`, `ChangeLister`,
+    their result types and the `SetRequirePrincipal` / `SetEmbeddingDimension`
+    switches are nameable from another module, which is what makes an external
+    storage wrapper such as the Alchemai Mem ACL gate writable at all
+  - pure aliases, no logic, so there is exactly one definition of each
+
+### Deprecations
+
+* The pre-principal, per-`user_id` API is deprecated and loses support in v1
+  (15 December 2026): `user_id` parameters are ignored whenever a principal is
+  present, `require_principal` becomes the default, and SurrealDB 2.x
+  datastores and the `--sse` transport are removed. Migration path and the full
+  table are in the README, section "End of support for the legacy line".
+
+### Fixes
+
+* **transport:** `/health` answered 200 to every method, including POST and
+  DELETE. It answers GET and replies 405 with an `Allow` header otherwise.
+
 ## [v1.18.0](https://github.com-josedigio/madeindigio/remembrances-mcp/compare/v1.17.3...v1.18.0) (2026-01-23)
 
 ### Features

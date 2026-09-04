@@ -34,6 +34,9 @@ func NewCodeSearchToolManager(s storage.Storage, embedder interface {
 
 // RegisterCodeSearchTools registers all code search tools
 func (cstm *CodeSearchToolManager) RegisterCodeSearchTools(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	// Code search reads scoped storage, so it runs as the same principal as
+	// every other tool (RM-10).
+	reg = withPrincipalResolver(reg, nil)
 	if err := reg("code_get_symbols_overview", cstm.codeGetSymbolsOverviewTool(), cstm.codeGetSymbolsOverviewHandler); err != nil {
 		return err
 	}

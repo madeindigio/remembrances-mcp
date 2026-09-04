@@ -8,8 +8,8 @@ import (
 	"sync"
 
 	"github.com/madeindigio/remembrances-mcp/internal/indexer"
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
 	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/pkg/storage"
 )
 
 // ModuleConfig is passed to Provision().

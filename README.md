@@ -13,6 +13,53 @@ Remembrances-MCP is a Go-based MCP server that provides long-term memory capabil
   - OpenAI API (remote)
 - Multiple transport options: stdio (default), MCP Streamable HTTP, and HTTP JSON API
 
+## ⚠️ End of support for the legacy line (RM-10)
+
+The supported line from v1 is this OSS core plus the Alchemai Mem commercial
+layer. The pre-principal line loses support on a schedule, and this section is
+the notice.
+
+**What is deprecated**
+
+| Deprecated | Replacement | Stops working |
+|---|---|---|
+| `user_id` string parameters as the ownership signal (`save_fact(user_id, ...)`, `get_stats(user_id)`, every `userID` argument of the storage API) | the principal in `context.Context` (`pkg/principal`), installed by the transport from the authenticated request | v1, 15 December 2026 |
+| Running with no principal at all (the `require_principal=false` default) | `--require-principal` / `GOMEM_REQUIRE_PRINCIPAL=true`, which is the default from v1 | v1, 15 December 2026 |
+| SurrealDB 2.x embedded datastores and the pre-v13 schema | SurrealDB 3.x with schema version 14 | v1, 15 December 2026 |
+| The `--sse` transport | `--mcp-http` (MCP Streamable HTTP) | already an alias, removed in v1 |
+
+**What replaces them.** Every storage call resolves its identity from the
+principal in the context: the org, the readable scopes and the write scope. The
+`userID` parameters are still accepted and are ignored whenever a principal is
+present, which is what "demoted to legacy" means. Where the principal comes
+from:
+
+- **stdio** (Remembrances as the local memory of one agent): the process
+  installs the local principal itself, so nothing changes for a local user and
+  `--require-principal` is safe to turn on today;
+- **HTTP module routes**: the module authentication layer produces an
+  `AuthInfo`, and the transport turns its tenancy claims into the principal. A
+  module that resolves grants itself (Alchemai Mem) installs the principal
+  directly and is never overridden;
+- **MCP Streamable HTTP**: an auth-providing module supplies a resolver. Until
+  one is loaded those calls carry no principal, so `--require-principal` will
+  refuse them rather than let them borrow an identity. That is the one
+  configuration where turning the switch on today changes behaviour.
+
+**Migration.** Move the datastore first, then the callers:
+
+```bash
+remembrances-mcp migrate-v3        # SurrealDB 2.x to 3.x datastore
+remembrances-mcp --db-path ...     # applies migrations up to schema version 14,
+                                   # which backfills legacy rows into org:legacy
+                                   # and one personal scope per existing user_id
+remembrances-mcp --require-principal ...   # verify, then keep it on
+```
+
+The v13 backfill maps each legacy `user_id` onto real records
+(`org:legacy`, `app_user:legacy_<slug>`, `mem_scope:legacy_personal_<slug>`), so
+data written before the upgrade stays reachable to the same caller afterwards.
+
 ## 🚀 GGUF Embeddings (NEW)
 
 Remembrances-MCP now supports loading local GGUF embedding models directly! This provides:

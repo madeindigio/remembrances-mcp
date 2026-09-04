@@ -35,6 +35,9 @@ func NewCodeToolManager(tm *ToolManager, jm *indexer.JobManager, wm *indexer.Wat
 
 // RegisterCodeTools registers all code indexing tools
 func (ctm *CodeToolManager) RegisterCodeTools(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	// The code tools reach the same scoped storage as every other tool, so
+	// they get the same principal installer (RM-10).
+	reg = ctm.ToolManager.withPrincipal(reg)
 	if err := reg("code_index_project", ctm.codeIndexProjectTool(), ctm.codeIndexProjectHandler); err != nil {
 		return err
 	}

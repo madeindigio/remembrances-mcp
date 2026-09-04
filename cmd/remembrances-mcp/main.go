@@ -21,7 +21,9 @@ import (
 	"github.com/madeindigio/remembrances-mcp/internal/transport"
 	_ "github.com/madeindigio/remembrances-mcp/modules/standard"
 	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/pkg/mcp_tools"
 	"github.com/madeindigio/remembrances-mcp/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/pkg/principal"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
@@ -181,7 +183,9 @@ func Main() {
 		addr := cfg.MCPStreamableHTTPAddr
 		endpoint := cfg.MCPStreamableHTTPEndpoint
 		if endpoint == "" {
-			endpoint = "/mcp"
+			// The API document names the same constant, so the server and the
+			// document cannot disagree about the endpoint (RM-5).
+			endpoint = transport.DefaultMCPEndpoint
 		}
 
 		if cfg.SSE && !cfg.MCPStreamableHTTP {
@@ -216,6 +220,30 @@ func Main() {
 		slog.Info("Starting MCP over stdio (default)")
 		t = mcptransport.NewStdioServerTransport()
 	}
+
+	// Tenancy (RM-2, RM-10). Two decisions are made here and nowhere else.
+	//
+	// require_principal closes the legacy no-principal path: with it on, a
+	// storage call whose context carries no principal is an error rather than
+	// a call running as the synthetic local identity.
+	//
+	// The tool principal resolver is what makes turning it on possible. In
+	// stdio mode Remembrances is the single-user memory of one agent, there is
+	// no token and no tenant, so every tool call runs as the local principal,
+	// which is a real principal in the legacy org rather than an absence of
+	// one. In a networked mode the identity has to come from the request, so
+	// no default is installed and an auth-providing module (Alchemai Mem)
+	// supplies one; without it those calls have no principal and, with
+	// require_principal on, fail closed rather than borrowing an identity.
+	storage.SetRequirePrincipal(cfg.RequirePrincipal)
+	if !cfg.MCPStreamableHTTP && !cfg.SSE {
+		mcp_tools.SetDefaultPrincipalResolver(func(context.Context, *protocol.CallToolRequest) (*principal.Principal, error) {
+			return storage.LocalPrincipal(), nil
+		})
+	}
+	slog.Info("Tenancy configured",
+		"require_principal", storage.RequirePrincipal(),
+		"tool_principal_resolver", mcp_tools.DefaultPrincipalResolver() != nil)
 
 	// Initialize storage early to generate dynamic instructions
 	var storageInstance storage.FullStorage

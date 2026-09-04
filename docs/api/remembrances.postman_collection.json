@@ -1,0 +1,195 @@
+{
+  "info": {
+    "name": "Remembrances MCP 1.0.0",
+    "description": "HTTP surface of the Remembrances MCP server.\n\nThis document is generated from the route registrations (`internal/transport`),\nnot written by hand, and a test fails the build when a registered route has no\noperation or an operation has no registered route.\n\nThree listeners exist and they are separate:\n\n- the HTTP JSON API (`--http`, :8080 by default) serves /health and the\n  /mcp/tools placeholder endpoints of this document;\n- the MCP Streamable HTTP transport (`--mcp-http`, :3000 by default) serves the\n  /mcp endpoint, which is the real MCP surface and is described here as an\n  external operation because an embedded library serves it;\n- module routes are registered on the HTTP JSON API listener, under the base\n  path each module declares, and appear here only in a build that includes\n  those modules.\n\nAuthentication: module routes are behind the module authentication layer when a\nmodule provides one. Alchemai Mem provides `Authorization: Bearer \u003cControl JWT\u003e`,\nverified against Control's JWKS with iss, aud=alchemai and exp checks; the\nclaims become the storage principal (see RM-2 and RM-10). The core routes of\nthis document carry no authentication of their own.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "core",
+      "item": [
+        {
+          "name": "Liveness probe",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base}}/health",
+              "host": [
+                "{{base}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Returns 200 with {\"status\":\"ok\"} while the process is serving. It does not check the datastore, so it is a liveness probe and not a readiness one."
+          }
+        },
+        {
+          "name": "List the tools of the HTTP JSON API",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base}}/mcp/tools",
+              "host": [
+                "{{base}}"
+              ],
+              "path": [
+                "mcp",
+                "tools"
+              ]
+            },
+            "description": "Lists the tools this JSON API exposes. It is not the MCP tool list: the MCP surface is served by the Streamable HTTP transport, and this endpoint answers with the placeholder set the JSON API implements today."
+          }
+        },
+        {
+          "name": "CORS preflight for the tool call endpoint",
+          "request": {
+            "method": "OPTIONS",
+            "url": {
+              "raw": "{{base}}/mcp/tools/call",
+              "host": [
+                "{{base}}"
+              ],
+              "path": [
+                "mcp",
+                "tools",
+                "call"
+              ]
+            },
+            "description": "Answers the browser preflight with the Access-Control-Allow-* headers the handler sets. The JSON API allows every origin."
+          }
+        },
+        {
+          "name": "Call a tool over the HTTP JSON API",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base}}/mcp/tools/call",
+              "host": [
+                "{{base}}"
+              ],
+              "path": [
+                "mcp",
+                "tools",
+                "call"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"arguments\": {},\n  \"name\": \"list_available_tools\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Accepts an MCP CallToolRequest body. The JSON API does not yet reach the MCP tool registry, so the reply is a placeholder result; use the MCP Streamable HTTP endpoint for real tool calls."
+          }
+        }
+      ]
+    },
+    {
+      "name": "mcp",
+      "item": [
+        {
+          "name": "End an MCP session",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              }
+            ],
+            "url": {
+              "raw": "{{mcpBase}}/mcp",
+              "host": [
+                "{{mcpBase}}"
+              ],
+              "path": [
+                "mcp"
+              ]
+            },
+            "description": "Terminates the session named by the Mcp-Session-Id header."
+          }
+        },
+        {
+          "name": "Open the server to client SSE stream",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              }
+            ],
+            "url": {
+              "raw": "{{mcpBase}}/mcp",
+              "host": [
+                "{{mcpBase}}"
+              ],
+              "path": [
+                "mcp"
+              ]
+            },
+            "description": "Opens the server-initiated event stream of a stateful MCP session. Requires the Mcp-Session-Id header returned by initialize."
+          }
+        },
+        {
+          "name": "Send a JSON-RPC message to the MCP server",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json, text/event-stream"
+              }
+            ],
+            "url": {
+              "raw": "{{mcpBase}}/mcp",
+              "host": [
+                "{{mcpBase}}"
+              ],
+              "path": [
+                "mcp"
+              ]
+            },
+            "description": "The MCP Streamable HTTP binding. The body is a JSON-RPC 2.0 request; the response is either a JSON-RPC response or an SSE stream, depending on the Accept header. Served by the embedded go-mcp transport on the --mcp-http listener, not by the HTTP JSON API listener."
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base",
+      "value": "http://localhost:8080",
+      "description": "HTTP JSON API listener, where module routes are served"
+    },
+    {
+      "key": "mcpBase",
+      "value": "http://localhost:3000",
+      "description": "MCP Streamable HTTP listener"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "description": "Control-issued JWT for authenticated module routes"
+    }
+  ]
+}

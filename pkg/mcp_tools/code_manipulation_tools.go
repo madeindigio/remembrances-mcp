@@ -49,6 +49,9 @@ func NewCodeManipulationToolManager(s storage.Storage, embedder interface {
 
 // RegisterCodeManipulationTools registers all code manipulation tools
 func (cmtm *CodeManipulationToolManager) RegisterCodeManipulationTools(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	// Code manipulation reads and writes scoped storage, so it runs as the
+	// same principal as every other tool (RM-10).
+	reg = withPrincipalResolver(reg, nil)
 	if err := reg("code_replace_symbol", cmtm.codeReplaceSymbolTool(), cmtm.codeReplaceSymbolHandler); err != nil {
 		return err
 	}

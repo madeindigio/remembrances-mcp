@@ -1,0 +1,283 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Remembrances MCP HTTP API",
+    "version": "1.0.0",
+    "description": "HTTP surface of the Remembrances MCP server.\n\nThis document is generated from the route registrations (`internal/transport`),\nnot written by hand, and a test fails the build when a registered route has no\noperation or an operation has no registered route.\n\nThree listeners exist and they are separate:\n\n- the HTTP JSON API (`--http`, :8080 by default) serves /health and the\n  /mcp/tools placeholder endpoints of this document;\n- the MCP Streamable HTTP transport (`--mcp-http`, :3000 by default) serves the\n  /mcp endpoint, which is the real MCP surface and is described here as an\n  external operation because an embedded library serves it;\n- module routes are registered on the HTTP JSON API listener, under the base\n  path each module declares, and appear here only in a build that includes\n  those modules.\n\nAuthentication: module routes are behind the module authentication layer when a\nmodule provides one. Alchemai Mem provides `Authorization: Bearer \u003cControl JWT\u003e`,\nverified against Control's JWKS with iss, aud=alchemai and exp checks; the\nclaims become the storage principal (see RM-2 and RM-10). The core routes of\nthis document carry no authentication of their own."
+  },
+  "servers": [
+    {
+      "url": "http://{host}:{port}",
+      "description": "HTTP JSON API listener and module routes",
+      "variables": {
+        "host": {
+          "default": "localhost"
+        },
+        "port": {
+          "default": "8080",
+          "description": "8080 for the JSON API, 3000 for the MCP Streamable HTTP endpoint"
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "name": "core",
+      "description": "Endpoints the core HTTP JSON API transport serves itself"
+    },
+    {
+      "name": "mcp",
+      "description": "The MCP Streamable HTTP endpoint, served by the embedded go-mcp transport on its own listener"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Liveness probe",
+        "description": "Returns 200 with {\"status\":\"ok\"} while the process is serving. It does not check the datastore, so it is a liveness probe and not a readiness one.",
+        "tags": [
+          "core"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The path is served but not for this method; the Allow header lists the methods that are"
+          }
+        }
+      }
+    },
+    "/mcp": {
+      "delete": {
+        "operationId": "mcpEndSession",
+        "summary": "End an MCP session",
+        "description": "Terminates the session named by the Mcp-Session-Id header.",
+        "tags": [
+          "mcp"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "get": {
+        "operationId": "mcpOpenStream",
+        "summary": "Open the server to client SSE stream",
+        "description": "Opens the server-initiated event stream of a stateful MCP session. Requires the Mcp-Session-Id header returned by initialize.",
+        "tags": [
+          "mcp"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      },
+      "post": {
+        "operationId": "mcpSendMessage",
+        "summary": "Send a JSON-RPC message to the MCP server",
+        "description": "The MCP Streamable HTTP binding. The body is a JSON-RPC 2.0 request; the response is either a JSON-RPC response or an SSE stream, depending on the Accept header. Served by the embedded go-mcp transport on the --mcp-http listener, not by the HTTP JSON API listener.",
+        "tags": [
+          "mcp"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/mcp/tools": {
+      "get": {
+        "operationId": "listTools",
+        "summary": "List the tools of the HTTP JSON API",
+        "description": "Lists the tools this JSON API exposes. It is not the MCP tool list: the MCP surface is served by the Streamable HTTP transport, and this endpoint answers with the placeholder set the JSON API implements today.",
+        "tags": [
+          "core"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolList"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "The path is served but not for this method; the Allow header lists the methods that are"
+          }
+        }
+      }
+    },
+    "/mcp/tools/call": {
+      "options": {
+        "operationId": "callToolPreflight",
+        "summary": "CORS preflight for the tool call endpoint",
+        "description": "Answers the browser preflight with the Access-Control-Allow-* headers the handler sets. The JSON API allows every origin.",
+        "tags": [
+          "core"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "405": {
+            "description": "The path is served but not for this method; the Allow header lists the methods that are"
+          }
+        }
+      },
+      "post": {
+        "operationId": "callTool",
+        "summary": "Call a tool over the HTTP JSON API",
+        "description": "Accepts an MCP CallToolRequest body. The JSON API does not yet reach the MCP tool registry, so the reply is a placeholder result; use the MCP Streamable HTTP endpoint for real tool calls.",
+        "tags": [
+          "core"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CallToolRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallToolResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request body is not valid JSON for this operation"
+          },
+          "405": {
+            "description": "The path is served but not for this method; the Allow header lists the methods that are"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CallToolRequest": {
+        "properties": {
+          "arguments": {
+            "description": "Tool arguments, validated against the tool input schema",
+            "type": "object"
+          },
+          "name": {
+            "description": "Tool name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "CallToolResult": {
+        "properties": {
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/ContentBlock"
+            },
+            "type": "array"
+          },
+          "isError": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "type": "object"
+      },
+      "ContentBlock": {
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "const": "ok",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "Tool": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "inputSchema": {
+            "description": "JSON Schema of the tool arguments",
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "ToolList": {
+        "properties": {
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/Tool"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "tools"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "controlJWT": {
+        "bearerFormat": "JWT",
+        "description": "Control-issued JWT, verified against Control's JWKS with iss, aud=alchemai and exp checks",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  }
+}

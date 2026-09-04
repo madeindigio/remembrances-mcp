@@ -22,6 +22,10 @@ type ToolManager struct {
 	knowledgeBasePath string            // Path to knowledge base directory for markdown files
 	kbChunkSize       int               // Chunk size used by kb_* tools when embedding long documents
 	kbChunkOverlap    int               // Overlap used by kb_* tools when embedding long documents
+	// principalResolver installs the caller identity in the context of every
+	// tool call (RM-10). Nil means the context is left untouched and the
+	// storage layer applies its own rule. See principal.go.
+	principalResolver ToolPrincipalResolver
 }
 
 // NewToolManager creates a new tool manager
@@ -89,6 +93,7 @@ func (tm *ToolManager) RegisterTools(srv *mcpserver.Server) error {
 // RegisterToolsWith registers all MCP tools using a provided registration callback.
 // This allows callers (like module systems) to collect tools without a server.
 func (tm *ToolManager) RegisterToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	reg = tm.withPrincipal(reg)
 	if err := tm.registerRemembranceTools(reg); err != nil {
 		return err
 	}
@@ -116,36 +121,43 @@ func (tm *ToolManager) RegisterToolsWith(reg func(string, *protocol.Tool, func(c
 
 // RegisterFactToolsWith registers fact tools (save/get/list/delete fact).
 func (tm *ToolManager) RegisterFactToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	reg = tm.withPrincipal(reg)
 	return tm.registerRemembranceTools(reg)
 }
 
 // RegisterVectorToolsWith registers vector tools (add/search/update/delete vector).
 func (tm *ToolManager) RegisterVectorToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	reg = tm.withPrincipal(reg)
 	return tm.registerVectorTools(reg)
 }
 
 // RegisterGraphToolsWith registers knowledge graph tools (entities/relationships/traverse/get).
 func (tm *ToolManager) RegisterGraphToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	reg = tm.withPrincipal(reg)
 	return tm.registerGraphTools(reg)
 }
 
 // RegisterKBToolsWith registers knowledge base tools.
 func (tm *ToolManager) RegisterKBToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	reg = tm.withPrincipal(reg)
 	return tm.registerKBTools(reg)
 }
 
 // RegisterRememberToolsWith registers remember tools (to_remember/last_to_remember).
 func (tm *ToolManager) RegisterRememberToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	reg = tm.withPrincipal(reg)
 	return tm.registerRememberTools(reg)
 }
 
 // RegisterEventToolsWith registers event tools.
 func (tm *ToolManager) RegisterEventToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	reg = tm.withPrincipal(reg)
 	return tm.registerEventTools(reg)
 }
 
 // RegisterMiscToolsWith registers misc tools (hybrid_search/get_stats/how_to_use).
 func (tm *ToolManager) RegisterMiscToolsWith(reg func(string, *protocol.Tool, func(context.Context, *protocol.CallToolRequest) (*protocol.CallToolResult, error)) error) error {
+	reg = tm.withPrincipal(reg)
 	return tm.registerMiscTools(reg)
 }
 
