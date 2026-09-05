@@ -90,6 +90,31 @@ func SetRequirePrincipal(v bool) { requirePrincipal.Store(v) }
 // RequirePrincipal reports whether the legacy no-principal path is disabled.
 func RequirePrincipal() bool { return requirePrincipal.Load() }
 
+// LegacyLineEndOfSupport is the date the pre-principal line stops working
+// (RM-10). It is the date the README's end-of-support section and the CHANGELOG
+// deprecation entry name, declared once here so the running binary and the two
+// documents cannot drift apart.
+const LegacyLineEndOfSupport = "15 December 2026"
+
+// LegacyLineNotice returns the end-of-support warning an operator should see at
+// startup, or the empty string when the deployment is already on the supported
+// line.
+//
+// A notice that lives only in a README reaches the people who read READMEs. The
+// deployments this one is for are the others: they run with the legacy fallback
+// enabled, they stop working on the date above, and their operator finds out
+// either at startup or on the day. Callers log whatever this returns; the
+// emptiness of it is the whole condition, so a deployment that has already
+// migrated is never nagged.
+func LegacyLineNotice() string {
+	if RequirePrincipal() {
+		return ""
+	}
+	return "the pre-principal legacy path is enabled and loses support on " + LegacyLineEndOfSupport +
+		"; set --require-principal (GOMEM_REQUIRE_PRINCIPAL=true) once every caller supplies an identity, " +
+		`and see the README section "End of support for the legacy line" for the migration path`
+}
+
 // ErrNoPrincipal is re-exported so storage callers need not import the
 // principal package just to test for the fail-closed error.
 var ErrNoPrincipal = principal.ErrNoPrincipal

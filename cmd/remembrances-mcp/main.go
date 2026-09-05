@@ -252,6 +252,11 @@ func Main() {
 	slog.Info("Tenancy configured",
 		"require_principal", storage.RequirePrincipal(),
 		"tool_principal_resolver", mcp_tools.DefaultPrincipalResolver() != nil)
+	// RM-10's notice, where the operator of a legacy deployment actually meets
+	// it. Silent once the deployment is on the supported line.
+	if notice := storage.LegacyLineNotice(); notice != "" {
+		slog.Warn(notice, "end_of_support", storage.LegacyLineEndOfSupport)
+	}
 
 	// Initialize storage early to generate dynamic instructions
 	var storageInstance storage.FullStorage

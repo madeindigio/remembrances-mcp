@@ -59,6 +59,11 @@ type Change struct {
 	UpdatedAt time.Time              `json:"updatedAt"`
 	Deleted   bool                   `json:"deleted"`
 	Payload   map[string]interface{} `json:"payload,omitempty"`
+	// LocalID is the pushing client's own id for the record, recovered from
+	// the row's stamped `source.local_id`. It is carried outside Payload so a
+	// tombstone can name the row a consumer has to retire without the feed
+	// replaying the content of a deleted record.
+	LocalID string `json:"localId,omitempty"`
 }
 
 // changeFeedTables maps each table the feed reports to the kind name a
@@ -239,6 +244,7 @@ func changesFromResult(result *[]QueryResult, kind string) []Change {
 			Version:   int64(convertToInt(row["version"])),
 			UpdatedAt: getTime(row, "updated_at"),
 			Deleted:   deleted,
+			LocalID:   localIDOfRow(row),
 		}
 		if !deleted {
 			payload := make(map[string]interface{}, len(row))
@@ -253,6 +259,39 @@ func changesFromResult(result *[]QueryResult, kind string) []Change {
 		out = append(out, change)
 	}
 	return out
+}
+
+// localIDOfRow recovers the pushing client's own record id from a stored row.
+//
+// A client stamps its provenance into the record metadata, and where that
+// object ends up depends on the table: a `source` column where a writer lifts
+// it there, the `metadata` column otherwise, and `value.metadata` for the
+// tables that nest the payload under `value`. All three are read so that a feed
+// entry answers the same way whichever table produced it. An unstamped row
+// simply has no local id, which is not an error.
+func localIDOfRow(row map[string]interface{}) string {
+	if row == nil {
+		return ""
+	}
+	object := func(v interface{}) map[string]interface{} {
+		m, _ := v.(map[string]interface{})
+		return m
+	}
+	for _, holder := range []map[string]interface{}{
+		row,
+		object(row["metadata"]),
+		object(object(row["value"])["metadata"]),
+	} {
+		if holder == nil {
+			continue
+		}
+		if source := object(holder["source"]); source != nil {
+			if id, ok := source["local_id"].(string); ok && strings.TrimSpace(id) != "" {
+				return strings.TrimSpace(id)
+			}
+		}
+	}
+	return ""
 }
 
 // recordKey returns the id half of a "table:key" record id.
