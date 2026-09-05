@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
 	"github.com/madeindigio/remembrances-mcp/pkg/modules"
 )
@@ -18,12 +17,6 @@ import (
 const (
 	contentTypeJSON   = "application/json"
 	headerContentType = "Content-Type"
-	headerCORSOrigin  = "Access-Control-Allow-Origin"
-	headerCORSMethods = "Access-Control-Allow-Methods"
-	headerCORSHeaders = "Access-Control-Allow-Headers"
-	corsMethods       = "GET, POST, OPTIONS"
-	corsOrigin        = "*"
-	corsHeaders       = "Content-Type"
 )
 
 // HTTPTransport implements a simple HTTP JSON API transport for MCP
@@ -71,6 +64,19 @@ type coreEndpoint struct {
 
 // coreEndpoints is the HTTP JSON API the core transport serves itself. It is
 // the single source for both the mux registration and the API document.
+//
+// There is deliberately no tool endpoint here. `GET /mcp/tools` and
+// `POST /mcp/tools/call` existed and were documented as placeholders: they
+// answered with a hard coded tool and a "(placeholder response)" string and
+// never reached the MCP tool registry, which go-mcp does not expose to a
+// transport in the first place. A documented placeholder is a promise, so they
+// were removed rather than left to be discovered by a caller in production
+// (defect 12 of the v1 list). The real tool surface is the MCP Streamable HTTP
+// endpoint, which authenticates with the module auth providers; these two did
+// not authenticate at all, so implementing them would have published every
+// tool in the process, unauthenticated, on the JSON API port. Rebuilding them
+// needs that authentication layer and a registry the core owns, and that is a
+// work item, not a handler.
 func coreEndpoints() []coreEndpoint {
 	return []coreEndpoint{
 		{
@@ -88,49 +94,6 @@ func coreEndpoints() []coreEndpoint {
 				Tag:            "core",
 				Source:         SourceCore,
 				ResponseSchema: "HealthResponse",
-			}},
-		},
-		{
-			path:    "/mcp/tools",
-			handler: (*HTTPTransport).handleListTools,
-			operations: []APIRoute{{
-				Method:         http.MethodGet,
-				Path:           "/mcp/tools",
-				MuxPath:        "/mcp/tools",
-				OperationID:    "listTools",
-				Summary:        "List the tools of the HTTP JSON API",
-				Description:    "Lists the tools this JSON API exposes. It is not the MCP tool list: the MCP surface is served by the Streamable HTTP transport, and this endpoint answers with the placeholder set the JSON API implements today.",
-				Tag:            "core",
-				Source:         SourceCore,
-				ResponseSchema: "ToolList",
-			}},
-		},
-		{
-			path:    "/mcp/tools/call",
-			handler: (*HTTPTransport).handleCallTool,
-			operations: []APIRoute{{
-				Method:         http.MethodPost,
-				Path:           "/mcp/tools/call",
-				MuxPath:        "/mcp/tools/call",
-				OperationID:    "callTool",
-				Summary:        "Call a tool over the HTTP JSON API",
-				Description:    "Accepts an MCP CallToolRequest body. The JSON API does not yet reach the MCP tool registry, so the reply is a placeholder result; use the MCP Streamable HTTP endpoint for real tool calls.",
-				Tag:            "core",
-				Source:         SourceCore,
-				RequestSchema:  "CallToolRequest",
-				ResponseSchema: "CallToolResult",
-			}, {
-				// The handler answers the CORS preflight itself, so the
-				// document says so; an operation the server serves and the
-				// document omits is exactly the drift this table prevents.
-				Method:      http.MethodOptions,
-				Path:        "/mcp/tools/call",
-				MuxPath:     "/mcp/tools/call",
-				OperationID: "callToolPreflight",
-				Summary:     "CORS preflight for the tool call endpoint",
-				Description: "Answers the browser preflight with the Access-Control-Allow-* headers the handler sets. The JSON API allows every origin.",
-				Tag:         "core",
-				Source:      SourceCore,
 			}},
 		},
 	}
@@ -160,86 +123,6 @@ func (h *HTTPTransport) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(map[string]string{"status": "ok"}); err != nil {
 		slog.Error("failed to encode health response", "error", err)
 	}
-}
-
-func (h *HTTPTransport) handleListTools(mcpServer *mcpserver.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		h.setCORSHeaders(w)
-		w.Header().Set(headerContentType, contentTypeJSON)
-
-		// For now, we'll return a basic tools list since we can't directly access the server's tools
-		// In a real implementation, you'd need to expose the tools through the server interface
-		response := map[string]interface{}{
-			"tools": []map[string]interface{}{
-				{
-					"name":        "list_available_tools",
-					"description": "List all available MCP tools",
-					"inputSchema": map[string]interface{}{
-						"type":       "object",
-						"properties": map[string]interface{}{},
-					},
-				},
-			},
-		}
-
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			slog.Error("failed to encode tools response", "error", err)
-			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		}
-	}
-}
-
-func (h *HTTPTransport) handleCallTool(mcpServer *mcpserver.Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodOptions {
-			h.setCORSHeaders(w)
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		h.setCORSHeaders(w)
-		w.Header().Set(headerContentType, contentTypeJSON)
-
-		var callReq protocol.CallToolRequest
-		if err := json.NewDecoder(r.Body).Decode(&callReq); err != nil {
-			slog.Error("failed to decode tool call request", "error", err)
-			http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
-			return
-		}
-
-		// For now, we'll return a placeholder response since direct access to tool handlers
-		// requires a different approach. This would need to be integrated with the MCP server's
-		// tool registry.
-		response := map[string]interface{}{
-			"content": []map[string]interface{}{
-				{
-					"type": "text",
-					"text": fmt.Sprintf("HTTP transport called tool: %s (placeholder response)", callReq.Name),
-				},
-			},
-		}
-
-		if err := json.NewEncoder(w).Encode(response); err != nil {
-			slog.Error("failed to encode tool call response", "error", err)
-			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		}
-	}
-}
-
-func (h *HTTPTransport) setCORSHeaders(w http.ResponseWriter) {
-	w.Header().Set(headerCORSOrigin, corsOrigin)
-	w.Header().Set(headerCORSMethods, corsMethods)
-	w.Header().Set(headerCORSHeaders, corsHeaders)
 }
 
 // Start starts the HTTP server

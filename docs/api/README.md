@@ -54,6 +54,7 @@ newman run docs/api/remembrances.postman_collection.json \
 
 The MCP tool surface itself. The `/mcp` operations are the Streamable HTTP
 binding, whose bodies are JSON-RPC messages; the tools those messages name are
-described by the MCP `tools/list` response, not by OpenAPI. The `/mcp/tools`
-endpoints of the JSON API are a placeholder that does not reach the MCP tool
-registry, and the document says so rather than implying a second tool API.
+described by the MCP `tools/list` response, not by OpenAPI. The JSON API has no
+tool endpoints at all: `/mcp/tools` and `/mcp/tools/call` were placeholders
+that never reached the tool registry and were removed rather than left as a
+promise, so there is exactly one tool API and it is the MCP one.

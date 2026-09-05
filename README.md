@@ -370,20 +370,17 @@ This configuration enables:
 When using `--http`, the server exposes these endpoints:
 
 - `GET /health` - Health check endpoint
-- `GET /mcp/tools` - List available MCP tools
-- `POST /mcp/tools/call` - Call an MCP tool
 - Module-specific endpoints (e.g., `/admin/*` for commercial webui module)
+
+The JSON API serves no tool endpoints. `GET /mcp/tools` and
+`POST /mcp/tools/call` existed as placeholders that never reached the tool
+registry and were removed; tools are called over the MCP Streamable HTTP
+endpoint (`--mcp-http`), which is the authenticated surface.
 
 Example HTTP usage:
 
 ```bash
-# List available tools
-curl http://localhost:8080/mcp/tools
-
-# Call a tool
-curl -X POST http://localhost:8080/mcp/tools/call \
-  -H "Content-Type: application/json" \
-  -d '{"name": "remembrance_save_fact", "arguments": {"key": "test", "value": "example"}}'
+curl http://localhost:8080/health
 ```
 
 Behavior: when the program starts it will attempt to connect to SurrealDB. If the connection fails and a start command was provided, the program will spawn the provided command (using `/bin/sh -c "<cmd>"`), stream its stdout/stderr to the running process, and poll the database connection for up to 30 seconds with exponential backoff. If the database becomes available the server continues startup. If starting the command fails or the database remains unreachable after the timeout, the program logs a descriptive error and exits.

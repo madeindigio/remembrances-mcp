@@ -87,7 +87,7 @@ Tests require these environment variables (set automatically by test scripts):
 
 ### HTTP Test (`test_http.sh`)
 - Tests custom HTTP JSON API transport on port 8081
-- Tests endpoints: `/health`, `/mcp/tools`, `/mcp/tools/call`
+- Tests endpoints: `/health` (the JSON API serves no tool endpoints)
 - Uses Python HTTP client (`mcp_http_client.py`)
 - Verifies CORS support
 - **Status**: ✅ Working perfectly
@@ -140,8 +140,6 @@ HTTP smoke test completed successfully
 ```bash
 # Test HTTP endpoints manually
 curl http://localhost:8081/health
-curl http://localhost:8081/mcp/tools
-curl -X POST http://localhost:8081/mcp/tools/call \
-  -H "Content-Type: application/json" \
-  -d '{"name": "remembrance_save_fact", "arguments": {"key": "test", "value": "value"}}'
+# tools are called over the MCP Streamable HTTP endpoint (--mcp-http), never
+# over this port: the JSON API serves no tool endpoints.
 ```

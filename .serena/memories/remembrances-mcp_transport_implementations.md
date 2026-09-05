@@ -11,9 +11,10 @@ Successfully implemented HTTP JSON API transport for the MCP server as an altern
 - **Default Port**: `:8080`
 - **Endpoints**:
   - `GET /health` - Health check endpoint
-  - `GET /mcp/tools` - List available MCP tools
-  - `POST /mcp/tools/call` - Call an MCP tool
-  - CORS support for web clients
+  - Module endpoints (for example `/admin/*`)
+  - No tool endpoints: `/mcp/tools` and `/mcp/tools/call` were placeholders
+    that never reached the tool registry and were removed (defect 12 of the v1
+    list). Tools are called over the MCP Streamable HTTP endpoint.
 
 ### Testing
 
@@ -65,8 +66,5 @@ The custom HTTP transport provides a clean JSON API that wraps the MCP server fu
 
 # Test endpoints
 curl http://localhost:8080/health
-curl http://localhost:8080/mcp/tools
-curl -X POST http://localhost:8080/mcp/tools/call \
-  -H "Content-Type: application/json" \
-  -d '{"name": "remembrance_save_fact", "arguments": {"key": "test", "value": "example"}}'
+# tools are not on this port; use the MCP Streamable HTTP endpoint
 ```
