@@ -29,13 +29,13 @@ type api struct {
 	initRocksDB func(path string) int32
 	use         func(handle int32, ns string, db string) int32
 
-	query            func(handle int32, query string) unsafe.Pointer
-	queryWithParams  func(handle int32, query string, params string) unsafe.Pointer
-	create           func(handle int32, resource string, data string) unsafe.Pointer
-	update           func(handle int32, resource string, data string) unsafe.Pointer
-	deleteResource   func(handle int32, resource string) unsafe.Pointer
-	freeString       func(p unsafe.Pointer)
-	closeHandle      func(handle int32) int32
+	query           func(handle int32, query string) unsafe.Pointer
+	queryWithParams func(handle int32, query string, params string) unsafe.Pointer
+	create          func(handle int32, resource string, data string) unsafe.Pointer
+	update          func(handle int32, resource string, data string) unsafe.Pointer
+	deleteResource  func(handle int32, resource string) unsafe.Pointer
+	freeString      func(p unsafe.Pointer)
+	closeHandle     func(handle int32) int32
 }
 
 var (
@@ -123,7 +123,7 @@ func NewFromURL(ctx context.Context, url string) (*DB, error) {
 
 	normalized := strings.TrimSpace(url)
 	switch {
-	case normalized == "" :
+	case normalized == "":
 		return nil, fmt.Errorf("embedded SurrealDB URL/path is empty")
 	case normalized == "memory" || normalized == "memory://":
 		h := a.initMem()

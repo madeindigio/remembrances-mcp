@@ -17,15 +17,16 @@ var (
 	// Variant indicates the build variant (e.g. cpu, cuda, cuda-portable, metal).
 	// It is optional, but when set it is printed by --version for easier debugging.
 	Variant string = "unknown"
-	Version    string = "dev"
+	Version string = "dev"
 )
 
 // Suffix returns a human-readable suffix describing the build variant and
 // library loading mode (if available).
 //
 // Examples:
-//   "cuda purego"
-//   "cpu shared-libs"
+//
+//	"cuda purego"
+//	"cpu shared-libs"
 func Suffix() string {
 	var parts []string
 	if Variant != "" && Variant != "unknown" {
@@ -40,7 +41,9 @@ func Suffix() string {
 // Describe returns a single-line version string suitable for --version output.
 //
 // Format:
-//   <Version> (<CommitHash>) <Suffix>
+//
+//	<Version> (<CommitHash>) <Suffix>
+//
 // Where commit hash and suffix are omitted when not available.
 func Describe() string {
 	base := Version

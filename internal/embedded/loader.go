@@ -75,7 +75,7 @@ func (l *Loader) Load(files map[string]string, variant string) error {
 				}
 			}
 			if err != nil {
-			return fmt.Errorf("dlopen %s: %w", path, err)
+				return fmt.Errorf("dlopen %s: %w", path, err)
 			}
 		}
 		l.handles[name] = handle

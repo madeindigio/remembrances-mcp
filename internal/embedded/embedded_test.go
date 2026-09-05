@@ -95,12 +95,12 @@ func TestLoaderCanLoadEmbedded(t *testing.T) {
 func TestOrderedNamesPrefersVariant(t *testing.T) {
 	ext := libraryFileExt()
 	files := map[string]string{
-		"libggml-base" + ext: "base",
-		"libggml" + ext:      "ggml",
-		"libggml-cuda" + ext: "cuda",
-		"libggml-cpu" + ext:  "cpu",
-		"libllama" + ext:     "llama",
-		"libllama_shim" + ext:"shim",
+		"libggml-base" + ext:  "base",
+		"libggml" + ext:       "ggml",
+		"libggml-cuda" + ext:  "cuda",
+		"libggml-cpu" + ext:   "cpu",
+		"libllama" + ext:      "llama",
+		"libllama_shim" + ext: "shim",
 	}
 
 	order := orderedNames(files, "cuda")

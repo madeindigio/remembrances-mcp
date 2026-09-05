@@ -14,9 +14,9 @@ import (
 )
 
 type loadedLibs struct {
-	dir        string
-	variant    string
-	llamaShim  uintptr
+	dir         string
+	variant     string
+	llamaShim   uintptr
 	openHandles []uintptr
 }
 
