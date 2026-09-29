@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/version"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/version"
 )
 
 // Config holds the configuration for the Remembrances-MCP server.

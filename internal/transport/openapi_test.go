@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
 )
 
 // The tests that keep the API document honest (RM-5).

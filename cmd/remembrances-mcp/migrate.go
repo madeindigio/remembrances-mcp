@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
-	"github.com/madeindigio/remembrances-mcp/internal/storage/migratev3"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage/migratev3"
 )
 
 // runSubcommand dispatches the migration subcommands before the main

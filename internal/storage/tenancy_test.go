@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage/migrations"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
 )
 
 // withRequirePrincipal turns the fail-closed switch on for one test and

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
 )
 
 // collector is a registration callback that keeps the handler it is given, so

@@ -22,8 +22,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/madeindigio/remembrances-mcp/internal/transport"
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/transport"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
 )
 
 func main() {

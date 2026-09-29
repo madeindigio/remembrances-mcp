@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/treesitter"
 )
 
 // Storage provides a unified interface for all database operations

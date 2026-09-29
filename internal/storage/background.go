@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync/atomic"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
 )
 
 // The identity of the core's own background work.

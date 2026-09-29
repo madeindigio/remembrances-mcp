@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/treesitter"
 )
 
 // ===== FILE OPERATIONS =====

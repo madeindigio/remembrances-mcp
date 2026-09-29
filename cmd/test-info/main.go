@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/madeindigio/remembrances-mcp/internal/surrealembedded"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/surrealembedded"
 )
 
 func main() {

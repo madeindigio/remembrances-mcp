@@ -29,8 +29,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
-	"github.com/madeindigio/remembrances-mcp/internal/surrealembedded"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage/migrations"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/surrealembedded"
 )
 
 func main() {

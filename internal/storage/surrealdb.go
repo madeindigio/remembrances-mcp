@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	embeddedlibs "github.com/madeindigio/remembrances-mcp/internal/embedded"
-	"github.com/madeindigio/remembrances-mcp/internal/surrealembedded"
+	embeddedlibs "github.com/madeindigio/remembrances-mcp/v2/internal/embedded"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/surrealembedded"
 	"github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/connection"
 	"github.com/surrealdb/surrealdb.go/pkg/connection/gorillaws"

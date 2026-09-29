@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage/migrations"
 )
 
 // The knowledge base surface, scoped per RM-3.

@@ -15,10 +15,10 @@ import (
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
 	mcptransport "github.com/ThinkInAIXYZ/go-mcp/transport"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
-	"github.com/madeindigio/remembrances-mcp/pkg/mcp_tools"
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/mcp_tools"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
 )
 
 // The MCP Streamable HTTP endpoint was the one entry point require_principal

@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage/migrations"
 )
 
 // TargetSchemaVersion is the schema version a current binary migrates to.

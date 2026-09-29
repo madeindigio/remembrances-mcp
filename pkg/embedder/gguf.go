@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/madeindigio/remembrances-mcp/internal/llama"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/llama"
 )
 
 // GGUFEmbedder implements Embedder using local GGUF models via llama.cpp.

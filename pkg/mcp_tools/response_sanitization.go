@@ -1,6 +1,6 @@
 package mcp_tools
 
-import "github.com/madeindigio/remembrances-mcp/internal/storage"
+import "github.com/madeindigio/remembrances-mcp/v2/internal/storage"
 
 func removeInternalRecordIDs(records []map[string]interface{}) {
 	for _, record := range records {

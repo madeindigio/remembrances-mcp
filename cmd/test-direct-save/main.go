@@ -8,7 +8,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
 )
 
 func main() {

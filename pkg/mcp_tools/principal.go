@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
 )
 
 // The principal on the MCP tool path (RM-10).

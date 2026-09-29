@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	buildversion "github.com/madeindigio/remembrances-mcp/pkg/version"
+	buildversion "github.com/madeindigio/remembrances-mcp/v2/pkg/version"
 )
 
 // ExtractAndLoad first attempts to load libraries from the directory where

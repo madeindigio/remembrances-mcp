@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/treesitter"
 )
 
 // ===== SYMBOL OPERATIONS =====

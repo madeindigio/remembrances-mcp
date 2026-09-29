@@ -10,8 +10,8 @@ import (
 	mcppkg "github.com/ThinkInAIXYZ/go-mcp/pkg"
 	mcptransport "github.com/ThinkInAIXYZ/go-mcp/transport"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/mcp_tools"
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/mcp_tools"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
 )
 
 // The MCP Streamable HTTP endpoint, served so that the caller's identity

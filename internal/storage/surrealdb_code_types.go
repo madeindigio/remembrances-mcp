@@ -5,7 +5,7 @@ package storage
 import (
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/treesitter"
 )
 
 // CodeProject represents a stored code project

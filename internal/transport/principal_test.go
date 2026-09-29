@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
 )
 
 // seen records the principal a handler ran with, or its absence.

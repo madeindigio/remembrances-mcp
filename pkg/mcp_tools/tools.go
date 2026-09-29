@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/madeindigio/remembrances-mcp/internal/indexer"
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
-	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/indexer"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/embedder"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"

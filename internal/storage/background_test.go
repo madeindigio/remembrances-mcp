@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
 )
 
 func TestServicePrincipalIsUsableAndMarkedAsAService(t *testing.T) {

@@ -27,8 +27,8 @@ builds:
     ldflags:
       - "-s"
       - "-w"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.Version={{.Version}}"
       - "-r $ORIGIN"
     hooks:
       # Pre-build: compile llama.cpp and surrealdb-embedded for this platform
@@ -55,8 +55,8 @@ builds:
     ldflags:
       - "-s"
       - "-w"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.Version={{.Version}}"
       - "-r $ORIGIN"
     hooks:
       pre:
@@ -79,8 +79,8 @@ builds:
     ldflags:
       - "-s"
       - "-w"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.Version={{.Version}}"
       - "-r @executable_path"
     hooks:
       pre:
@@ -103,8 +103,8 @@ builds:
     ldflags:
       - "-s"
       - "-w"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.Version={{.Version}}"
       - "-r @executable_path"
     hooks:
       pre:
@@ -127,8 +127,8 @@ builds:
     ldflags:
       - "-s"
       - "-w"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.Version={{.Version}}"
       - "-buildmode=exe"
     hooks:
       pre:
@@ -151,8 +151,8 @@ builds:
     ldflags:
       - "-s"
       - "-w"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.CommitHash={{.Commit}}"
-      - "-X github.com/madeindigio/remembrances-mcp/pkg/version.Version={{.Version}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.CommitHash={{.Commit}}"
+      - "-X github.com/madeindigio/remembrances-mcp/v2/pkg/version.Version={{.Version}}"
       - "-buildmode=exe"
     hooks:
       pre:

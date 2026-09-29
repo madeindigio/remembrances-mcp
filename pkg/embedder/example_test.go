@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/embedder"
 )
 
 // Example demonstrates how to use the embedder service with Ollama

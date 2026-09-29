@@ -7,9 +7,9 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
-	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
-	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/treesitter"
 )
 
 const (

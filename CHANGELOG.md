@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Breaking changes
+
+* **module:** The Go module path is now `github.com/madeindigio/remembrances-mcp/v2`
+  - The released tag line has been `v2.x` since v2.0.0 (February 2026), but the
+    module path carried no `/v2` suffix, so Go refused every `v2` version of it:
+    `go get github.com/madeindigio/remembrances-mcp@v2.3.2` could not resolve,
+    and dependants were stuck on a pseudo-version or a local `replace`
+  - importers change one line per import: add `/v2` after the repository name,
+    for example
+    `github.com/madeindigio/remembrances-mcp/v2/pkg/storage`
+  - nothing else changed: no package, symbol or behaviour was touched, and the
+    `-X .../pkg/version.*` link flags in the `Makefile` and `.goreleaser.yml`
+    were moved to the new path so a release still stamps its version
+
 ### Features
 
 * **api:** Generated OpenAPI 3.1 document and Postman collection (RM-5)

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
-	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/treesitter"
 )
 
 // Background work must reach storage with an identity (RM-2, RM-10).

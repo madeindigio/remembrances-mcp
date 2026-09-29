@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/embedder"
 )
 
 func main() {

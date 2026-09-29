@@ -14,21 +14,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/internal/config"
-	"github.com/madeindigio/remembrances-mcp/internal/indexer"
-	"github.com/madeindigio/remembrances-mcp/internal/kb"
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
-	"github.com/madeindigio/remembrances-mcp/internal/transport"
-	_ "github.com/madeindigio/remembrances-mcp/modules/standard"
-	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
-	"github.com/madeindigio/remembrances-mcp/pkg/mcp_tools"
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/config"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/indexer"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/kb"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/transport"
+	_ "github.com/madeindigio/remembrances-mcp/v2/modules/standard"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/mcp_tools"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
 	mcptransport "github.com/ThinkInAIXYZ/go-mcp/transport"
-	"github.com/madeindigio/remembrances-mcp/pkg/version"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/version"
 )
 
 var portOnlyRe = regexp.MustCompile(`^\d{1,5}$`)

@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
 )
 
 const (

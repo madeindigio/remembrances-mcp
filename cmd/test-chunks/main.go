@@ -8,10 +8,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/internal/config"
-	"github.com/madeindigio/remembrances-mcp/internal/kb"
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
-	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/config"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/kb"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/embedder"
 )
 
 func main() {

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
 )
 
 func TestRemoveInternalRecordIDs(t *testing.T) {

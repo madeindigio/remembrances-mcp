@@ -8,8 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage/migrations"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
 )
 
 // The tenancy layer (RM-2 and RM-3).

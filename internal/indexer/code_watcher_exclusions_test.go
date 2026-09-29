@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
 )
 
 func TestCodeWatcher_shouldExcludePath_UsesRelativePatterns(t *testing.T) {

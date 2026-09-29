@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage/migrations"
 )
 
 // DefaultEmbeddingDimension is the embedding width assumed when nothing else is

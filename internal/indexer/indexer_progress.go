@@ -4,7 +4,7 @@ package indexer
 import (
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/treesitter"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/treesitter"
 )
 
 // initProgress initializes progress tracking for a project

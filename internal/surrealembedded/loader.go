@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/ebitengine/purego"
-	"github.com/madeindigio/remembrances-mcp/internal/embedded"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/embedded"
 )
 
 type loadedLib struct {

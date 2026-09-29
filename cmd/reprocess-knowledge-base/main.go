@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
-	embedderpkg "github.com/madeindigio/remembrances-mcp/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	embedderpkg "github.com/madeindigio/remembrances-mcp/v2/pkg/embedder"
 )
 
 func main() {

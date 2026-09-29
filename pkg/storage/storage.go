@@ -32,7 +32,7 @@
 // See ADR 004 in the Alchemai suite knowledge base.
 package storage
 
-import "github.com/madeindigio/remembrances-mcp/internal/storage"
+import "github.com/madeindigio/remembrances-mcp/v2/internal/storage"
 
 // The storage contracts. A module names these to write a wrapper; the core
 // keeps implementing the same types under their internal name.

@@ -14,7 +14,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/madeindigio/remembrances-mcp/internal/surrealembedded"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/surrealembedded"
 )
 
 // paramCase is one runtime query shape with its parameters and the number of

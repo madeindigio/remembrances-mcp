@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage/migrations"
 )
 
 // Statistics, scoped per RM-2.

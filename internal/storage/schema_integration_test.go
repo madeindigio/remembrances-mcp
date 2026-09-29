@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage/migrations"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage/migrations"
 )
 
 // These tests execute real SurrealQL. They need the prebuilt embedded library at

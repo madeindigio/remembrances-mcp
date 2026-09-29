@@ -8,9 +8,9 @@ import (
 	"errors"
 	"testing"
 
-	internalstorage "github.com/madeindigio/remembrances-mcp/internal/storage"
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
-	"github.com/madeindigio/remembrances-mcp/pkg/storage"
+	internalstorage "github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/storage"
 )
 
 // aclStorage is the shim a wrapper module needs: it embeds the primary storage

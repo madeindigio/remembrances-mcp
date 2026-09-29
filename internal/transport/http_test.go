@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
 )
 
 // endpointProvider is a test modules.HTTPEndpointProvider.

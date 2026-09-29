@@ -3,7 +3,7 @@ package modules
 import (
 	"context"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/storage"
 )
 
 // ModuleID identifies a module uniquely (e.g., "tools.reasoning").

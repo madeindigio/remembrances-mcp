@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
-	"github.com/madeindigio/remembrances-mcp/pkg/principal"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/principal"
 )
 
 // The knowledge-base watcher has no user and must still reach storage with an

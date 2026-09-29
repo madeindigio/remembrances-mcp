@@ -8,10 +8,10 @@ import (
 	// The commercial modules are linked in so their routes are registered and
 	// therefore documented. Importing them here is what makes the commercial
 	// document describe the commercial binary.
-	_ "github.com/madeindigio/remembrances-mcp/modules/commercial/db-sync-server"
-	_ "github.com/madeindigio/remembrances-mcp/modules/commercial/webui"
+	_ "github.com/madeindigio/remembrances-mcp/v2/modules/commercial/db-sync-server"
+	_ "github.com/madeindigio/remembrances-mcp/v2/modules/commercial/webui"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
 )
 
 // The file names of the commercial document. It is a separate file rather than

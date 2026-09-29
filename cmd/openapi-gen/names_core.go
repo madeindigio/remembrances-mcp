@@ -5,7 +5,7 @@ package main
 import (
 	"sort"
 
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
 )
 
 // The file names of the core document, the one a build with no module tags

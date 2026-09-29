@@ -33,7 +33,7 @@ GIT_DIRTY := $(shell git diff --quiet 2>/dev/null || echo "-dirty")
 BUILD_VERSION := $(VERSION)$(GIT_DIRTY)
 
 # Go ldflags for version injection
-VERSION_PKG := github.com/madeindigio/remembrances-mcp/pkg/version
+VERSION_PKG := github.com/madeindigio/remembrances-mcp/v2/pkg/version
 GO_VERSION_LDFLAGS := -X $(VERSION_PKG).Version=$(BUILD_VERSION) -X $(VERSION_PKG).CommitHash=$(COMMIT_HASH)
 
 # Build variant printed by --version.

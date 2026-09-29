@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/agnivade/levenshtein"
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
 )
 
 // WatcherManager manages a single active code watcher.

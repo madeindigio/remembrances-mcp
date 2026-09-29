@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
-	"github.com/madeindigio/remembrances-mcp/internal/indexer"
-	"github.com/madeindigio/remembrances-mcp/pkg/mcp_tools"
-	"github.com/madeindigio/remembrances-mcp/pkg/modules"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/indexer"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/mcp_tools"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/modules"
 )
 
 func init() {

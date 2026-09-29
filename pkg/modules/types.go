@@ -6,8 +6,8 @@ import (
 
 	"github.com/ThinkInAIXYZ/go-mcp/protocol"
 	mcpserver "github.com/ThinkInAIXYZ/go-mcp/server"
-	"github.com/madeindigio/remembrances-mcp/pkg/embedder"
-	"github.com/madeindigio/remembrances-mcp/pkg/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/embedder"
+	"github.com/madeindigio/remembrances-mcp/v2/pkg/storage"
 )
 
 // ToolHandler is the signature for a tool handler.

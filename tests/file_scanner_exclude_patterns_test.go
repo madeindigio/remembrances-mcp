@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/madeindigio/remembrances-mcp/internal/config"
-	"github.com/madeindigio/remembrances-mcp/internal/indexer"
-	"github.com/madeindigio/remembrances-mcp/internal/storage"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/config"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/indexer"
+	"github.com/madeindigio/remembrances-mcp/v2/internal/storage"
 )
 
 func TestFileScanner_ExclusionPatterns_DefaultsAndConfiguredValues(t *testing.T) {

@@ -52,7 +52,7 @@ func buildCmd(args []string) error {
 
 	fs.Var(&with, "with", "Module to include (repeatable). Example: github.com/remembrances/tools-reasoning@v1.2.0")
 	fs.StringVar(&output, "output", "./remembrances-mcp", "Output binary path")
-	fs.StringVar(&base, "base", "github.com/madeindigio/remembrances-mcp", "Base module path")
+	fs.StringVar(&base, "base", "github.com/madeindigio/remembrances-mcp/v2", "Base module path")
 
 	if err := fs.Parse(args); err != nil {
 		return err
