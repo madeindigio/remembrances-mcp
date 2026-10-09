@@ -61,7 +61,7 @@ func (cstm *CodeSearchToolManager) codeGetSymbolsOverviewHandler(ctx context.Con
 		if sym.ParentID == nil && len(topLevelSymbols) < input.MaxResults {
 			topLevelSymbols = append(topLevelSymbols, map[string]interface{}{
 				"name":       sym.Name,
-				"type":       sym.SymbolType,
+				"type":       string(sym.SymbolType),
 				"name_path":  sym.NamePath,
 				"start_line": sym.StartLine,
 				"end_line":   sym.EndLine,
@@ -72,7 +72,7 @@ func (cstm *CodeSearchToolManager) codeGetSymbolsOverviewHandler(ctx context.Con
 
 	result := map[string]interface{}{
 		"file_path": input.RelativePath,
-		"language":  file.Language,
+		"language":  string(file.Language),
 		"symbols":   topLevelSymbols,
 		"count":     len(topLevelSymbols),
 	}
@@ -301,10 +301,10 @@ func (cstm *CodeSearchToolManager) codeSearchSymbolsSemanticHandler(ctx context.
 	for _, r := range results {
 		sym := map[string]interface{}{
 			"name":       r.Symbol.Name,
-			"type":       r.Symbol.SymbolType,
+			"type":       string(r.Symbol.SymbolType),
 			"name_path":  r.Symbol.NamePath,
 			"file_path":  r.Symbol.FilePath,
-			"language":   r.Symbol.Language,
+			"language":   string(r.Symbol.Language),
 			"start_line": r.Symbol.StartLine,
 			"end_line":   r.Symbol.EndLine,
 			"signature":  r.Symbol.Signature,
